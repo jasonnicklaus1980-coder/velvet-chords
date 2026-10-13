@@ -1,0 +1,73 @@
+# Upload velvet-chords-repo.zip to the top of this repository and this builds the MPC plugin from it.
+# Result: Actions > the run > Artifacts > VelvetChords-MPC. If a step fails, the error shows under Annotations.
+name: Build MPC plugin from zip
+
+on:
+  push:
+    paths: ["*.zip"]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unpack the zip and get the compiler
+        run: |
+          cat > /tmp/run.sh <<'SH'
+          title="$1"; shift
+          log=$(mktemp); "$@" >"$log" 2>&1; rc=$?; cat "$log"
+          if [ "$rc" -ne 0 ]; then
+            t=$(tail -n 15 "$log" | sed -e 's/%/%25/g' -e 's/\r//g' | awk 'BEGIN{ORS="%0A"} {print}')
+            echo "::error title=${title} failed (exit ${rc})::${t}"
+          fi
+          exit "$rc"
+          SH
+          z=$(ls *.zip 2>/dev/null | head -n 1)
+          if [ -z "$z" ]; then echo "::error title=No zip found::Upload velvet-chords-repo.zip to the top level of the repository"; exit 1; fi
+          echo "Using $z"
+          sh /tmp/run.sh "Unzip" unzip -q "$z" -d /tmp/src
+          d=$(dirname "$(find /tmp/src -name Makefile -path '*/Makefile' | head -n 1)")
+          [ -f "$d/src/plugin.c" ] || { echo "::error title=Wrong zip::The zip doesn't contain the Velvet Chords project"; exit 1; }
+          echo "SRC=$d" >> "$GITHUB_ENV"
+          sh /tmp/run.sh "Download Zig" sh -c 'curl -sSfL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ -C /tmp'
+          echo "/tmp/zig-linux-x86_64-0.13.0" >> "$GITHUB_PATH"
+
+      - name: Native build and tests
+        run: cd "$SRC" && sh /tmp/run.sh "Native tests" make test
+
+      - name: ARM build (zig, glibc 2.17)
+        run: |
+          cd "$SRC" && mkdir -p build/arm
+          sh /tmp/run.sh "ARM build" zig cc -target arm-linux-gnueabihf.2.17 -mcpu=cortex_a7 -std=gnu99 -O2 \
+            -fPIC -fvisibility=hidden -fno-strict-aliasing -shared -o build/arm/velvetchords.so src/*.c \
+            -Wl,-z,defs -ldl -s
+          sh /tmp/run.sh "ARM test host build" zig cc -target arm-linux-gnueabihf.2.17 -mcpu=cortex_a7 -std=gnu99 -O1 \
+            -o build/arm/test_host tests/test_host.c -ldl -lm
+
+      - name: Check the ARM binary
+        run: |
+          cd "$SRC" && sh /tmp/run.sh "Binary check" sh -c '
+            so=build/arm/velvetchords.so
+            readelf -h $so | grep -E "Class|Machine|Flags"
+            readelf -h $so | grep -q ELF32 || { echo "not 32-bit"; exit 1; }
+            readelf -h $so | grep -q ARM || { echo "not ARM"; exit 1; }
+            readelf --dyn-syms -W $so | grep -q " VSTPluginMain$" || { echo "VSTPluginMain not exported"; exit 1; }
+            readelf -d $so | grep NEEDED
+            v=$(readelf --dyn-syms -W $so | grep -o "GLIBC_[0-9.]*" | sort -u); echo "$v"
+            for x in $v; do m=$(echo $x | sed "s/GLIBC_2\.\([0-9]*\).*/\1/"); [ "$m" -le 17 ] || { echo "needs $x"; exit 1; }; done'
+
+      - name: Plugin test under ARM emulation (optional)
+        continue-on-error: true
+        run: |
+          sudo apt-get update -qq && sudo apt-get install -y -qq qemu-user libc6-armhf-cross >/dev/null || exit 0
+          cd "$SRC" && sh /tmp/run.sh "ARM emulation test" sh -c 'VC_EXPORT_DIR=/tmp/vc-arm qemu-arm -L /usr/arm-linux-gnueabihf build/arm/test_host build/arm/velvetchords.so /tmp/vc-arm-demo'
+
+      - name: Package installer zip
+        run: cd "$SRC" && sh /tmp/run.sh "Package" sh scripts/release.sh 1.0.0 && cp dist/*.zip "$GITHUB_WORKSPACE/"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VelvetChords-MPC
+          path: VelvetChords-*.zip
