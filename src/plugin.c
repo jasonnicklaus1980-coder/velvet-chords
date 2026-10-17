@@ -371,7 +371,9 @@ static void step_param(Plugin *p, int i, int dir, int count) {
 static void apply_preset(Plugin *p, int x) {
     if (x < 1 || x > VC_NUM_PRESETS) return;
     const VcPreset *s = &VC_PRESETS[x - 1];
-    set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0);
+    /* a preset never makes sound or arpeggio you didn't choose: Silent stays silent, and the arpeggio stays as it is
+     * unless you already have one running (then the preset sets its order, rate and octaves) */
+    if (idx_of(p, P_SOUND) != SY_SILENT) set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0);
     set_param(p, P_TONE, s->tone, 0);
     set_param(p, P_RELEASE, s->release, 0);
     set_param(p, P_VOLUME, s->volume, 0);
@@ -381,12 +383,14 @@ static void apply_preset(Plugin *p, int x) {
     set_param(p, P_VL, norm_of(P_VL, s->voice_lead), 0);
     set_param(p, P_STRUM, s->strum_ms / 150.f, 0);
     set_param(p, P_STRUM_DIR, norm_of(P_STRUM_DIR, s->strum_dir), 0);
-    set_param(p, P_ARP, norm_of(P_ARP, s->arp), 0);
-    set_param(p, P_ARP_RATE, norm_of(P_ARP_RATE, s->arp_rate), 0);
-    set_param(p, P_ARP_OCT, norm_of(P_ARP_OCT, s->arp_oct - 1), 0);
-    set_param(p, P_ARP2, 0.f, 0); /* a preset sets the arpeggio itself: the extra lanes go off */
-    set_param(p, P_ARP3, 0.f, 0);
-    set_param(p, P_ARP4, 0.f, 0);
+    if (en_arp_on(p->eng)) {
+        set_param(p, P_ARP, norm_of(P_ARP, s->arp), 0);
+        set_param(p, P_ARP_RATE, norm_of(P_ARP_RATE, s->arp_rate), 0);
+        set_param(p, P_ARP_OCT, norm_of(P_ARP_OCT, s->arp_oct - 1), 0);
+        set_param(p, P_ARP2, 0.f, 0); /* the extra lanes go off: a preset sets the arpeggio itself */
+        set_param(p, P_ARP3, 0.f, 0);
+        set_param(p, P_ARP4, 0.f, 0);
+    }
     set_param(p, P_VEL, norm_of(P_VEL, s->vel), 0);
     set_param(p, P_PATTERN, norm_of(P_PATTERN, s->pattern), 0);
     set_param(p, P_PAT_RATE, norm_of(P_PAT_RATE, s->pat_rate), 0);

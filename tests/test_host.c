@@ -684,6 +684,20 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_PRE, 1.f / 230.f);
         display(fx, P_SND2, buf);
         CHECK(!strcmp(buf, "Silent (MIDI only)"), "re-sent preset keeps the chosen sound (%s)", buf);
+
+        /* no preset makes sound or arpeggio you didn't choose: Silent stays, and Arp stays off unless you turned it on */
+        int P_ARP_ = find_param(fx, "Arp"), bad_sound = 0, bad_arp = 0;
+        fx->setParameter(fx, P_ARP_, 0.f);
+        for (int k = 1; k <= 230; k++) {
+            fx->setParameter(fx, P_PRE, k / 230.f);
+            display(fx, P_SND2, buf);
+            bad_sound += strcmp(buf, "Silent (MIDI only)") != 0;
+            display(fx, P_ARP_, buf);
+            bad_arp += strcmp(buf, "Off") != 0;
+        }
+        CHECK(bad_sound == 0, "no preset replaces Silent (%d presets did)", bad_sound);
+        CHECK(bad_arp == 0, "no preset turns the arpeggio on (%d presets did)", bad_arp);
+        fx->setParameter(fx, P_SND2, 0.f);
         fx->setParameter(fx, P_PRE, 0.f);
 
         fx->setParameter(fx, P_ARPO, 1.f / 3.f);
