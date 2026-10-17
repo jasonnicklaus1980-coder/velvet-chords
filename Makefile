@@ -29,7 +29,7 @@ build/native/velvetchords.so: $(SRC) src/plugin.c src/*.h | build/native
 build/native/test_engine: $(SRC) tests/test_engine.c src/*.h | build/native
 	$(NATIVE_CC) -std=gnu99 -O1 -g $(WARN) -o $@ $(SRC) tests/test_engine.c -ldl
 build/native/test_host: tests/test_host.c src/vst2_abi.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O1 -g $(WARN) -o $@ tests/test_host.c -ldl -lm -lpthread
+	$(NATIVE_CC) -std=gnu99 -O1 -g $(WARN) -o $@ tests/test_host.c src/chords.c -ldl -lm -lpthread
 build/native/vc_export: $(SRC) tools/export_cli.c | build/native
 	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -o $@ $(SRC) tools/export_cli.c -ldl
 build/native build/arm:

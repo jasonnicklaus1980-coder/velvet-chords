@@ -10,8 +10,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "../src/chords.h"
 
 static int fails = 0, checks = 0;
+/* Edit type has 0 (none) plus one step per chord quality, so quality q is step q + 1 of VC_NUM_QUALITIES */
+static float edit_type_of(const char *suffix) { return (vc_quality_find(suffix) + 1) / (float)VC_NUM_QUALITIES; }
 #define CHECK(c, ...) do { checks++; if (!(c)) { fails++; printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); } } while (0)
 
 static VstTimeInfo g_time;
@@ -206,7 +209,7 @@ int main(int argc, char **argv) {
     fx->setParameter(fx, P_EDIT_PAD, 5.f / 63.f);
     fx->setParameter(fx, P_EDIT_ROOT, 2.f / 11.f); /* D */
     int nq = (int)(1.f / (1.f / 1.f)); (void)nq;
-    fx->setParameter(fx, P_EDIT_TYPE, 21.f / 40.f); /* index 21 -> quality 20 (m9) given 41 steps */
+    fx->setParameter(fx, P_EDIT_TYPE, edit_type_of("m9")); /* m9, whatever its place in the quality list */
     display(fx, P_EDIT_TYPE, buf);
     printf("  edit type -> %s\n", buf);
     display(fx, P_MODE, name);
@@ -731,7 +734,7 @@ int main(int argc, char **argv) {
 
         fx->setParameter(fx, find_param(fx, "Edit pad"), 5.f / 63.f);
         fx->setParameter(fx, find_param(fx, "Edit root"), 2.f / 11.f);
-        fx->setParameter(fx, find_param(fx, "Edit type"), 21.f / 40.f);
+        fx->setParameter(fx, find_param(fx, "Edit type"), edit_type_of("m9"));
         fx->setParameter(fx, P_NSEL, 1.f / 7.f);
         fx->setParameter(fx, P_NIV, (7.f + 13.f) / 37.f);
         display(fx, P_NIV, buf);

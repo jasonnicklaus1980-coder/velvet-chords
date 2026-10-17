@@ -43,6 +43,7 @@ const ChordQuality VC_QUALITIES[] = {
     {"m6/9", "Minor 6/9", 5, {0, 3, 7, 9, 14}},
     {"maj7#5", "Major 7#5", 4, {0, 4, 8, 11}},
     {"7sus2", "7sus2", 4, {0, 2, 7, 10}},
+    {"qrt", "Quartal (4ths)", 4, {0, 5, 10, 15}},
 };
 const int VC_NUM_QUALITIES = (int)(sizeof(VC_QUALITIES) / sizeof(VC_QUALITIES[0]));
 

@@ -29,7 +29,7 @@ static void test_qualities_against_spelled(void) {
         {"C9sus4", "C F G Bb D"}, {"C11", "C G Bb D F"}, {"Cm11", "C Eb G Bb D F"}, {"Cmaj7#11", "C E G B F#"},
         {"C13", "C E Bb D A"}, {"Cm13", "C Eb Bb D A"}, {"Cmaj13", "C E B D A"}, {"C7b9", "C E G Bb Db"}, {"C7#9", "C E G Bb D#"},
         {"C7#5", "C E G# Bb"}, {"C7b5", "C E Gb Bb"}, {"C9#11", "C E Bb D F#"}, {"C13b9", "C E Bb Db A"}, {"C7alt", "C E Bb D# Ab"},
-        {"Cmmaj9", "C Eb G B D"}, {"Cm6/9", "C Eb G A D"}, {"Cmaj7#5", "C E G# B"}, {"C7sus2", "C D G Bb"},
+        {"Cmmaj9", "C Eb G B D"}, {"Cm6/9", "C Eb G A D"}, {"Cmaj7#5", "C E G# B"}, {"C7sus2", "C D G Bb"}, {"Cqrt", "C F Bb Eb"},
         /* aliases */
         {"CM7", "C E G B"}, {"C-7", "C Eb G Bb"}, {"Cmin9", "C Eb G Bb D"}, {"C\xc3\xb8", "C Eb Gb Bb"}, {"Co7", "C Eb Gb A"},
         {"C7(#9)", "C E G Bb D#"}, {"Cm(maj7)", "C Eb G B"}, {"C69", "C E G A D"}, {"Csus", "C F G"}, {"C+", "C E G#"},
