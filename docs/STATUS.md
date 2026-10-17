@@ -36,7 +36,8 @@ no test or device run covers it. Nothing here has been run on an MPC.
 | 10 MIDI | Recording generated MIDI, drag-and-drop export | Not built, and not claimed |
 | 11 presets | 230 factory presets (23 genres x 10 variations) setting sound, voicing, strum, pattern, smart pads, key and scale | Tested. A preset never replaces Silent or turns the arpeggio on |
 | 11 presets | Four user presets, saved with the project; export to and import from a versioned text file | Tested (see `docs/INSTALL.md` for the file format) |
-| 11 presets | Search, favourites, rename, delete | Not built |
+| 11 presets | Starred factory presets (star, previous and next starred), clearing a user preset slot | Tested |
+| 11 presets | Search, rename | Not built (the MPC screen has no text entry, so rename would need a different design) |
 | 12 UI | Six pages, Roman numerals on chord tiles, Progression, Bassline, Harmony, pattern and preset controls | Skin checked and previewed (`docs/skin-preview/`). **Not seen on an MPC** |
 | 13 real time | No heap allocation on the audio path | Tested with an allocation probe: 0 calls in about 12,000 blocks |
 | 13 real time | No stuck notes under random play | Tested (random pads, sustain, patterns, arpeggio, progression, bass, transport) |
@@ -69,6 +70,6 @@ Install with the steps in `docs/INSTALL.md`, then:
 
 1. Whatever step 1-8 above turns up on the device. This is the most valuable next step.
 2. Phase 8: pattern chaining, then per-step probability and velocity.
-3. Phase 11: rename and delete for user presets, then search and favourites for the factory list.
+3. Phase 11: search for the factory list, and a way to name user presets.
 4. Phase 10: MIDI recording and drag-and-drop, only after checking what the MPC host supports.
 5. Phase 12: the full UI pass, with the device in hand.

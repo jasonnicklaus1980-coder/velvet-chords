@@ -122,6 +122,11 @@ velocity, the pattern and its 16 steps, rate, swing, gate, length, chance and se
 the bassline, harmony, and the progression with Progression play. Unlike a factory preset it restores all of that, including Silent or an
 arpeggio, because you saved it. Slots are stored with the project. It does not hold your custom pads, saved progressions or imported chords.
 
+**Starred presets** (Tools page, bottom left): with a factory preset chosen, **Star preset** marks it (press again to un-star), and
+**Prev star** and **Next star** jump to the previous or next starred preset, wrapping round. The readout shows whether the current preset is
+starred and how many you have starred. Stars are stored with the project. **Clear** (Tools page, next to Export and Import) empties the
+chosen user preset slot.
+
 **Sharing your presets:** **Export file** writes the chosen slot to `user-preset-N.vcpreset` in the Velvet Chords folder (the same folder as
 Export MIDI), and **Import file** reads that file back into the slot. Copy the file to another MPC or keep it as a backup. The file is
 plain text, version 1: the first line is `VELVET-PRESET 1`, then lines starting with `#` are comments, and every other line is

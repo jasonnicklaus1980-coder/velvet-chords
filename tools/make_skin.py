@@ -595,9 +595,14 @@ class Skin:
         self.segments(c, bg, "upre", "User preset slot", ["1", "2", "3", "4"], R, 536, 56, caption="Slot")
         self.action_button(c, bg, "upre_save", "Save", "Save user preset", R + 252, 536, w=164)
         self.action_button(c, bg, "upre_load", "Load", "Load user preset", R + 428, 536, w=164)
-        self.action_button(c, bg, "upre_export", "Export file", "Export user preset", R, 580, w=164)
-        self.action_button(c, bg, "upre_import", "Import file", "Import user preset", R + 176, 580, w=164)
-        self.readout(c, bg, "User preset status", R + 352, 580, 240, size=12)
+        self.action_button(c, bg, "upre_export", "Export file", "Export user preset", R, 580, w=140)
+        self.action_button(c, bg, "upre_import", "Import file", "Import user preset", R + 148, 580, w=140)
+        self.action_button(c, bg, "upre_clear", "Clear", "Clear user preset", R + 296, 580, w=110)
+        self.readout(c, bg, "User preset status", R + 414, 580, 180, size=12)
+        self.action_button(c, bg, "fav_star", "Star preset", "Star preset", L, 580, w=120)
+        self.action_button(c, bg, "fav_prev", "Prev star", "Previous starred preset", L + 128, 580, w=120)
+        self.action_button(c, bg, "fav_next", "Next star", "Next starred preset", L + 256, 580, w=120)
+        self.readout(c, bg, "Starred preset status", L + 384, 580, 200, size=12)
         self.page("Tools", 4, c, "vc_bg_tools.png", bg)
 
         # ---------- Lanes: presets, multi arp, melody riffs, note editor

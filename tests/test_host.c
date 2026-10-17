@@ -796,6 +796,61 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_SN, 0.f); fx->setParameter(fx, P_T, 0.45f); fx->setParameter(fx, P_SW, 0.f);
     }
 
+    /* starred presets, and clearing a user preset slot */
+    {
+        int P_PR = find_param(fx, "Preset"), P_FT = find_param(fx, "Star preset"), P_FP = find_param(fx, "Previous starred preset");
+        int P_FN = find_param(fx, "Next starred preset"), P_FS = find_param(fx, "Starred preset status");
+        CHECK(P_PR > 0 && P_FT > 0 && P_FP > 0 && P_FN > 0 && P_FS > 0, "starred preset parameters exist");
+        char n5[64], n20[64], got[96];
+        fx->setParameter(fx, P_PR, 5.f / 230.f); display(fx, P_PR, n5);
+        fx->setParameter(fx, P_FT, 1.f);
+        display(fx, P_FS, got);
+        CHECK(!strcmp(got, "Starred. 1 starred"), "starring shows in the status (%s)", got);
+        fx->setParameter(fx, P_PR, 20.f / 230.f); display(fx, P_PR, n20);
+        fx->setParameter(fx, P_FT, 1.f);
+        fx->setParameter(fx, P_PR, 1.f / 230.f);
+        fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
+        CHECK(!strcmp(got, n5), "next starred from preset 1 is preset 5 (%s vs %s)", got, n5);
+        fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
+        CHECK(!strcmp(got, n20), "next starred goes on to preset 20 (%s)", got);
+        fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
+        CHECK(!strcmp(got, n5), "next starred wraps round to preset 5 (%s)", got);
+        fx->setParameter(fx, P_FP, 1.f); display(fx, P_PR, got);
+        CHECK(!strcmp(got, n20), "previous starred wraps back to preset 20 (%s)", got);
+
+        /* the stars survive a save and reload */
+        void *ck = 0;
+        int csize = (int)fx->dispatcher(fx, effGetChunk, 0, 0, &ck, 0);
+        void *cc = malloc((size_t)csize); memcpy(cc, ck, (size_t)csize);
+        AEffect *fx5 = open_fx();
+        CHECK(fx5->dispatcher(fx5, effSetChunk, 0, csize, cc, 0) == 1, "chunk with stars loads");
+        fx5->setParameter(fx5, find_param(fx5, "Preset"), 5.f / 230.f);
+        display(fx5, find_param(fx5, "Starred preset status"), got);
+        CHECK(!strcmp(got, "Starred. 2 starred"), "stars survive a reload (%s)", got);
+        free(cc);
+
+        fx->setParameter(fx, P_FT, 1.f); /* un-star preset 20 */
+        display(fx, P_FS, got);
+        CHECK(!strcmp(got, "Not starred. 1 starred"), "toggling again un-stars (%s)", got);
+        fx->setParameter(fx, P_PR, 5.f / 230.f); fx->setParameter(fx, P_FT, 1.f); /* un-star preset 5: none left */
+        fx->setParameter(fx, P_PR, 1.f / 230.f); fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
+        char n1[64]; display(fx, P_PR, n1);
+        CHECK(!strcmp(got, n1) && fx->getParameter(fx, P_PR) > 0.f, "with nothing starred, next does nothing");
+        fx->setParameter(fx, P_PR, 0.f);
+
+        /* clearing a user preset slot */
+        int P_US = find_param(fx, "User preset slot"), P_CL = find_param(fx, "Clear user preset");
+        fx->setParameter(fx, P_US, 1.f / 3.f); /* slot 2 holds a preset from the tests above */
+        display(fx, P_US, got);
+        CHECK(!strcmp(got, "Slot 2 (saved)"), "slot 2 holds a preset before clearing (%s)", got);
+        fx->setParameter(fx, P_CL, 1.f);
+        display(fx, P_US, got);
+        CHECK(!strcmp(got, "Slot 2 (empty)"), "clearing empties the slot (%s)", got);
+        display(fx, find_param(fx, "User preset status"), got);
+        CHECK(!strcmp(got, "Cleared slot 2"), "clearing reports (%s)", got);
+        fx->setParameter(fx, P_US, 0.f);
+    }
+
     /* Velvet Chords 1.1 features through the plugin interface: presets, riffs, shift keys, note editor, state */
     {
         int P_PRE = find_param(fx, "Preset"), P_PNX = find_param(fx, "Preset next"), P_TN = find_param(fx, "Tone");

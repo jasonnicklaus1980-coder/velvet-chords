@@ -19,7 +19,7 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
-#define CHUNK_VERSION 6 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets (appended after the earlier data) */
+#define CHUNK_VERSION 7 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data) */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 
@@ -52,7 +52,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS,
+    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -68,7 +68,7 @@ static int lane_of(int i, const int *ids) {
 enum { OUT_OFF = 0, OUT_HOST = 1, OUT_PORT = 2, OUT_BOTH = 3 }; /* bit 0 host, bit 1 port */
 
 static int is_display_only(int i) {
-    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
+    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
 }
 
 typedef struct { const char *name; int steps; float def; int trigger; } ParamInfo; /* steps 0 = continuous */
@@ -209,6 +209,11 @@ static void init_param_info(void) {
     P(P_UPRE_EXPORT, "Export user preset", 2, 0.f, 1)
     P(P_UPRE_IMPORT, "Import user preset", 2, 0.f, 1)
     P(P_UPRE_STATUS, "User preset status", 1, 0.f, 0)
+    P(P_UPRE_CLEAR, "Clear user preset", 2, 0.f, 1)
+    P(P_FAV_TOGGLE, "Star preset", 2, 0.f, 1)
+    P(P_FAV_PREV, "Previous starred preset", 2, 0.f, 1)
+    P(P_FAV_NEXT, "Next starred preset", 2, 0.f, 1)
+    P(P_FAV_STATUS, "Starred preset status", 1, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -237,6 +242,7 @@ typedef struct {
     unsigned char *chunk;
     char export_msg[64];
     char upre_msg[64]; /* what the last user preset export or import did */
+    unsigned char fav[32]; /* starred factory presets: bit n is preset n (1..230) */
     VstEvents *outEvents;
     VstMidiEvent outMidi[EN_MIDI_OUT];
     char program_name[32];
@@ -490,6 +496,29 @@ static void import_user_preset(Plugin *p, int slot) {
     p->upre_ok[slot] = 1;
     if (skipped) snprintf(p->upre_msg, sizeof(p->upre_msg), "Imported %d settings, skipped %d", applied, skipped);
     else snprintf(p->upre_msg, sizeof(p->upre_msg), "Imported %d settings into slot %d", applied, slot + 1);
+}
+
+/* Starred presets: star the ones you like, then step through only those. The stars are stored with the project. */
+static int fav_get(const Plugin *p, int x) { return x >= 1 && x < 256 && ((p->fav[x >> 3] >> (x & 7)) & 1); }
+
+static int fav_count(const Plugin *p) {
+    int n = 0;
+    for (int x = 1; x <= VC_NUM_PRESETS && x < 256; x++) n += fav_get(p, x);
+    return n;
+}
+
+static void fav_toggle(Plugin *p) {
+    int x = idx_of(p, P_PRESET);
+    if (x < 1 || x > VC_NUM_PRESETS || x >= 256) return;
+    p->fav[x >> 3] ^= (unsigned char)(1u << (x & 7));
+}
+
+static void fav_step(Plugin *p, int dir) { /* the next starred preset after the current one, wrapping; nothing if none are starred */
+    int x = idx_of(p, P_PRESET);
+    for (int n = 1; n <= VC_NUM_PRESETS; n++) {
+        int y = ((x - 1 + dir * n) % VC_NUM_PRESETS + VC_NUM_PRESETS) % VC_NUM_PRESETS + 1;
+        if (fav_get(p, y)) { set_param(p, P_PRESET, norm_of(P_PRESET, y), 0); return; }
+    }
 }
 
 static void apply_preset(Plugin *p, int x) {
@@ -777,6 +806,10 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             if (i == P_UPRE_LOAD) load_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_UPRE_EXPORT) export_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_UPRE_IMPORT) import_user_preset(p, idx_of(p, P_UPRE_SLOT));
+            if (i == P_UPRE_CLEAR) { int sl = idx_of(p, P_UPRE_SLOT); p->upre_ok[sl] = 0; snprintf(p->upre_msg, sizeof(p->upre_msg), "Cleared slot %d", sl + 1); }
+            if (i == P_FAV_TOGGLE) fav_toggle(p);
+            if (i == P_FAV_PREV) fav_step(p, -1);
+            if (i == P_FAV_NEXT) fav_step(p, 1);
             if (i == P_EXPORT) do_export(p, host_tempo(p));
             if (i == P_SONG_PREV || i == P_SONG_NEXT) {
                 step_param(p, P_SONG, i == P_SONG_NEXT ? 1 : -1, VC_NUM_SONGS);
@@ -1012,6 +1045,12 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         break;
     }
     case P_UPROG_SLOT: snprintf(b, sizeof(b), "Slot %d", x + 1); break;
+    case P_FAV_STATUS: {
+        int cur = idx_of(p, P_PRESET), nf = fav_count(p);
+        if (cur < 1) snprintf(b, sizeof(b), "Manual. %d starred", nf);
+        else snprintf(b, sizeof(b), "%s. %d starred", fav_get(p, cur) ? "Starred" : "Not starred", nf);
+        break;
+    }
     case P_UPRE_STATUS: copy_str(b, p->upre_msg[0] ? p->upre_msg : "Export writes a file you can copy", sizeof(b)); break;
     case P_UPRE_SLOT: snprintf(b, sizeof(b), "Slot %d (%s)", x + 1, p->upre_ok[x] ? "saved" : "empty"); break;
     case P_PAT_LEN: snprintf(b, sizeof(b), "%d steps", (x + 1) * 4); break;
@@ -1149,7 +1188,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
 /* ---------- chunk (saved inside the MPC project) ---------- */
 
 #define IMP_REC 23
-static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2) + 1 + VC_USER_PRESETS * (1 + UPRE_MAX * 4); }
+static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2) + 1 + VC_USER_PRESETS * (1 + UPRE_MAX * 4) + 32; }
 
 static void w32(unsigned char *b, int *k, uint32_t v) { b[(*k)++] = v & 255; b[(*k)++] = (v >> 8) & 255; b[(*k)++] = (v >> 16) & 255; b[(*k)++] = v >> 24; }
 static uint32_t r32(const unsigned char *b, int *k) { uint32_t v = b[*k] | (b[*k + 1] << 8) | (b[*k + 2] << 16) | ((uint32_t)b[*k + 3] << 24); *k += 4; return v; }
@@ -1197,6 +1236,7 @@ static int get_chunk(Plugin *p, void **data) {
         b[k++] = p->upre_ok[s];
         for (int j = 0; j < UPRE_MAX; j++) { union { float f; uint32_t u; } u; u.f = p->upre[s][j]; w32(b, &k, u.u); }
     }
+    for (int j = 0; j < 32; j++) b[k++] = p->fav[j]; /* version 7: starred presets */
     *data = b;
     return k;
 }
@@ -1288,6 +1328,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
             }
         }
     }
+    if (ver >= 7 && size >= k + 32) { for (int j = 0; j < 32; j++) p->fav[j] = b[k++]; p->fav[0] &= 0xFE; } /* bit 0 is not a preset */
     load_riff_fields(p);
     load_note_field(p);
     load_edit_fields(p);
