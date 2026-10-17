@@ -116,6 +116,12 @@ or **Octave up**. It follows the key and scale you've chosen, so the extra note 
 belongs to. It works on the smart pads only (Smart Scale pads on Pads 9-16 or Follow). The Release Q-Link on the Tools page was replaced
 by Harmony; Release is still on the Perform page.
 
+**Your presets** (Tools page, bottom right): pick a slot (1-4) and press **Save** to keep your current settings in it, or **Load** to bring them
+back. A user preset holds the sound, tone, release and volume, voicing, inversion, octave and voice leading, strum, all four arpeggio lanes,
+velocity, the pattern and its 16 steps, rate, swing, gate, length, chance and seed, the smart pads settings, the riff, the key and scale,
+the bassline, harmony, and the progression with Progression play. Unlike a factory preset it restores all of that, including Silent or an
+arpeggio, because you saved it. Slots are stored with the project. It does not hold your custom pads, saved progressions or imported chords.
+
 **Pattern length, chance and seed** (Pattern page, bottom row): **Pattern length** loops the pattern after 4, 8, 12 or 16 steps.
 **Pattern chance** plays 25, 50, 75 or 100% of its hits. Which hits are skipped is set by **Pattern seed** (1-4): the same seed and
 settings always play the same hits, so a pattern you like can be reproduced. Rests and ties are not affected by the chance.

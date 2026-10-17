@@ -19,7 +19,9 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
-#define CHUNK_VERSION 5 /* 4 adds note lists and riffs; 5 adds the saved progressions (appended after the earlier data) */
+#define CHUNK_VERSION 6 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets (appended after the earlier data) */
+#define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
+#define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 
 enum {
     P_MODE, P_SONG, P_SECTION, P_KEY, P_SCALE, P_TRANSPOSE, P_VOICING, P_INVERSION, P_OCTAVE, P_VL,
@@ -50,7 +52,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM,
+    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -201,6 +203,9 @@ static void init_param_info(void) {
     P(P_PAT_SEED, "Pattern seed", 4, 0.f, 0)
     P(P_BASS, "Bassline", BASS_COUNT, 0.f, 0)
     P(P_HARM, "Harmony", HARM_COUNT, 0.f, 0)
+    P(P_UPRE_SLOT, "User preset slot", VC_USER_PRESETS, 0.f, 0)
+    P(P_UPRE_SAVE, "Save user preset", 2, 0.f, 1)
+    P(P_UPRE_LOAD, "Load user preset", 2, 0.f, 1)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -220,6 +225,8 @@ typedef struct {
     int edit_pad;
     /* layout changes are written here and picked up by the audio thread at the next block */
     LayoutParams lp_pending;
+    float upre[VC_USER_PRESETS][UPRE_MAX];
+    unsigned char upre_ok[VC_USER_PRESETS];
     CustomPad custom_pending[VC_PADS];
     volatile unsigned gen, gen_applied;
     float *scratchL, *scratchR;
@@ -396,6 +403,32 @@ static void step_param(Plugin *p, int i, int dir, int count) {
 
 /* Presets: 0 = Manual (nothing changes), 1..N = VC_PRESETS. Only performance settings are set; the chords, key,
  * scale, song, custom pads and the Tools settings stay as they are. */
+/* User presets: your own settings (sound, voicing, strum, arpeggio, pattern with its steps, smart pads, key, scale, bass, harmony,
+ * progression), saved into a slot and recalled later. Unlike a factory preset, a user preset restores everything it holds,
+ * including Silent and an arpeggio, because you saved them. */
+static const int UPRE_IDS[] = {
+    P_SOUND, P_TONE, P_RELEASE, P_VOLUME, P_VOICING, P_INVERSION, P_OCTAVE, P_VL, P_STRUM, P_STRUM_DIR,
+    P_ARP, P_ARP_RATE, P_ARP_OCT, P_ARP_TR, P_ARP2, P_ARP2_RATE, P_ARP2_OCT, P_ARP2_TR,
+    P_ARP3, P_ARP3_RATE, P_ARP3_OCT, P_ARP3_TR, P_ARP4, P_ARP4_RATE, P_ARP4_OCT, P_ARP4_TR,
+    P_VEL, P_PATTERN, P_PAT_RATE, P_SWING, P_GATE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED,
+    P_SMART, P_SMART_MODE, P_SMART_OCT, P_SMART_MAP, P_RIFF, P_KEY, P_SCALE, P_BASS, P_HARM, P_PROG, P_PROG_PLAY,
+};
+#define UPRE_NIDS ((int)(sizeof(UPRE_IDS) / sizeof(UPRE_IDS[0])))
+typedef char upre_fits[(UPRE_NIDS + EN_STEPS) <= UPRE_MAX ? 1 : -1];
+
+static void save_user_preset(Plugin *p, int slot) {
+    if (slot < 0 || slot >= VC_USER_PRESETS) return;
+    for (int k = 0; k < UPRE_NIDS; k++) p->upre[slot][k] = p->val[UPRE_IDS[k]];
+    for (int j = 0; j < EN_STEPS; j++) p->upre[slot][UPRE_NIDS + j] = p->val[P_STEP0 + j];
+    p->upre_ok[slot] = 1;
+}
+
+static void load_user_preset(Plugin *p, int slot) {
+    if (slot < 0 || slot >= VC_USER_PRESETS || !p->upre_ok[slot]) return;
+    for (int k = 0; k < UPRE_NIDS; k++) set_param(p, UPRE_IDS[k], p->upre[slot][k], 0);
+    for (int j = 0; j < EN_STEPS; j++) set_param(p, P_STEP0 + j, p->upre[slot][UPRE_NIDS + j], 0); /* after the pattern, so the saved steps win */
+}
+
 static void apply_preset(Plugin *p, int x) {
     if (x < 1 || x > VC_NUM_PRESETS) return;
     const VcPreset *s = &VC_PRESETS[x - 1];
@@ -677,6 +710,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             }
             if (i == P_COPY) do_copy_to_custom(p);
             if (i == P_UPROG_SAVE) save_user_prog(p, idx_of(p, P_UPROG_SLOT));
+            if (i == P_UPRE_SAVE) save_user_preset(p, idx_of(p, P_UPRE_SLOT));
+            if (i == P_UPRE_LOAD) load_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_EXPORT) do_export(p, host_tempo(p));
             if (i == P_SONG_PREV || i == P_SONG_NEXT) {
                 step_param(p, P_SONG, i == P_SONG_NEXT ? 1 : -1, VC_NUM_SONGS);
@@ -912,6 +947,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         break;
     }
     case P_UPROG_SLOT: snprintf(b, sizeof(b), "Slot %d", x + 1); break;
+    case P_UPRE_SLOT: snprintf(b, sizeof(b), "Slot %d (%s)", x + 1, p->upre_ok[x] ? "saved" : "empty"); break;
     case P_PAT_LEN: snprintf(b, sizeof(b), "%d steps", (x + 1) * 4); break;
     case P_PAT_CHANCE: snprintf(b, sizeof(b), "%d%%", (x + 1) * 25); break;
     case P_PAT_SEED: snprintf(b, sizeof(b), "Seed %d", x + 1); break;
@@ -1047,7 +1083,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
 /* ---------- chunk (saved inside the MPC project) ---------- */
 
 #define IMP_REC 23
-static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2); }
+static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2) + 1 + VC_USER_PRESETS * (1 + UPRE_MAX * 4); }
 
 static void w32(unsigned char *b, int *k, uint32_t v) { b[(*k)++] = v & 255; b[(*k)++] = (v >> 8) & 255; b[(*k)++] = (v >> 16) & 255; b[(*k)++] = v >> 24; }
 static uint32_t r32(const unsigned char *b, int *k) { uint32_t v = b[*k] | (b[*k + 1] << 8) | (b[*k + 2] << 16) | ((uint32_t)b[*k + 3] << 24); *k += 4; return v; }
@@ -1089,6 +1125,11 @@ static int get_chunk(Plugin *p, void **data) {
     for (int s = 0; s < VC_USER_PROGS; s++) { /* version 5: saved progressions */
         b[k++] = p->lp_pending.un[s];
         for (int j = 0; j < VC_PROG_MAX; j++) { b[k++] = p->lp_pending.ur[s][j]; b[k++] = (unsigned char)p->lp_pending.uq[s][j]; }
+    }
+    b[k++] = UPRE_MAX; /* version 6: user presets, each a valid flag and UPRE_MAX floats */
+    for (int s = 0; s < VC_USER_PRESETS; s++) {
+        b[k++] = p->upre_ok[s];
+        for (int j = 0; j < UPRE_MAX; j++) { union { float f; uint32_t u; } u; u.f = p->upre[s][j]; w32(b, &k, u.u); }
     }
     *data = b;
     return k;
@@ -1167,6 +1208,17 @@ static int set_chunk(Plugin *p, const void *data, int size) {
                 p->lp_pending.ur[s][j] = b[k++] % 12;
                 signed char q = (signed char)b[k++];
                 p->lp_pending.uq[s][j] = (q >= 0 && q < VC_NUM_QUALITIES) ? q : -1;
+            }
+        }
+    }
+    if (ver >= 6 && size >= k + 1) {
+        int per = b[k++];
+        for (int s = 0; s < VC_USER_PRESETS && per > 0 && size >= k + 1 + per * 4; s++) {
+            p->upre_ok[s] = b[k++] ? 1 : 0;
+            for (int j = 0; j < per; j++) {
+                union { float f; uint32_t u; } u;
+                u.u = r32(b, &k);
+                if (j < UPRE_MAX) p->upre[s][j] = (u.f >= 0.f && u.f <= 1.f) ? u.f : 0.f; /* also rejects NaN */
             }
         }
     }

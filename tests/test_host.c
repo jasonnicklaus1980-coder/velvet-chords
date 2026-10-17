@@ -692,6 +692,45 @@ int main(int argc, char **argv) {
         free(cc);
     }
 
+    /* user presets: save your settings, change them, load them back; they also survive a save and reload */
+    {
+        int P_UPS = find_param(fx, "User preset slot"), P_UPSV = find_param(fx, "Save user preset"), P_UPLD = find_param(fx, "Load user preset");
+        int P_T = find_param(fx, "Tone"), P_SN = find_param(fx, "Sound"), P_SW = find_param(fx, "Swing");
+        CHECK(P_UPS > 0 && P_UPSV > 0 && P_UPLD > 0, "user preset parameters exist");
+        fx->setParameter(fx, P_UPS, 1.f / 3.f); /* slot 2 */
+        display(fx, P_UPS, buf);
+        CHECK(!strcmp(buf, "Slot 2 (empty)"), "an unused slot shows as empty (%s)", buf);
+        fx->setParameter(fx, P_T, 0.9f);
+        fx->setParameter(fx, P_SN, 1.f); /* Silent: a user preset keeps it, because you chose it */
+        fx->setParameter(fx, P_SW, 0.5f);
+        char want_tone[64], want_sound[64], want_swing[64];
+        display(fx, P_T, want_tone); display(fx, P_SN, want_sound); display(fx, P_SW, want_swing);
+        fx->setParameter(fx, P_UPSV, 1.f);
+        display(fx, P_UPS, buf);
+        CHECK(!strcmp(buf, "Slot 2 (saved)"), "a saved slot shows as saved (%s)", buf);
+        fx->setParameter(fx, P_T, 0.1f); fx->setParameter(fx, P_SN, 0.f); fx->setParameter(fx, P_SW, 0.f);
+        fx->setParameter(fx, P_UPLD, 1.f);
+        char got[64];
+        display(fx, P_T, got);   CHECK(!strcmp(got, want_tone), "loading restores Tone (%s vs %s)", got, want_tone);
+        display(fx, P_SN, got);  CHECK(!strcmp(got, want_sound), "loading restores the sound, Silent included (%s)", got);
+        display(fx, P_SW, got);  CHECK(!strcmp(got, want_swing), "loading restores Swing (%s)", got);
+        /* save and reload the project: the slot is still there */
+        void *ck = 0;
+        int csize = (int)fx->dispatcher(fx, effGetChunk, 0, 0, &ck, 0);
+        void *cc = malloc((size_t)csize); memcpy(cc, ck, (size_t)csize);
+        AEffect *fx4 = open_fx();
+        CHECK(fx4->dispatcher(fx4, effSetChunk, 0, csize, cc, 0) == 1, "chunk with user presets loads");
+        int P_UPS4 = find_param(fx4, "User preset slot");
+        display(fx4, P_UPS4, got);
+        CHECK(!strcmp(got, "Slot 2 (saved)"), "the saved slot survives a reload (%s)", got);
+        fx4->setParameter(fx4, find_param(fx4, "Tone"), 0.3f);
+        fx4->setParameter(fx4, find_param(fx4, "Load user preset"), 1.f);
+        display(fx4, find_param(fx4, "Tone"), got);
+        CHECK(!strcmp(got, want_tone), "a reloaded project loads the same settings (%s)", got);
+        free(cc);
+        fx->setParameter(fx, P_SN, 0.f); fx->setParameter(fx, P_T, 0.45f); fx->setParameter(fx, P_SW, 0.f);
+    }
+
     /* Velvet Chords 1.1 features through the plugin interface: presets, riffs, shift keys, note editor, state */
     {
         int P_PRE = find_param(fx, "Preset"), P_PNX = find_param(fx, "Preset next"), P_TN = find_param(fx, "Tone");

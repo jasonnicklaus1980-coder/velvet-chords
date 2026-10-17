@@ -591,6 +591,10 @@ class Skin:
                 "3. Its chords appear on the pads, in order, with the",
                 "   file's exact notes. Copy to Custom (Edit page) to edit."]):
             bg.a.text(R, 344 + i * 26, line, 12.5, TEXT_2, "Regular")
+        bg.a.label(R, 500, "Your presets")
+        self.segments(c, bg, "upre", "User preset slot", ["1", "2", "3", "4"], R, 536, 56, caption="Slot")
+        self.action_button(c, bg, "upre_save", "Save", "Save user preset", R + 252, 536, w=164)
+        self.action_button(c, bg, "upre_load", "Load", "Load user preset", R + 428, 536, w=164)
         self.page("Tools", 4, c, "vc_bg_tools.png", bg)
 
         # ---------- Lanes: presets, multi arp, melody riffs, note editor
