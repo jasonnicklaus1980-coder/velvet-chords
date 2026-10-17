@@ -1,0 +1,1322 @@
+/* Velvet Chords - chord pad instrument for MPC OS (VST2 ABI). */
+#include "vst2_abi.h"
+#include "engine.h"
+#include "export.h"
+#include "midiport.h"
+#include "presets.h"
+#include "midiimport.h"
+#include <dirent.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/stat.h>
+#include <errno.h>
+#include <dlfcn.h>
+#include <pthread.h>
+#include <time.h>
+
+#define VC_EXPORT __attribute__((visibility("default")))
+#define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
+#define VC_VERSION 1000
+#define CHUNK_VERSION 4 /* 4 adds note lists and riffs (appended after the earlier data) */
+
+enum {
+    P_MODE, P_SONG, P_SECTION, P_KEY, P_SCALE, P_TRANSPOSE, P_VOICING, P_INVERSION, P_OCTAVE, P_VL,
+    P_STRUM, P_STRUM_DIR, P_ARP, P_ARP_RATE, P_VEL, P_SOUND, P_TONE, P_RELEASE, P_VOLUME,
+    P_PAD_BASE, P_LEARN, P_MIDI_OUT,
+    P_EDIT_PAD, P_EDIT_ROOT, P_EDIT_TYPE, P_EDIT_BASS, P_EDIT_INV, P_EDIT_OCT, P_EDIT_FOLLOW,
+    P_COPY, P_EXPORT, P_NOW, P_INFO,
+    /* screen-skin helpers (appended so older projects still load) */
+    P_VIEW_BANK, P_ACTIVE,
+    P_PADNAME0, P_PADFUNC0 = P_PADNAME0 + 16, P_SCALENOTE0 = P_PADFUNC0 + 16,
+    P_SONG_PREV = P_SCALENOTE0 + 12, P_SONG_NEXT, P_SEC_PREV, P_SEC_NEXT, P_SCALE_PREV, P_SCALE_NEXT,
+    P_TYPE_PREV, P_TYPE_NEXT, P_EPAD_PREV, P_EPAD_NEXT,
+    /* ChordPrism-style MIDI output and pattern generator */
+    P_MIDI_CH, P_PATTERN, P_PAT_RATE, P_SWING, P_GATE, P_PAT_SYNC,
+    P_STEP0, P_PAT_PREV = P_STEP0 + EN_STEPS, P_PAT_NEXT, P_PORT_STATUS,
+    /* Smart Scale */
+    P_SMART, P_SMART_MODE, P_SMART_OCT,
+    /* Tools: hold, repeat, melody, key sync, MIDI import */
+    P_HOLD, P_REPEAT, P_MELODY, P_MEL_RATE, P_KEYSYNC,
+    P_IMP_FILE, P_IMP_PREV, P_IMP_NEXT, P_IMP_LOAD, P_IMP_STATUS, P_IMP_PADS,
+    P_LEARN_ALL,
+    /* Presets: Manual or one of the factory presets (performance settings only) */
+    P_PRESET, P_PRESET_PREV, P_PRESET_NEXT,
+    /* Multi arp: lane 1 is Arp, Arp rate, Arp octaves, Arp transpose; lanes 2-4 are Arp 2-4 */
+    P_ARP_OCT, P_ARP2, P_ARP3, P_ARP4, P_ARP2_RATE, P_ARP3_RATE, P_ARP4_RATE, P_ARP2_OCT, P_ARP3_OCT, P_ARP4_OCT,
+    P_ARP_TR, P_ARP2_TR, P_ARP3_TR, P_ARP4_TR,
+    /* riffs, shift keys and the note-by-note editor */
+    P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
+    NUM_PARAMS
+};
+/* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
+static const int ARP_ORDER_IDS[EN_ARP_LANES] = {P_ARP, P_ARP2, P_ARP3, P_ARP4};
+static const int ARP_RATE_IDS[EN_ARP_LANES] = {P_ARP_RATE, P_ARP2_RATE, P_ARP3_RATE, P_ARP4_RATE};
+static const int ARP_OCT_IDS[EN_ARP_LANES] = {P_ARP_OCT, P_ARP2_OCT, P_ARP3_OCT, P_ARP4_OCT};
+static const int ARP_TR_IDS[EN_ARP_LANES] = {P_ARP_TR, P_ARP2_TR, P_ARP3_TR, P_ARP4_TR};
+static int lane_of(int i, const int *ids) {
+    for (int k = 0; k < EN_ARP_LANES; k++) if (ids[k] == i) return k;
+    return 0;
+}
+
+enum { OUT_OFF = 0, OUT_HOST = 1, OUT_PORT = 2, OUT_BOTH = 3 }; /* bit 0 host, bit 1 port */
+
+static int is_display_only(int i) {
+    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
+}
+
+typedef struct { const char *name; int steps; float def; int trigger; } ParamInfo; /* steps 0 = continuous */
+
+static ParamInfo PINFO[NUM_PARAMS];
+
+static void init_param_info(void) {
+    static int done = 0;
+    if (done) return;
+#define P(i, n, s, d, t) PINFO[i].name = n; PINFO[i].steps = s; PINFO[i].def = d; PINFO[i].trigger = t;
+    P(P_MODE, "Mode", VC_MODE_COUNT, 0.f, 0)
+    P(P_SONG, "Song", VC_NUM_SONGS, 0.f, 0)
+    P(P_SECTION, "Section", 8, 0.f, 0)
+    P(P_KEY, "Key", 12, 0.f, 0)
+    P(P_SCALE, "Scale", VC_NUM_SCALES, 0.f, 0)
+    P(P_TRANSPOSE, "Transpose", 25, 0.5f, 0)
+    P(P_VOICING, "Voicing", VC_VOICE_COUNT, 0.f, 0)
+    P(P_INVERSION, "Inversion", 4, 0.f, 0)
+    P(P_OCTAVE, "Octave", 5, 0.5f, 0)
+    P(P_VL, "Voice lead", 2, 1.f, 0)
+    P(P_STRUM, "Strum", 0, 0.f, 0)
+    P(P_STRUM_DIR, "Strum dir", STRUM_COUNT, 0.f, 0)
+    P(P_ARP, "Arp", ARP_COUNT, 0.f, 0)
+    P(P_ARP_RATE, "Arp rate", RATE_COUNT, 3.f / 5.f, 0)
+    P(P_VEL, "Velocity", VEL_COUNT, 0.f, 0)
+    P(P_SOUND, "Sound", SY_SOUND_COUNT, 0.f, 0)
+    P(P_TONE, "Tone", 0, 0.5f, 0)
+    P(P_RELEASE, "Release", 0, 0.3f, 0)
+    P(P_VOLUME, "Volume", 0, 0.75f, 0)
+    P(P_PAD_BASE, "Pad 1 note", 113, 36.f / 112.f, 0)
+    P(P_LEARN, "Learn pad 1", 2, 0.f, 1)
+    P(P_MIDI_OUT, "MIDI out", 4, 0.f, 0)
+    P(P_EDIT_PAD, "Edit pad", VC_PADS, 0.f, 0)
+    P(P_EDIT_ROOT, "Edit root", 12, 0.f, 0)
+    P(P_EDIT_TYPE, "Edit type", VC_NUM_QUALITIES + 1, 0.f, 0)
+    P(P_EDIT_BASS, "Edit bass", 13, 0.f, 0)
+    P(P_EDIT_INV, "Edit inversion", 4, 0.f, 0)
+    P(P_EDIT_OCT, "Edit octave", 5, 0.5f, 0)
+    P(P_EDIT_FOLLOW, "Edit follows pad", 2, 1.f, 0)
+    P(P_COPY, "Copy to Custom", 2, 0.f, 1)
+    P(P_EXPORT, "Export MIDI", 2, 0.f, 1)
+    P(P_NOW, "Now playing", 1, 0.f, 0)
+    P(P_INFO, "Info", 1, 0.f, 0)
+    P(P_VIEW_BANK, "Screen bank", 4, 0.f, 0)
+    P(P_ACTIVE, "Screen pad", 17, 0.f, 0)
+    {
+        static char names[44][20];
+        static const char *NOTE[12] = {"C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"};
+        for (int k = 0; k < 16; k++) {
+            snprintf(names[k], 20, "Pad %d chord", k + 1);
+            snprintf(names[16 + k], 20, "Pad %d function", k + 1);
+            P(P_PADNAME0 + k, names[k], 1, 0.f, 0)
+            P(P_PADFUNC0 + k, names[16 + k], 1, 0.f, 0)
+        }
+        for (int k = 0; k < 12; k++) {
+            snprintf(names[32 + k], 20, "Scale has %s", NOTE[k]);
+            P(P_SCALENOTE0 + k, names[32 + k], 2, 0.f, 0)
+        }
+    }
+    P(P_SONG_PREV, "Song prev", 2, 0.f, 1)
+    P(P_SONG_NEXT, "Song next", 2, 0.f, 1)
+    P(P_SEC_PREV, "Section prev", 2, 0.f, 1)
+    P(P_SEC_NEXT, "Section next", 2, 0.f, 1)
+    P(P_SCALE_PREV, "Scale prev", 2, 0.f, 1)
+    P(P_SCALE_NEXT, "Scale next", 2, 0.f, 1)
+    P(P_TYPE_PREV, "Edit type prev", 2, 0.f, 1)
+    P(P_TYPE_NEXT, "Edit type next", 2, 0.f, 1)
+    P(P_EPAD_PREV, "Edit pad prev", 2, 0.f, 1)
+    P(P_EPAD_NEXT, "Edit pad next", 2, 0.f, 1)
+    P(P_MIDI_CH, "MIDI channel", 16, 1.f, 0) /* 16: keeps output apart from pad input */
+    P(P_PATTERN, "Pattern", EN_NUM_PATTERNS + 2, 0.f, 0)
+    P(P_PAT_RATE, "Pattern rate", PRATE_COUNT, (float)PRATE_16 / (PRATE_COUNT - 1), 0)
+    P(P_SWING, "Swing", 0, 0.f, 0)
+    P(P_GATE, "Gate", 0, 0.8889f, 0)
+    P(P_PAT_SYNC, "Pattern sync", 2, 1.f, 0)
+    {
+        static char stepnames[EN_STEPS][12];
+        for (int k = 0; k < EN_STEPS; k++) {
+            snprintf(stepnames[k], 12, "Step %d", k + 1);
+            P(P_STEP0 + k, stepnames[k], 7, 0.f, 0)
+        }
+    }
+    P(P_PAT_PREV, "Pattern prev", 2, 0.f, 1)
+    P(P_PAT_NEXT, "Pattern next", 2, 0.f, 1)
+    P(P_PORT_STATUS, "MIDI port", 1, 0.f, 0)
+    P(P_SMART, "Smart pads", SMART_COUNT, 0.f, 0)
+    P(P_SMART_MODE, "Smart notes", SMODE_COUNT, 0.f, 0)
+    P(P_SMART_OCT, "Smart octave", 5, 0.5f, 0)
+    P(P_HOLD, "Hold", 2, 0.f, 0)
+    P(P_REPEAT, "Repeat", REP_COUNT, 0.f, 0)
+    P(P_MELODY, "Melody", MEL_COUNT, 0.f, 0)
+    P(P_MEL_RATE, "Melody rate", MRATE_COUNT, 0.f, 0)
+    P(P_KEYSYNC, "Key sync", 2, 0.f, 0)
+    P(P_IMP_FILE, "Import file", 64, 0.f, 0)
+    P(P_IMP_PREV, "Import prev", 2, 0.f, 1)
+    P(P_IMP_NEXT, "Import next", 2, 0.f, 1)
+    P(P_IMP_LOAD, "Import load", 2, 0.f, 1)
+    P(P_IMP_STATUS, "Import status", 1, 0.f, 0)
+    P(P_IMP_PADS, "Pads play", 2, 0.f, 0)
+    P(P_LEARN_ALL, "Learn all pads", 2, 0.f, 1)
+    P(P_PRESET, "Preset", VC_NUM_PRESETS + 1, 0.f, 0)
+    P(P_PRESET_PREV, "Preset prev", 2, 0.f, 1)
+    P(P_PRESET_NEXT, "Preset next", 2, 0.f, 1)
+    P(P_ARP_OCT, "Arp octaves", 4, 0.f, 0)
+    P(P_ARP2, "Arp 2", ARP_COUNT, 0.f, 0)
+    P(P_ARP3, "Arp 3", ARP_COUNT, 0.f, 0)
+    P(P_ARP4, "Arp 4", ARP_COUNT, 0.f, 0)
+    P(P_ARP2_RATE, "Arp 2 rate", RATE_COUNT, 3.f / 5.f, 0)
+    P(P_ARP3_RATE, "Arp 3 rate", RATE_COUNT, 3.f / 5.f, 0)
+    P(P_ARP4_RATE, "Arp 4 rate", RATE_COUNT, 3.f / 5.f, 0)
+    P(P_ARP2_OCT, "Arp 2 octaves", 4, 0.f, 0)
+    P(P_ARP3_OCT, "Arp 3 octaves", 4, 0.f, 0)
+    P(P_ARP4_OCT, "Arp 4 octaves", 4, 0.f, 0)
+    P(P_ARP_TR, "Arp transpose", 25, 0.5f, 0)
+    P(P_ARP2_TR, "Arp 2 transpose", 25, 0.5f, 0)
+    P(P_ARP3_TR, "Arp 3 transpose", 25, 0.5f, 0)
+    P(P_ARP4_TR, "Arp 4 transpose", 25, 0.5f, 0)
+    P(P_SHIFT, "Shift keys", 2, 1.f, 0)
+    P(P_RIFF, "Riff", VC_RIFFS + 1, 0.f, 0)
+    P(P_RIFF_SLOT, "Riff slot", VC_RIFFS, 0.f, 0)
+    P(P_NOTE_SEL, "Edit note", 8, 0.f, 0)
+    P(P_NOTE_IV, "Edit note interval", 38, 0.f, 0)
+    {
+        static char rifnames[EN_STEPS][16];
+        for (int k = 0; k < EN_STEPS; k++) {
+            snprintf(rifnames[k], 16, "Riff step %d", k + 1);
+            P(P_RIFF0 + k, rifnames[k], 38, 0.f, 0)
+        }
+    }
+#undef P
+    done = 1;
+}
+
+typedef struct {
+    AEffect fx;
+    audioMasterCallback host;
+    Engine *eng;
+    float val[NUM_PARAMS];
+    int edit_pad;
+    /* layout changes are written here and picked up by the audio thread at the next block */
+    LayoutParams lp_pending;
+    CustomPad custom_pending[VC_PADS];
+    volatile unsigned gen, gen_applied;
+    float *scratchL, *scratchR;
+    int scratch_n;
+    unsigned char *chunk;
+    char export_msg[64];
+    VstEvents *outEvents;
+    VstMidiEvent outMidi[EN_MIDI_OUT];
+    char program_name[32];
+    PadChord ui_pads[VC_PADS];   /* layout as seen by the screen (built on the UI thread) */
+    volatile int audition_req;   /* pad index requested from the screen, -1 none */
+    int audition_note, audition_left;
+    int seen_pad;
+    MidiPort port;
+    int out_mode, flush_routes;
+    int riff_sel, note_sel;     /* riff slot shown by the Riff step parameters; note shown by Edit note */
+    volatile int refresh_req, refresh_quit;
+    volatile int have_audio_thread, opened;
+    pthread_t audio_thread;
+    float trig_last[NUM_PARAMS];
+    double trig_time[NUM_PARAMS];
+    int refresh_running;
+    pthread_t refresh_thread;
+    /* MIDI import */
+    ImportChord imp[VC_PADS], imp_engine[VC_PADS];
+    int nimp;
+    char imp_files[64][64];
+    int nfiles;
+    char imp_status[96];
+    unsigned key_seen;
+} Plugin;
+
+static int idx_of(const Plugin *p, int i) {
+    int s = PINFO[i].steps;
+    if (s <= 1) return 0;
+    int v = (int)(p->val[i] * (s - 1) + 0.5f);
+    return v < 0 ? 0 : v >= s ? s - 1 : v;
+}
+static float norm_of(int i, int idx) { int s = PINFO[i].steps; return s <= 1 ? 0.f : (float)idx / (float)(s - 1); }
+
+static void copy_str(char *dst, const char *src, int max) {
+    int k = 0;
+    while (src && src[k] && k < max - 1) { dst[k] = src[k]; k++; }
+    dst[k] = 0;
+}
+
+static void load_edit_fields(Plugin *p) {
+    const CustomPad *c = &p->custom_pending[p->edit_pad];
+    p->val[P_EDIT_PAD] = norm_of(P_EDIT_PAD, p->edit_pad);
+    p->val[P_EDIT_ROOT] = norm_of(P_EDIT_ROOT, c->root % 12);
+    p->val[P_EDIT_TYPE] = norm_of(P_EDIT_TYPE, c->valid ? c->quality + 1 : 0);
+    p->val[P_EDIT_BASS] = norm_of(P_EDIT_BASS, c->bass == 255 ? 0 : c->bass % 12 + 1);
+    p->val[P_EDIT_INV] = norm_of(P_EDIT_INV, c->inv);
+    p->val[P_EDIT_OCT] = norm_of(P_EDIT_OCT, c->oct + 2);
+}
+
+static void sync_layout(Plugin *p) {
+    LayoutParams *lp = &p->lp_pending;
+    lp->mode = idx_of(p, P_MODE);
+    lp->song = idx_of(p, P_SONG);
+    lp->section = idx_of(p, P_SECTION);
+    lp->key = idx_of(p, P_KEY);
+    lp->scale = idx_of(p, P_SCALE);
+    lp->transpose = idx_of(p, P_TRANSPOSE) - 12;
+    lp->voicing = idx_of(p, P_VOICING);
+    lp->inversion = idx_of(p, P_INVERSION);
+    lp->octave = idx_of(p, P_OCTAVE) - 2;
+    lp->voice_lead = idx_of(p, P_VL);
+    lp->imp = p->imp;
+    lp->nimp = p->nimp;
+    if (idx_of(p, P_IMP_PADS) && p->nimp > 0) lp->mode = VC_MODE_IMPORT;
+    vc_build_pads(lp, p->custom_pending, p->ui_pads);
+    p->gen++;
+}
+
+/* Screen refresh. Never call the host from here: this runs on the audio thread (pad hits, automation), and a
+ * host that redraws inside that call stalls the audio for every track. Just raise a flag; a background thread
+ * (refresh_loop) tells the host at most every 40 ms. */
+static void refresh_host(Plugin *p) {
+    /* From the screen or the host's UI thread: tell the host right away, like any plugin (the MPC may ignore
+     * requests from other threads, which froze the screen and one-tap buttons). From the audio thread (pad hits,
+     * automation): only raise a flag for the background helper, so the audio is never held up. */
+    if (p->opened && p->host && !(p->have_audio_thread && pthread_equal(pthread_self(), p->audio_thread))) {
+        p->refresh_req = 0;
+        p->host(&p->fx, audioMasterUpdateDisplay, 0, 0, 0, 0.f);
+    } else p->refresh_req = 1;
+}
+
+static double mono_seconds(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return (double)ts.tv_sec + ts.tv_nsec * 1e-9;
+}
+
+typedef int (*pthread_create_fn)(pthread_t *, const pthread_attr_t *, void *(*)(void *), void *);
+typedef int (*pthread_join_fn)(pthread_t, void **);
+
+static void *refresh_loop(void *arg) {
+    Plugin *p = (Plugin *)arg;
+    while (!p->refresh_quit) {
+        struct timespec ts = {0, 40 * 1000000L};
+        nanosleep(&ts, 0);
+        if (p->refresh_req && !p->refresh_quit) {
+            p->refresh_req = 0;
+            if (p->host) p->host(&p->fx, audioMasterUpdateDisplay, 0, 0, 0, 0.f);
+        }
+    }
+    return 0;
+}
+
+static void start_refresh_thread(Plugin *p) {
+    /* looked up at runtime: the host process always has threads, and this keeps the link free of libpthread */
+    pthread_create_fn create = (pthread_create_fn)dlsym(RTLD_DEFAULT, "pthread_create");
+    if (create && create(&p->refresh_thread, 0, refresh_loop, p) == 0) p->refresh_running = 1;
+}
+
+static void stop_refresh_thread(Plugin *p) {
+    if (!p->refresh_running) return;
+    p->refresh_quit = 1;
+    pthread_join_fn join = (pthread_join_fn)dlsym(RTLD_DEFAULT, "pthread_join");
+    if (join) join(p->refresh_thread, 0);
+    else { struct timespec ts = {0, 100 * 1000000L}; nanosleep(&ts, 0); } /* let the loop see refresh_quit */
+    p->refresh_running = 0;
+}
+
+/* pattern: 0 = off, 1..N = presets, N+1 = custom (the 16 Step parameters) */
+static char shown_step(const Plugin *p, int k) {
+    int pat = idx_of(p, P_PATTERN);
+    if (pat >= 1 && pat <= EN_NUM_PATTERNS) return EN_PATTERNS[pat - 1].steps[k];
+    return EN_STEP_CHARS[idx_of(p, P_STEP0 + k)];
+}
+
+static void apply_pattern(Plugin *p) {
+    Engine *e = p->eng;
+    for (int k = 0; k < EN_STEPS; k++) e->pat[k] = shown_step(p, k);
+    e->pattern_on = idx_of(p, P_PATTERN) != 0 || e->riff != 0; /* a riff plays on the same grid */
+}
+
+static void apply_out_mode(Plugin *p, int mode) {
+    Engine *e = p->eng;
+    if (mode == p->out_mode) return;
+    if (p->out_mode != OUT_OFF) { e->midi_out_flush = 1; p->flush_routes = p->out_mode; } /* silence the old routes */
+    if (mode & OUT_PORT) vc_port_open(&p->port, "Velvet Chords", "Velvet Chords Out");
+    else if (vc_port_is_open(&p->port) && !(p->flush_routes & OUT_PORT)) vc_port_close(&p->port);
+    p->out_mode = mode;
+    e->midi_out = mode != OUT_OFF;
+}
+
+/* move a stepped parameter one step (prev/next buttons on the screen) */
+static void set_param(Plugin *p, int i, float v, int from_host);
+static void step_param(Plugin *p, int i, int dir, int count) {
+    if (count < 1) count = 1;
+    int x = idx_of(p, i) + dir;
+    if (x < 0) x = count - 1;
+    if (x >= count) x = 0;
+    set_param(p, i, norm_of(i, x), 0);
+}
+
+/* Presets: 0 = Manual (nothing changes), 1..N = VC_PRESETS. Only performance settings are set; the chords, key,
+ * scale, song, custom pads and the Tools settings stay as they are. */
+static void apply_preset(Plugin *p, int x) {
+    if (x < 1 || x > VC_NUM_PRESETS) return;
+    const VcPreset *s = &VC_PRESETS[x - 1];
+    set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0);
+    set_param(p, P_TONE, s->tone, 0);
+    set_param(p, P_RELEASE, s->release, 0);
+    set_param(p, P_VOLUME, s->volume, 0);
+    set_param(p, P_VOICING, norm_of(P_VOICING, s->voicing), 0);
+    set_param(p, P_INVERSION, norm_of(P_INVERSION, s->inversion), 0);
+    set_param(p, P_OCTAVE, norm_of(P_OCTAVE, s->octave + 2), 0);
+    set_param(p, P_VL, norm_of(P_VL, s->voice_lead), 0);
+    set_param(p, P_STRUM, s->strum_ms / 150.f, 0);
+    set_param(p, P_STRUM_DIR, norm_of(P_STRUM_DIR, s->strum_dir), 0);
+    set_param(p, P_ARP, norm_of(P_ARP, s->arp), 0);
+    set_param(p, P_ARP_RATE, norm_of(P_ARP_RATE, s->arp_rate), 0);
+    set_param(p, P_ARP_OCT, norm_of(P_ARP_OCT, s->arp_oct - 1), 0);
+    set_param(p, P_ARP2, 0.f, 0); /* a preset sets the arpeggio itself: the extra lanes go off */
+    set_param(p, P_ARP3, 0.f, 0);
+    set_param(p, P_ARP4, 0.f, 0);
+    set_param(p, P_VEL, norm_of(P_VEL, s->vel), 0);
+    set_param(p, P_PATTERN, norm_of(P_PATTERN, s->pattern), 0);
+    set_param(p, P_PAT_RATE, norm_of(P_PAT_RATE, s->pat_rate), 0);
+    set_param(p, P_SWING, s->swing, 0);
+    set_param(p, P_GATE, (s->gate - 0.1f) / 0.9f, 0);
+    set_param(p, P_SMART, norm_of(P_SMART, s->smart), 0);
+    set_param(p, P_SMART_MODE, norm_of(P_SMART_MODE, s->smart_mode), 0);
+    set_param(p, P_SMART_OCT, norm_of(P_SMART_OCT, s->smart_oct + 2), 0);
+    set_param(p, P_RIFF, norm_of(P_RIFF, s->melody), 0);
+}
+
+/* riffs: 0 = Off, 1..6 = the riff in slot; the 16 steps shown are the slot chosen in Riff slot */
+static void load_riff_fields(Plugin *p) {
+    for (int k = 0; k < EN_STEPS; k++) {
+        int x = p->eng->rif[p->riff_sel][k];
+        p->val[P_RIFF0 + k] = norm_of(P_RIFF0 + k, x == RIFF_REST ? 0 : x + 13);
+    }
+}
+
+/* the Edit note interval shows the selected note of the edited pad (0 = none / whole chord) */
+static void load_note_field(Plugin *p) {
+    const CustomPad *c = &p->custom_pending[p->edit_pad];
+    int v = 0;
+    if (p->note_sel > 0 && p->note_sel < c->nnotes) v = c->notes[p->note_sel] + 13;
+    p->val[P_NOTE_IV] = norm_of(P_NOTE_IV, v);
+}
+
+/* the note list starts from the chord as named, the first time a note is edited */
+static void notes_from_chord(CustomPad *c) {
+    if (!c->valid || c->quality >= VC_NUM_QUALITIES) return;
+    ChordSpec s;
+    memset(&s, 0, sizeof(s));
+    s.root = c->root % 12;
+    s.quality = c->quality;
+    s.bass = -1;
+    int iv[VC_MAX_IV], n = vc_chord_intervals(&s, iv);
+    if (n > VC_MAX_IV) n = VC_MAX_IV;
+    c->nnotes = (unsigned char)n;
+    for (int i = 0; i < n; i++) c->notes[i] = (signed char)iv[i];
+}
+
+/* Edit note interval: sets, adds or removes the selected note (0 = Remove; 1..37 = -12..+24 semitones) */
+static void set_note_interval(Plugin *p, int x) {
+    if (p->note_sel <= 0) return; /* the whole chord is edited with Edit type / root / bass */
+    CustomPad *c = &p->custom_pending[p->edit_pad];
+    if (c->nnotes < 2) notes_from_chord(c);
+    int s = p->note_sel;
+    if (s < c->nnotes) {
+        if (x == 0) { /* remove: the notes above move down */
+            for (int i = s; i + 1 < c->nnotes; i++) c->notes[i] = c->notes[i + 1];
+            c->nnotes--;
+        } else c->notes[s] = (signed char)(x - 13);
+    } else if (s == c->nnotes && x != 0 && c->nnotes < VC_MAX_IV) {
+        c->notes[c->nnotes++] = (signed char)(x - 13); /* the next free slot */
+    }
+    if (c->nnotes < 2) c->nnotes = 0; /* only the root is left: back to the named chord */
+    p->val[P_MODE] = norm_of(P_MODE, VC_MODE_CUSTOM); /* edits are heard in Custom mode */
+    load_note_field(p);
+    sync_layout(p);
+}
+
+/* Shift keys (MIDI notes in the octave below the pads), applied on the host thread after each block */
+static void apply_shift(Plugin *p) {
+    Engine *e = p->eng;
+    for (int a = 0; a < SHIFT_COUNT; a++) {
+        while (e->shift_pending[a] > 0) {
+            e->shift_pending[a]--;
+            if (a == SHIFT_KEY_DOWN) step_param(p, P_KEY, -1, 12);
+            else if (a == SHIFT_KEY_UP) step_param(p, P_KEY, 1, 12);
+            else if (a == SHIFT_SCALE_PREV) step_param(p, P_SCALE, -1, VC_NUM_SCALES);
+            else if (a == SHIFT_SCALE_NEXT) step_param(p, P_SCALE, 1, VC_NUM_SCALES);
+            else step_param(p, P_INVERSION, 1, 4);
+            refresh_host(p);
+        }
+    }
+}
+
+static void build_local(const Plugin *p, PadChord *pads, Voicing *v) {
+    vc_build_pads(&p->lp_pending, p->custom_pending, pads);
+    vc_voice_pads(&p->lp_pending, pads, v);
+}
+
+static void do_copy_to_custom(Plugin *p) {
+    static PadChord pads[VC_PADS];
+    static Voicing v[VC_PADS];
+    build_local(p, pads, v);
+    int addOct = 0;
+    for (int i = 0; i < VC_PADS; i++) {
+        CustomPad *c = &p->custom_pending[i];
+        memset(c, 0, sizeof(*c));
+        c->bass = 255;
+        if (!pads[i].valid || pads[i].spec.quality < 0) continue; /* scale-stacked chords without a name are skipped */
+        c->valid = 1;
+        c->root = (unsigned char)pads[i].spec.root;
+        c->quality = (unsigned char)pads[i].spec.quality;
+        c->bass = pads[i].spec.bass < 0 ? 255 : (unsigned char)pads[i].spec.bass;
+        c->oct = (signed char)(pads[i].oct + addOct);
+        c->inv = (signed char)pads[i].inv;
+    }
+    p->val[P_MODE] = norm_of(P_MODE, VC_MODE_CUSTOM);
+    load_edit_fields(p);
+    sync_layout(p);
+}
+
+static const char *export_dir(void) {
+    const char *d = getenv("VC_EXPORT_DIR");
+    if (d && *d) return d;
+    /* MPC OS internal drive (where MPC.settings lives); falls back to /sdcard like the plugin itself.
+     * mkdir+errno instead of stat(): stat() binds to GLIBC_2.33 on new toolchains. */
+    static const char *internal = "/media/az01-internal/Velvet Chords";
+    if (mkdir(internal, 0775) == 0 || errno == EEXIST) return internal;
+    return "/sdcard/Velvet Chords";
+}
+
+static const char *import_dir(void) {
+    static char d[300];
+    snprintf(d, sizeof(d), "%s/Import", export_dir());
+    return d;
+}
+
+static int ends_with_mid(const char *n) {
+    size_t l = strlen(n);
+    const char *e = l >= 4 ? n + l - 4 : "";
+    const char *e5 = l >= 5 ? n + l - 5 : "";
+    return (!strcmp(e, ".mid") || !strcmp(e, ".MID") || !strcmp(e, ".Mid") || !strcmp(e5, ".midi") || !strcmp(e5, ".MIDI"));
+}
+
+static void scan_import_files(Plugin *p) {
+    mkdir(export_dir(), 0775);
+    mkdir(import_dir(), 0775);
+    p->nfiles = 0;
+    DIR *d = opendir(import_dir());
+    if (!d) return;
+    struct dirent *de;
+    while ((de = readdir(d)) && p->nfiles < 64) {
+        if (de->d_name[0] == '.' || !ends_with_mid(de->d_name) || strlen(de->d_name) >= 64) continue;
+        copy_str(p->imp_files[p->nfiles++], de->d_name, 64);
+    }
+    closedir(d);
+    for (int i = 1; i < p->nfiles; i++) { /* alphabetical */
+        char t[64]; copy_str(t, p->imp_files[i], 64);
+        int j = i - 1;
+        while (j >= 0 && strcmp(p->imp_files[j], t) > 0) { copy_str(p->imp_files[j + 1], p->imp_files[j], 64); j--; }
+        copy_str(p->imp_files[j + 1], t, 64);
+    }
+}
+
+static void do_import(Plugin *p) {
+    scan_import_files(p);
+    int i = idx_of(p, P_IMP_FILE);
+    if (p->nfiles == 0) { snprintf(p->imp_status, sizeof(p->imp_status), "No .mid files in Velvet Chords/Import"); return; }
+    if (i >= p->nfiles) i = p->nfiles - 1;
+    char path[400], err[96];
+    snprintf(path, sizeof(path), "%s/%s", import_dir(), p->imp_files[i]);
+    static ImportChord tmp[VC_PADS];
+    int n = vc_midi_import(path, tmp, VC_PADS, err, sizeof(err));
+    if (n < 0) { snprintf(p->imp_status, sizeof(p->imp_status), "%s", err); return; }
+    memcpy(p->imp, tmp, sizeof(ImportChord) * (size_t)n);
+    p->nimp = n;
+    snprintf(p->imp_status, sizeof(p->imp_status), "Loaded %d chord%s from %s", n, n == 1 ? "" : "s", p->imp_files[i]);
+    p->val[P_IMP_PADS] = 1.f; /* show them on the pads */
+    sync_layout(p);
+}
+
+static void do_export(Plugin *p, double hostTempo) {
+    static PadChord pads[VC_PADS];
+    static Voicing v[VC_PADS];
+    static MfChord ch[256];
+    char fname[160], path[512], text[700], title[160];
+    const char *dir = export_dir();
+    mkdir(dir, 0775);
+    LayoutParams *lp = &p->lp_pending;
+    int ok = 0, n = 0;
+    build_local(p, pads, v);
+    if (lp->mode == VC_MODE_SONG && lp->song < VC_NUM_SONGS) {
+        const Song *s = &VC_SONGS[lp->song];
+        int sec = vc_song_section_index(lp, 0);
+        if (sec >= 0) {
+            n = vc_section_chords(s, sec, lp, ch, 256);
+            snprintf(title, sizeof(title), "%s - %s - %s%s", s->artist, s->title, s->sections[sec].name, lp->transpose ? " (transposed)" : "");
+            vc_safe_filename(title, fname, sizeof(fname));
+            vc_provenance_text(s, lp, text, sizeof(text));
+            double bpm = s->bpm > 0 ? s->bpm : hostTempo;
+            snprintf(path, sizeof(path), "%s/%s.mid", dir, fname);
+            ok = vc_midi_write(path, title, text, ch, n, bpm, s->ts_num, s->ts_den);
+            int pn = vc_bank_chords(pads, v, 0, ch, 16);
+            snprintf(path, sizeof(path), "%s/%s.progression", dir, fname);
+            ok = ok && vc_progression_write(path, title, vc_pc_name(s->key_root + lp->transpose, vc_song_flats(s, lp->transpose)), ch, pn);
+        }
+    } else {
+        Engine *e = p->eng;
+        int bank = e->last_pad >= 0 ? e->last_pad / 16 : 0;
+        snprintf(title, sizeof(title), "Velvet Chords - %s - %s %s - Bank %c", VC_MODE_NAMES[lp->mode], vc_pc_name(lp->key, 0),
+                 VC_SCALES[lp->scale].name, 'A' + bank);
+        vc_safe_filename(title, fname, sizeof(fname));
+        n = vc_bank_chords(pads, v, bank, ch, 16);
+        snprintf(path, sizeof(path), "%s/%s.mid", dir, fname);
+        ok = n > 0 && vc_midi_write(path, title, "Velvet Chords pad bank, one chord per bar. Original/stylistic chords, not song data.", ch, n, hostTempo, 4, 4);
+        snprintf(path, sizeof(path), "%s/%s.progression", dir, fname);
+        ok = ok && vc_progression_write(path, title, vc_pc_name(lp->key, 0), ch, n);
+    }
+    if (ok) snprintf(p->export_msg, sizeof(p->export_msg), "Saved %d chords", n);
+    else snprintf(p->export_msg, sizeof(p->export_msg), "Save failed: %s", dir);
+}
+
+enum { kVstPpqPosValid = 1 << 9 };
+static double host_tempo_pos(Plugin *p, double *ppq, int *playing) {
+    if (ppq) *ppq = 0.0;
+    if (playing) *playing = 0;
+    if (!p->host) return 90.0;
+    VstTimeInfo *ti = (VstTimeInfo *)p->host(&p->fx, audioMasterGetTime, 0, kVstTempoValid | kVstPpqPosValid, 0, 0.f);
+    if (!ti) return 90.0;
+    if (ppq && (ti->flags & kVstPpqPosValid)) *ppq = ti->ppqPos;
+    if (playing) *playing = (ti->flags & kVstTransportPlaying) && (ti->flags & kVstPpqPosValid) ? 1 : 0;
+    if ((ti->flags & kVstTempoValid) && ti->tempo > 20.0 && ti->tempo < 400.0) return ti->tempo;
+    return 90.0;
+}
+static double host_tempo(Plugin *p) { return host_tempo_pos(p, 0, 0); }
+
+static void set_param(Plugin *p, int i, float v, int from_host) {
+    if (i < 0 || i >= NUM_PARAMS) return;
+    if (v < 0.f) v = 0.f;
+    if (v > 1.f) v = 1.f;
+    Engine *e = p->eng;
+    if (PINFO[i].trigger) {
+        /* a tap counts whether the host sends 1 again, or flips its cached 1 back to 0 (hosts that didn't re-read
+         * our reset); a 0 right after a 1 is the release of the same tap and is ignored */
+        float prev = p->trig_last[i];
+        p->trig_last[i] = v;
+        int press = v >= 0.5f;
+        if (!press && prev >= 0.5f && mono_seconds() - p->trig_time[i] > 0.25) press = 1;
+        if (press) p->trig_time[i] = mono_seconds();
+        if (press) {
+            if (i == P_LEARN) { e->learn = 1; e->learn_all = 0; p->val[i] = 1.f; return; }
+            if (i == P_LEARN_ALL) {
+                memset(e->pad_map, -1, sizeof(e->pad_map));
+                e->map_set = 0; e->learn = 0; e->learn_all = 1;
+                p->val[i] = 0.f;
+                refresh_host(p);
+                return;
+            }
+            if (i == P_COPY) do_copy_to_custom(p);
+            if (i == P_EXPORT) do_export(p, host_tempo(p));
+            if (i == P_SONG_PREV || i == P_SONG_NEXT) {
+                step_param(p, P_SONG, i == P_SONG_NEXT ? 1 : -1, VC_NUM_SONGS);
+                set_param(p, P_SECTION, 0.f, 0);
+            }
+            if (i == P_SEC_PREV || i == P_SEC_NEXT) {
+                int n = VC_SONGS[idx_of(p, P_SONG)].nsections;
+                int cur = idx_of(p, P_SECTION);
+                if (cur >= n) cur = n - 1;
+                cur += (i == P_SEC_NEXT) ? 1 : -1;
+                if (cur < 0) cur = n - 1;
+                if (cur >= n) cur = 0;
+                set_param(p, P_SECTION, norm_of(P_SECTION, cur), 0);
+            }
+            if (i == P_SCALE_PREV || i == P_SCALE_NEXT) step_param(p, P_SCALE, i == P_SCALE_NEXT ? 1 : -1, VC_NUM_SCALES);
+            if (i == P_PAT_PREV || i == P_PAT_NEXT) step_param(p, P_PATTERN, i == P_PAT_NEXT ? 1 : -1, EN_NUM_PATTERNS + 2);
+            if (i == P_IMP_PREV || i == P_IMP_NEXT) {
+                scan_import_files(p);
+                if (p->nfiles > 0) step_param(p, P_IMP_FILE, i == P_IMP_NEXT ? 1 : -1, p->nfiles);
+            }
+            if (i == P_IMP_LOAD) do_import(p);
+            if (i == P_TYPE_PREV || i == P_TYPE_NEXT) step_param(p, P_EDIT_TYPE, i == P_TYPE_NEXT ? 1 : -1, VC_NUM_QUALITIES + 1);
+            if (i == P_EPAD_PREV || i == P_EPAD_NEXT) {
+                step_param(p, P_EDIT_PAD, i == P_EPAD_NEXT ? 1 : -1, VC_PADS);
+                p->val[P_VIEW_BANK] = norm_of(P_VIEW_BANK, p->edit_pad / 16);
+            }
+            if (i == P_TYPE_PREV || i == P_TYPE_NEXT) { p->val[P_MODE] = norm_of(P_MODE, VC_MODE_CUSTOM); sync_layout(p); }
+            if (i == P_PRESET_PREV || i == P_PRESET_NEXT) step_param(p, P_PRESET, i == P_PRESET_NEXT ? 1 : -1, VC_NUM_PRESETS + 1);
+            if (i != P_COPY && i != P_EXPORT && i != P_LEARN) refresh_host(p);
+            if (i == P_IMP_LOAD) refresh_host(p);
+        }
+        p->val[i] = 0.f;
+        return;
+    }
+    if (is_display_only(i)) return;
+    if (i == P_ACTIVE) { /* tapping a pad on the screen auditions it */
+        p->val[i] = v;
+        int k = idx_of(p, i);
+        if (from_host && k > 0) p->audition_req = idx_of(p, P_VIEW_BANK) * 16 + k - 1;
+        return;
+    }
+    if (i == P_VIEW_BANK) { p->val[i] = v; p->val[P_ACTIVE] = 0.f; refresh_host(p); return; }
+    p->val[i] = v;
+    switch (i) {
+    case P_MODE: case P_SONG: case P_SECTION: case P_KEY: case P_SCALE: case P_TRANSPOSE:
+    case P_VOICING: case P_INVERSION: case P_OCTAVE: case P_VL:
+        /* picking a mode, song, section, key or scale shows that layout again (not the imported chords) */
+        if (i == P_MODE || i == P_SONG || i == P_SECTION || i == P_KEY || i == P_SCALE) p->val[P_IMP_PADS] = 0.f;
+        sync_layout(p);
+        if ((i == P_KEY || i == P_SCALE) && from_host && !idx_of(p, P_KEYSYNC)) { /* share with copies that follow */
+            g_vc_key.key = idx_of(p, P_KEY); g_vc_key.scale = idx_of(p, P_SCALE);
+            g_vc_key.source = e->instance_id; g_vc_key.version++;
+        }
+        break;
+    case P_STRUM: e->strum_ms = v * 150.f; break;
+    case P_STRUM_DIR: e->strum_dir = idx_of(p, i); break;
+    case P_ARP: case P_ARP2: case P_ARP3: case P_ARP4: e->lanes[lane_of(i, ARP_ORDER_IDS)].order = idx_of(p, i); break;
+    case P_ARP_RATE: case P_ARP2_RATE: case P_ARP3_RATE: case P_ARP4_RATE: e->lanes[lane_of(i, ARP_RATE_IDS)].rate = idx_of(p, i); break;
+    case P_ARP_OCT: case P_ARP2_OCT: case P_ARP3_OCT: case P_ARP4_OCT: e->lanes[lane_of(i, ARP_OCT_IDS)].oct = idx_of(p, i) + 1; break;
+    case P_ARP_TR: case P_ARP2_TR: case P_ARP3_TR: case P_ARP4_TR: e->lanes[lane_of(i, ARP_TR_IDS)].transpose = idx_of(p, i) - 12; break;
+    case P_VEL: e->vel_curve = idx_of(p, i); break;
+    case P_SOUND: e->synth.sound = idx_of(p, i); break;
+    case P_TONE: e->synth.tone = v; break;
+    case P_RELEASE: e->synth.release = v; break;
+    case P_VOLUME: e->synth.volume = v; break;
+    case P_PAD_BASE: e->pad_base = idx_of(p, i); break;
+    case P_MIDI_OUT: apply_out_mode(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
+    case P_MIDI_CH: e->out_channel = idx_of(p, i); break;
+    case P_PATTERN: apply_pattern(p); if (from_host) refresh_host(p); break;
+    case P_PAT_RATE: e->pat_rate = idx_of(p, i); break;
+    case P_SWING: e->swing = v; break;
+    case P_GATE: e->gate = 0.1f + 0.9f * v; break;
+    case P_PAT_SYNC: e->pat_sync = idx_of(p, i); break;
+    case P_SMART: e->smart = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_HOLD: e->hold = idx_of(p, i); break;
+    case P_REPEAT: e->repeat = idx_of(p, i); break;
+    case P_MELODY: e->mel_mode = idx_of(p, i); break;
+    case P_MEL_RATE: e->mel_rate = idx_of(p, i); break;
+    case P_KEYSYNC: e->dirty = 1; p->key_seen = 0; break; /* adopt the shared key at the next block */
+    case P_IMP_FILE: refresh_host(p); break;
+    case P_IMP_PADS: sync_layout(p); refresh_host(p); break;
+    case P_SMART_MODE: e->smart_mode = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_SMART_OCT: e->smart_oct = idx_of(p, i) - 2; e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_PRESET: apply_preset(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
+    case P_SHIFT: e->shift_keys = idx_of(p, i); break;
+    case P_RIFF: e->riff = idx_of(p, i); apply_pattern(p); if (from_host) refresh_host(p); break;
+    case P_RIFF_SLOT: p->riff_sel = idx_of(p, i); load_riff_fields(p); if (from_host) refresh_host(p); break;
+    case P_NOTE_SEL: p->note_sel = idx_of(p, i); load_note_field(p); if (from_host) refresh_host(p); break;
+    case P_NOTE_IV: set_note_interval(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
+    case P_EDIT_FOLLOW: e->edit_follow = idx_of(p, i); break;
+    default:
+        if (i >= P_RIFF0 && i <= P_RIFF_END) { /* a riff step: a rest, or an offset from the chord root */
+            int x = idx_of(p, i);
+            p->eng->rif[p->riff_sel][i - P_RIFF0] = (signed char)(x == 0 ? RIFF_REST : x - 13);
+            break;
+        }
+        if (i >= P_STEP0 && i < P_STEP0 + EN_STEPS) {
+            int pat = idx_of(p, P_PATTERN);
+            if (from_host && pat != EN_NUM_PATTERNS + 1) { /* editing a preset (or Off) turns it into your Custom pattern */
+                char cur[EN_STEPS];
+                for (int k = 0; k < EN_STEPS; k++) cur[k] = shown_step(p, k);
+                float keep = v;
+                for (int k = 0; k < EN_STEPS; k++) p->val[P_STEP0 + k] = norm_of(P_STEP0 + k, en_step_index(cur[k]));
+                p->val[i] = keep;
+                p->val[P_PATTERN] = norm_of(P_PATTERN, EN_NUM_PATTERNS + 1);
+                refresh_host(p);
+            }
+            apply_pattern(p);
+        }
+        break;
+    case P_EDIT_PAD:
+        p->edit_pad = idx_of(p, i);
+        load_edit_fields(p);
+        if (from_host) refresh_host(p);
+        break;
+    case P_EDIT_ROOT: case P_EDIT_TYPE: case P_EDIT_BASS: case P_EDIT_INV: case P_EDIT_OCT: {
+        CustomPad *c = &p->custom_pending[p->edit_pad];
+        if (i == P_EDIT_ROOT || i == P_EDIT_TYPE || i == P_EDIT_BASS) { c->nnotes = 0; load_note_field(p); } /* a new chord replaces the note list */
+        int t = idx_of(p, P_EDIT_TYPE);
+        c->valid = t > 0;
+        c->quality = (unsigned char)(t > 0 ? t - 1 : 0);
+        c->root = (unsigned char)idx_of(p, P_EDIT_ROOT);
+        int b = idx_of(p, P_EDIT_BASS);
+        c->bass = b == 0 ? 255 : (unsigned char)(b - 1);
+        c->inv = (signed char)idx_of(p, P_EDIT_INV);
+        c->oct = (signed char)(idx_of(p, P_EDIT_OCT) - 2);
+        if (from_host) p->val[P_MODE] = norm_of(P_MODE, VC_MODE_CUSTOM); /* edits are heard in Custom mode */
+        sync_layout(p);
+        break;
+    }
+    }
+}
+
+/* ---------- display text ---------- */
+
+static int ui_flats(const Plugin *p) {
+    const LayoutParams *lp = &p->lp_pending;
+    return lp->mode == VC_MODE_SONG ? vc_song_flats(&VC_SONGS[lp->song], lp->transpose) : vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
+}
+
+/* what a smart note is, relative to the chord it follows */
+static const char *smart_degree(const Engine *e, int note) {
+    static const char *DEG[12] = {"root", "b9", "9th", "b3", "3rd", "11th", "#11", "5th", "b13", "6th", "b7", "7th"};
+    const SmartChord *s = &e->smart_src;
+    int pc = note % 12, in_chord = 0;
+    for (int i = 0; i < s->npcs; i++) if (s->pcs[i] == pc) in_chord = 1;
+    int iv = (pc - s->root + 12) % 12;
+    if (in_chord && iv == 3 && s->npcs >= 3) return "m3";
+    if (in_chord && iv == 8) return "#5";
+    if (in_chord && iv == 9 && s->npcs >= 4) { int has7 = 0; for (int i = 0; i < s->npcs; i++) if ((s->pcs[i] - s->root + 12) % 12 == 10 || (s->pcs[i] - s->root + 12) % 12 == 11) has7 = 1; if (!has7) return "6th"; return "13th"; }
+    return in_chord ? DEG[iv] : (iv == 2 ? "scale 9" : iv == 5 ? "scale 11" : iv == 9 ? "scale 13" : "scale");
+}
+
+static int getParameterValueInScale(const Plugin *p, int pc) {
+    const Scale *sc = &VC_SCALES[idx_of(p, P_SCALE)];
+    int key = idx_of(p, P_KEY);
+    for (int j = 0; j < sc->n; j++) if ((key + sc->iv[j]) % 12 == pc) return 1;
+    return 0;
+}
+
+static void pad_label(int idx, char *buf) { buf[0] = (char)('A' + idx / 16); buf[1] = (char)('0' + (idx % 16 + 1) / 10); buf[2] = (char)('0' + (idx % 16 + 1) % 10); buf[3] = 0; }
+
+static void param_display(Plugin *p, int i, char *out, int max) {
+    char b[160];
+    b[0] = 0;
+    int x = idx_of(p, i);
+    Engine *e = p->eng;
+    if (i >= P_RIFF0 && i <= P_RIFF_END) { /* riff step: Rest, or semitones from the chord root */
+        if (x == 0) copy_str(out, "Rest", max); else snprintf(out, (size_t)max, "%+d st", x - 13);
+        return;
+    }
+    const LayoutParams *lp = &p->lp_pending;
+    static const char *KEYS[12] = {"C", "C#/Db", "D", "D#/Eb", "E", "F", "F#/Gb", "G", "G#/Ab", "A", "A#/Bb", "B"};
+    static const char *INV[4] = {"Root", "1st", "2nd", "3rd"};
+    static const char *ONOFF[2] = {"Off", "On"};
+    static const char *SDIR[STRUM_COUNT] = {"Up", "Down", "Alternate"};
+    static const char *ARPS[ARP_COUNT] = {"Off", "Up", "Down", "Up-down", "Random", "Converge", "Diverge"};
+    static const char *RATES[RATE_COUNT] = {"1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"};
+    static const char *VELS[VEL_COUNT] = {"Linear", "Soft", "Hard", "Fixed"};
+    switch (i) {
+    case P_MODE: copy_str(b, VC_MODE_NAMES[x], sizeof(b)); break;
+    case P_SONG:
+        if (!strcmp(VC_SONGS[x].status, "original")) { /* "Title - original (style)" with the style before " (original" */
+            const char *g = VC_SONGS[x].genre, *cut = strstr(g, " (");
+            snprintf(b, sizeof(b), "%s - original (%.*s)", VC_SONGS[x].title, cut ? (int)(cut - g) : (int)strlen(g), g);
+        }
+        else snprintf(b, sizeof(b), "%s - %s (%d)", VC_SONGS[x].title, VC_SONGS[x].artist, VC_SONGS[x].year);
+        break;
+    case P_SECTION: {
+        const Song *s = &VC_SONGS[lp->song];
+        int si = vc_song_section_index(lp, 0);
+        if (si < 0) copy_str(b, "-", sizeof(b));
+        else snprintf(b, sizeof(b), "%s (%d/%d)", s->sections[si].name, si + 1, s->nsections);
+        break;
+    }
+    case P_KEY: copy_str(b, KEYS[x], sizeof(b)); break;
+    case P_SCALE: copy_str(b, VC_SCALES[x].name, sizeof(b)); break;
+    case P_TRANSPOSE: snprintf(b, sizeof(b), "%+d st", x - 12); break;
+    case P_VOICING: copy_str(b, VC_VOICE_NAMES[x], sizeof(b)); break;
+    case P_INVERSION: case P_EDIT_INV: copy_str(b, INV[x], sizeof(b)); break;
+    case P_OCTAVE: case P_EDIT_OCT: snprintf(b, sizeof(b), "%+d", x - 2); break;
+    case P_VL: case P_EDIT_FOLLOW: copy_str(b, ONOFF[x], sizeof(b)); break;
+    case P_MIDI_OUT: { static const char *M[4] = {"Off", "To MPC host", "Virtual port", "Host + port"}; copy_str(b, M[x], sizeof(b)); break; }
+    case P_MIDI_CH: snprintf(b, sizeof(b), "Ch %d", x + 1); break;
+    case P_PATTERN: copy_str(b, x == 0 ? "Off" : x <= EN_NUM_PATTERNS ? EN_PATTERNS[x - 1].name : "Custom", sizeof(b)); break;
+    case P_PAT_RATE: { static const char *PR[PRATE_COUNT] = {"1/8", "1/8T", "1/16", "1/16T", "1/32"}; copy_str(b, PR[x], sizeof(b)); break; }
+    case P_SWING: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
+    case P_GATE: snprintf(b, sizeof(b), "%d%%", (int)((0.1f + 0.9f * p->val[i]) * 100.f + 0.5f)); break;
+    case P_PAT_SYNC: copy_str(b, x ? "Follow MPC" : "Free", sizeof(b)); break;
+    case P_PAT_PREV: copy_str(b, "<", sizeof(b)); break;
+    case P_PAT_NEXT: copy_str(b, ">", sizeof(b)); break;
+    case P_SMART: { static const char *SM[SMART_COUNT] = {"Off", "Pads 9-16", "Follow other"}; copy_str(b, SM[x], sizeof(b)); break; }
+    case P_SMART_MODE: { static const char *SN[SMODE_COUNT] = {"Chord tones", "Scale", "Bass"}; copy_str(b, SN[x], sizeof(b)); break; }
+    case P_SMART_OCT: snprintf(b, sizeof(b), "%+d", x - 2); break;
+    case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;
+    case P_ARP_OCT: case P_ARP2_OCT: case P_ARP3_OCT: case P_ARP4_OCT: snprintf(b, sizeof(b), "%d oct", x + 1); break;
+    case P_ARP2: case P_ARP3: case P_ARP4: copy_str(b, ARPS[x], sizeof(b)); break;
+    case P_ARP2_RATE: case P_ARP3_RATE: case P_ARP4_RATE: copy_str(b, RATES[x], sizeof(b)); break;
+    case P_ARP_TR: case P_ARP2_TR: case P_ARP3_TR: case P_ARP4_TR: snprintf(b, sizeof(b), "%+d st", x - 12); break;
+    case P_SHIFT: copy_str(b, ONOFF[x], sizeof(b)); break;
+    case P_RIFF: copy_str(b, x == 0 ? "Off" : EN_RIFF_NAMES[x - 1], sizeof(b)); break;
+    case P_RIFF_SLOT: copy_str(b, EN_RIFF_NAMES[x], sizeof(b)); break;
+    case P_NOTE_SEL: if (x == 0) copy_str(b, "Whole chord", sizeof(b)); else snprintf(b, sizeof(b), "Note %d", x + 1); break;
+    case P_NOTE_IV: if (x == 0) copy_str(b, "Remove", sizeof(b)); else snprintf(b, sizeof(b), "%+d st", x - 13); break;
+    case P_HOLD: copy_str(b, x ? "On" : "Off", sizeof(b)); break;
+    case P_REPEAT: { static const char *R[REP_COUNT] = {"Off", "1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"}; copy_str(b, R[x], sizeof(b)); break; }
+    case P_MELODY: { static const char *M2[MEL_COUNT] = {"Off", "Simple", "Busy"}; copy_str(b, M2[x], sizeof(b)); break; }
+    case P_MEL_RATE: { static const char *M3[MRATE_COUNT] = {"1/8", "1/8T", "1/16"}; copy_str(b, M3[x], sizeof(b)); break; }
+    case P_KEYSYNC: copy_str(b, x ? "Follow other copy" : "Off", sizeof(b)); break;
+    case P_IMP_FILE: copy_str(b, p->nfiles ? p->imp_files[x < p->nfiles ? x : p->nfiles - 1] : "No .mid files in Velvet Chords/Import", sizeof(b)); break;
+    case P_IMP_PREV: copy_str(b, "<", sizeof(b)); break;
+    case P_IMP_NEXT: copy_str(b, ">", sizeof(b)); break;
+    case P_IMP_LOAD: copy_str(b, "Load chords", sizeof(b)); break;
+    case P_IMP_STATUS: copy_str(b, p->imp_status[0] ? p->imp_status : (p->nimp ? "Imported chords ready" : "Put .mid files in Velvet Chords/Import"), sizeof(b)); break;
+    case P_IMP_PADS: copy_str(b, x && p->nimp ? "Imported chords" : (x ? "Imported (none loaded)" : "Layout"), sizeof(b)); break;
+    case P_PORT_STATUS: copy_str(b, (p->out_mode & OUT_PORT) || vc_port_is_open(&p->port) ? p->port.status : "Virtual port off", sizeof(b)); break;
+    case P_STRUM: if (p->val[i] < 0.004f) copy_str(b, "Off", sizeof(b)); else snprintf(b, sizeof(b), "%d ms", (int)(p->val[i] * 150.f + 0.5f)); break;
+    case P_STRUM_DIR: copy_str(b, SDIR[x], sizeof(b)); break;
+    case P_ARP: copy_str(b, ARPS[x], sizeof(b)); break;
+    case P_ARP_RATE: copy_str(b, RATES[x], sizeof(b)); break;
+    case P_VEL: copy_str(b, VELS[x], sizeof(b)); break;
+    case P_SOUND: copy_str(b, SY_SOUND_NAMES[x], sizeof(b)); break;
+    case P_TONE: case P_RELEASE: case P_VOLUME: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
+    case P_PAD_BASE:
+        if (e->map_set) { copy_str(b, "Learned layout", sizeof(b)); break; }
+        { char nn[8]; x = e->pad_base; vc_note_name(x, 0, nn, sizeof(nn)); snprintf(b, sizeof(b), "%s (%d)", nn, x); }
+        break;
+    case P_LEARN: copy_str(b, e->learn ? "Hit pad 1 now" : "Press to learn", sizeof(b)); break;
+    case P_LEARN_ALL:
+        if (e->learn_all > 0) snprintf(b, sizeof(b), "Hit pad %d of 16", e->learn_all);
+        else copy_str(b, e->map_set ? "Pads learned" : "Learn all 16 pads", sizeof(b));
+        break;
+    case P_EDIT_PAD: pad_label(x, b); break;
+    case P_EDIT_ROOT: copy_str(b, KEYS[x], sizeof(b)); break;
+    case P_EDIT_TYPE:
+        if (x == 0) copy_str(b, "Empty", sizeof(b));
+        else snprintf(b, sizeof(b), "%s (%s)", VC_QUALITIES[x - 1].suffix[0] ? VC_QUALITIES[x - 1].suffix : "maj", VC_QUALITIES[x - 1].label);
+        break;
+    case P_EDIT_BASS: if (x == 0) copy_str(b, "Root", sizeof(b)); else snprintf(b, sizeof(b), "/%s", KEYS[x - 1]); break;
+    case P_COPY: copy_str(b, "Press to copy", sizeof(b)); break;
+    case P_EXPORT: copy_str(b, p->export_msg[0] ? p->export_msg : "Press to save", sizeof(b)); break;
+    case P_NOW: {
+        if (e->learn_all > 0) { snprintf(b, sizeof(b), "Learning: hit MPC pad %d of 16", e->learn_all); break; }
+        int k = e->last_pad;
+        if (k < 0 || k >= VC_PADS) {
+            if (e->last_note_in < 0) copy_str(b, "Play a pad", sizeof(b));
+            else if (e->map_set) snprintf(b, sizeof(b), "Note %d isn't one of the learned pads", e->last_note_in);
+            else snprintf(b, sizeof(b), "Note %d isn't a chord pad (Pad 1 note is %d)", e->last_note_in, e->pad_base);
+            break;
+        }
+        char lab[4];
+        pad_label(k, lab);
+        if (en_smart_index(e, k) >= 0) {
+            int note = e->smart_notes[en_smart_index(e, k)];
+            char nn[8];
+            vc_note_name(note, e->smart_src.flats, nn, sizeof(nn));
+            snprintf(b, sizeof(b), "%s %s: %s of %s", lab, nn, smart_degree(e, note), e->smart_src.name);
+            break;
+        }
+        if (!e->pads[k].valid) { snprintf(b, sizeof(b), "%s empty", lab); break; }
+        int n = e->pads[k].roman[0] ? snprintf(b, sizeof(b), "%s %s (%s):", lab, e->pads[k].name, e->pads[k].roman)
+                                     : snprintf(b, sizeof(b), "%s %s:", lab, e->pads[k].name);
+        int fl = lp->mode == VC_MODE_SONG ? vc_song_flats(&VC_SONGS[lp->song], lp->transpose) : vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
+        for (int j = 0; j < e->voicings[k].n && n < (int)sizeof(b) - 6; j++) {
+            char nn[8];
+            vc_note_name(e->voicings[k].notes[j], fl, nn, sizeof(nn));
+            n += snprintf(b + n, sizeof(b) - (size_t)n, " %s", nn);
+        }
+        break;
+    }
+    case P_VIEW_BANK: b[0] = (char)('A' + x); b[1] = 0; break;
+    case P_ACTIVE: if (x == 0) copy_str(b, "-", sizeof(b)); else { pad_label(idx_of(p, P_VIEW_BANK) * 16 + x - 1, b); } break;
+    case P_SONG_PREV: case P_SEC_PREV: case P_SCALE_PREV: case P_TYPE_PREV: case P_EPAD_PREV: copy_str(b, "<", sizeof(b)); break;
+    case P_SONG_NEXT: case P_SEC_NEXT: case P_SCALE_NEXT: case P_TYPE_NEXT: case P_EPAD_NEXT: copy_str(b, ">", sizeof(b)); break;
+    case P_INFO: {
+        if (lp->mode == VC_MODE_SONG) {
+            const Song *s = &VC_SONGS[lp->song];
+            if (!strcmp(s->status, "original")) snprintf(b, sizeof(b), "Original progression, %s, %d BPM", s->key, (int)(s->bpm + 0.5f));
+            else snprintf(b, sizeof(b), "%s, confidence %s, key %s", s->status, s->confidence, s->key);
+        } else {
+            const Scale *sc = &VC_SCALES[lp->scale];
+            int n = snprintf(b, sizeof(b), "Scale:");
+            int fl = vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
+            for (int j = 0; j < sc->n; j++) n += snprintf(b + n, sizeof(b) - (size_t)n, " %s", vc_pc_name(lp->key + sc->iv[j], fl));
+        }
+        break;
+    }
+    default:
+        if (i >= P_PADNAME0 && i < P_PADFUNC0 + 16 && en_smart_index(e, idx_of(p, P_VIEW_BANK) * 16 + (i - P_PADNAME0) % 16) >= 0) {
+            int k = (i - P_PADNAME0) % 16, isFunc = i >= P_PADFUNC0;
+            int si = en_smart_index(e, k), note = e->smart_notes[si];
+            if (!isFunc) vc_note_name(note, e->smart_src.flats, b, sizeof(b));
+            else copy_str(b, smart_degree(e, note), sizeof(b));
+        } else if (i >= P_PADNAME0 && i < P_PADFUNC0 + 16) {
+            int k = (i - P_PADNAME0) % 16, isFunc = i >= P_PADFUNC0;
+            const PadChord *pc = &p->ui_pads[idx_of(p, P_VIEW_BANK) * 16 + k];
+            if (!pc->valid) b[0] = 0; /* empty pad: blank key on screen */
+            else if (!isFunc) copy_str(b, pc->name, sizeof(b));
+            else if (pc->roman[0]) copy_str(b, pc->roman, sizeof(b));
+            else if (pc->spec.quality >= 0) copy_str(b, VC_QUALITIES[pc->spec.quality].label, sizeof(b));
+        } else if (i >= P_STEP0 && i < P_STEP0 + EN_STEPS) {
+            static const char *ST[7] = {"Rest", "Chord", "Accent", "Bass", "Upper", "Up acc", "Tie"};
+            copy_str(b, ST[en_step_index(shown_step(p, i - P_STEP0))], sizeof(b));
+        } else if (i >= P_SCALENOTE0 && i < P_SCALENOTE0 + 12) {
+            copy_str(b, getParameterValueInScale(p, i - P_SCALENOTE0) ? "In scale" : "-", sizeof(b));
+        }
+        break;
+    }
+    copy_str(out, b, max);
+}
+
+/* ---------- chunk (saved inside the MPC project) ---------- */
+
+#define IMP_REC 23
+static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS; }
+
+static void w32(unsigned char *b, int *k, uint32_t v) { b[(*k)++] = v & 255; b[(*k)++] = (v >> 8) & 255; b[(*k)++] = (v >> 16) & 255; b[(*k)++] = v >> 24; }
+static uint32_t r32(const unsigned char *b, int *k) { uint32_t v = b[*k] | (b[*k + 1] << 8) | (b[*k + 2] << 16) | ((uint32_t)b[*k + 3] << 24); *k += 4; return v; }
+
+static int get_chunk(Plugin *p, void **data) {
+    int n = chunk_size(), k = 0;
+    if (!p->chunk) p->chunk = (unsigned char *)malloc((size_t)n);
+    if (!p->chunk) return 0;
+    unsigned char *b = p->chunk;
+    memcpy(b, "VLVC", 4); k = 4;
+    w32(b, &k, CHUNK_VERSION);
+    w32(b, &k, NUM_PARAMS);
+    for (int i = 0; i < NUM_PARAMS; i++) { union { float f; uint32_t u; } u; u.f = p->val[i]; w32(b, &k, u.u); }
+    w32(b, &k, VC_PADS);
+    for (int i = 0; i < VC_PADS; i++) {
+        const CustomPad *c = &p->custom_pending[i];
+        b[k++] = c->valid; b[k++] = c->root; b[k++] = c->quality; b[k++] = c->bass;
+        b[k++] = (unsigned char)c->inv; b[k++] = (unsigned char)c->oct;
+    }
+    w32(b, &k, (uint32_t)p->edit_pad);
+    w32(b, &k, (uint32_t)p->nimp);
+    for (int i = 0; i < p->nimp; i++) {
+        const ImportChord *ic = &p->imp[i];
+        b[k++] = (unsigned char)ic->spec.root; b[k++] = (unsigned char)(signed char)ic->spec.quality; b[k++] = (unsigned char)(signed char)ic->spec.bass;
+        b[k++] = (unsigned char)ic->spec.ncustom;
+        for (int j = 0; j < 8; j++) b[k++] = (unsigned char)ic->spec.custom[j];
+        b[k++] = (unsigned char)ic->n;
+        for (int j = 0; j < 10; j++) b[k++] = j < ic->n ? ic->notes[j] : 0;
+    }
+    w32(b, &k, (uint32_t)p->eng->map_set);
+    for (int n = 0; n < 128; n++) b[k++] = (unsigned char)p->eng->pad_map[n];
+    for (int i = 0; i < VC_PADS; i++) { /* version 4: note lists */
+        const CustomPad *c = &p->custom_pending[i];
+        b[k++] = c->nnotes;
+        for (int j = 0; j < VC_MAX_IV; j++) b[k++] = (unsigned char)c->notes[j];
+    }
+    for (int s = 0; s < VC_RIFFS; s++)
+        for (int j = 0; j < EN_STEPS; j++) b[k++] = (unsigned char)p->eng->rif[s][j];
+    *data = b;
+    return k;
+}
+
+static int set_chunk(Plugin *p, const void *data, int size) {
+    const unsigned char *b = (const unsigned char *)data;
+    if (!b || size < 16 || memcmp(b, "VLVC", 4)) return 0;
+    int k = 4;
+    uint32_t ver = r32(b, &k), np = r32(b, &k);
+    if (ver < 1 || ver > 4 || np > 512 || size < (int)(12 + np * 4 + 4)) return 0;
+    for (uint32_t i = 0; i < np; i++) {
+        union { float f; uint32_t u; } u;
+        u.u = r32(b, &k);
+        if (i == P_PRESET) p->val[i] = u.f; /* shown only: the parameters saved with it already hold the preset's values */
+        else if (i >= P_RIFF0 && i <= P_RIFF_END) p->val[i] = u.f; /* riff steps are stored as data below */
+        else if (i == P_NOTE_IV) p->val[i] = u.f;                  /* the note list is stored as data below */
+        else if (i < NUM_PARAMS && !PINFO[i].trigger) set_param(p, (int)i, u.f, 0);
+    }
+    uint32_t npads = r32(b, &k);
+    if (npads > VC_PADS || size < k + (int)npads * 6) return 0;
+    for (uint32_t i = 0; i < npads; i++) {
+        CustomPad *c = &p->custom_pending[i];
+        c->valid = b[k++] ? 1 : 0; c->root = b[k++] % 12; c->quality = b[k++]; c->bass = b[k++];
+        c->inv = (signed char)b[k++]; c->oct = (signed char)b[k++];
+        if (c->quality >= VC_NUM_QUALITIES) c->valid = 0;
+        if (c->bass != 255) c->bass %= 12;
+        if (c->inv < 0 || c->inv > 3) c->inv = 0;
+        if (c->oct < -2 || c->oct > 2) c->oct = 0;
+    }
+    if (size >= k + 4) { p->edit_pad = (int)r32(b, &k); if (p->edit_pad < 0 || p->edit_pad >= VC_PADS) p->edit_pad = 0; }
+    p->nimp = 0;
+    if (ver >= 2 && size >= k + 4) {
+        uint32_t ni = r32(b, &k);
+        if (ni > VC_PADS || size < k + (int)ni * IMP_REC) ni = 0;
+        for (uint32_t i = 0; i < ni; i++) {
+            ImportChord *ic = &p->imp[i];
+            memset(ic, 0, sizeof(*ic));
+            ic->spec.root = b[k++] % 12; ic->spec.quality = (signed char)b[k++]; ic->spec.bass = (signed char)b[k++];
+            ic->spec.ncustom = b[k++] % 9;
+            for (int j = 0; j < 8; j++) ic->spec.custom[j] = (signed char)b[k++];
+            ic->n = b[k++]; if (ic->n > 10) ic->n = 10;
+            for (int j = 0; j < 10; j++) { unsigned char v = b[k++]; if (j < ic->n) ic->notes[j] = v & 127; }
+            if (ic->spec.quality >= VC_NUM_QUALITIES || ic->spec.quality < -1) ic->spec.quality = -1;
+            if (ic->spec.bass > 11 || ic->spec.bass < -1) ic->spec.bass = -1;
+        }
+        p->nimp = (int)ni;
+    }
+    if (ver >= 3 && size >= k + 4 + 128) {
+        int ms = (int)r32(b, &k);
+        int ok = 1;
+        signed char m[128];
+        for (int n = 0; n < 128; n++) { m[n] = (signed char)b[k++]; if (m[n] < -1 || m[n] > 15) ok = 0; }
+        if (ok) { memcpy(p->eng->pad_map, m, 128); p->eng->map_set = ms ? 1 : 0; p->eng->learn_all = 0; }
+    }
+    if (ver >= 4 && size >= k + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS) {
+        for (int i = 0; i < VC_PADS; i++) {
+            CustomPad *c = &p->custom_pending[i];
+            c->nnotes = b[k++];
+            for (int j = 0; j < VC_MAX_IV; j++) c->notes[j] = (signed char)b[k++];
+            if (c->nnotes > VC_MAX_IV) c->nnotes = 0;
+            for (int j = 1; j < c->nnotes; j++) if (c->notes[j] < RIFF_MIN || c->notes[j] > RIFF_MAX) c->nnotes = 0;
+            if (c->nnotes < 2) c->nnotes = 0;
+            if (c->nnotes) c->notes[0] = 0;
+        }
+        for (int s = 0; s < VC_RIFFS; s++)
+            for (int j = 0; j < EN_STEPS; j++) {
+                signed char v = (signed char)b[k++];
+                p->eng->rif[s][j] = (v == RIFF_REST || (v >= RIFF_MIN && v <= RIFF_MAX)) ? v : RIFF_REST;
+            }
+    }
+    load_riff_fields(p);
+    load_note_field(p);
+    load_edit_fields(p);
+    sync_layout(p);
+    return 1;
+}
+
+/* ---------- audio ---------- */
+
+static void ensure_scratch(Plugin *p, int n) {
+    if (n <= p->scratch_n) return;
+    free(p->scratchL); free(p->scratchR);
+    p->scratchL = (float *)calloc((size_t)n, sizeof(float));
+    p->scratchR = (float *)calloc((size_t)n, sizeof(float));
+    p->scratch_n = (p->scratchL && p->scratchR) ? n : 0;
+}
+
+static void apply_pending(Plugin *p) {
+    Engine *e = p->eng;
+    unsigned g = p->gen;
+    if (g == p->gen_applied) return;
+    e->lp = p->lp_pending;
+    memcpy(p->imp_engine, p->imp, sizeof(p->imp_engine));
+    e->lp.imp = p->imp_engine;
+    memcpy(e->custom, p->custom_pending, sizeof(e->custom));
+    p->gen_applied = g;
+    en_rebuild(e);
+}
+
+static void send_midi_out(Plugin *p) {
+    Engine *e = p->eng;
+    int routes = p->out_mode | p->flush_routes;
+    p->flush_routes = 0;
+    if (!(p->out_mode & OUT_PORT) && vc_port_is_open(&p->port) && !e->nout) vc_port_close(&p->port); /* after its flush */
+    if (!e->nout) return;
+    if ((routes & OUT_PORT) && vc_port_is_open(&p->port))
+        for (int i = 0; i < e->nout; i++) vc_port_send(&p->port, e->out[i].d);
+    if (!(routes & OUT_HOST) || !p->host) { e->nout = 0; return; }
+    int n = e->nout;
+    if (!p->outEvents) {
+        p->outEvents = (VstEvents *)calloc(1, sizeof(VstEvents) + sizeof(VstEvent *) * EN_MIDI_OUT);
+        if (!p->outEvents) { e->nout = 0; return; }
+    }
+    for (int i = 0; i < n; i++) {
+        VstMidiEvent *m = &p->outMidi[i];
+        memset(m, 0, sizeof(*m));
+        m->type = kVstMidiType;
+        m->byteSize = (int32_t)sizeof(VstMidiEvent);
+        m->deltaFrames = e->out[i].frame;
+        m->midiData[0] = (char)e->out[i].d[0];
+        m->midiData[1] = (char)e->out[i].d[1];
+        m->midiData[2] = (char)e->out[i].d[2];
+        p->outEvents->events[i] = (VstEvent *)m;
+    }
+    p->outEvents->numEvents = n;
+    p->host(&p->fx, audioMasterProcessEvents, 0, 0, p->outEvents, 0.f);
+    e->nout = 0;
+}
+
+static void render(Plugin *p, float **out, int n, int accumulate) {
+    Engine *e = p->eng;
+    p->audio_thread = pthread_self(); /* every block: the host may move audio between threads */
+    p->have_audio_thread = 1;
+    apply_pending(p);
+    e->tempo = host_tempo_pos(p, &e->ppq, &e->playing);
+    ensure_scratch(p, n); /* normally sized once in effSetBlockSize */
+    if (!p->scratch_n) {
+        if (!accumulate) { memset(out[0], 0, sizeof(float) * (size_t)n); memset(out[1], 0, sizeof(float) * (size_t)n); }
+        e->nin = 0;
+        return;
+    }
+    /* key sync: adopt the key and scale another copy published */
+    if (idx_of(p, P_KEYSYNC) && g_vc_key.version && g_vc_key.version != p->key_seen && g_vc_key.source != e->instance_id) {
+        p->key_seen = g_vc_key.version;
+        p->val[P_KEY] = norm_of(P_KEY, g_vc_key.key);
+        p->val[P_SCALE] = norm_of(P_SCALE, g_vc_key.scale);
+        sync_layout(p);
+        refresh_host(p);
+    }
+    /* screen audition: a tapped on-screen pad plays for ~0.9 s through the normal pad path */
+    int req = p->audition_req;
+    if (req >= 0) {
+        p->audition_req = -1;
+        if (p->audition_note >= 0) en_push_midi(e, 0, 0x80, (unsigned char)p->audition_note, 0);
+        int note = -1; /* the note that this pad sends, in the learned layout if there is one */
+        for (int n = 0; n < 128 && note < 0; n++) if (en_pad_index(e, n) == req) note = n;
+        if (note < 0) note = 128;
+        if (note <= 127) {
+            en_push_midi(e, 0, 0x90, (unsigned char)note, 100);
+            p->audition_note = note;
+            p->audition_left = (int)(e->sr * 0.9f);
+        }
+    } else if (p->audition_note >= 0) {
+        p->audition_left -= n;
+        if (p->audition_left <= 0) { en_push_midi(e, 0, 0x80, (unsigned char)p->audition_note, 0); p->audition_note = -1; }
+    }
+    en_process(e, p->scratchL, p->scratchR, n);
+    apply_shift(p);
+    if (e->events_changed && e->last_pad >= 0) { /* screen follows the played pad */
+        p->seen_pad = e->last_pad;
+        p->val[P_VIEW_BANK] = norm_of(P_VIEW_BANK, e->last_pad / 16);
+        p->val[P_ACTIVE] = norm_of(P_ACTIVE, e->last_pad % 16 + 1);
+        e->events_changed = 0;
+        refresh_host(p);
+    }
+    e->events_changed = 0;
+    if (e->smart_changed) { e->smart_changed = 0; if (e->smart != SMART_OFF) refresh_host(p); } /* smart labels follow the chord */
+    for (int k = 0; k < n; k++) {
+        if (accumulate) { out[0][k] += p->scratchL[k]; out[1][k] += p->scratchR[k]; }
+        else { out[0][k] = p->scratchL[k]; out[1][k] = p->scratchR[k]; }
+    }
+    if (idx_of(p, P_PAD_BASE) != e->pad_base) p->val[P_PAD_BASE] = norm_of(P_PAD_BASE, e->pad_base); /* after Learn */
+    if (e->edit_pad_request >= 0) { /* "Edit follows pad" in Custom mode */
+        p->edit_pad = e->edit_pad_request;
+        e->edit_pad_request = -1;
+        load_edit_fields(p);
+    }
+    send_midi_out(p);
+}
+
+static void processReplacing(AEffect *fx, float **in, float **out, int32_t n) { (void)in; render((Plugin *)fx->object, out, n, 0); }
+static void processAccumulating(AEffect *fx, float **in, float **out, int32_t n) { (void)in; render((Plugin *)fx->object, out, n, 1); }
+
+static void setParameter(AEffect *fx, int32_t i, float v) { set_param((Plugin *)fx->object, i, v, 1); }
+static float getParameter(AEffect *fx, int32_t i) {
+    Plugin *p = (Plugin *)fx->object;
+    if (i < 0 || i >= NUM_PARAMS) return 0.f;
+    if (i == P_LEARN) return p->eng->learn ? 1.f : 0.f;
+    if (i == P_PAD_BASE) return norm_of(P_PAD_BASE, p->eng->pad_base); /* may change via Learn */
+    if (i >= P_SCALENOTE0 && i < P_SCALENOTE0 + 12) return getParameterValueInScale(p, i - P_SCALENOTE0) ? 1.f : 0.f;
+    if (i >= P_STEP0 && i < P_STEP0 + EN_STEPS) return norm_of(i, en_step_index(shown_step(p, i - P_STEP0)));
+    return p->val[i];
+}
+
+/* outside the audio callback (deactivate/close): send note-offs for anything still held straight to the port */
+static void flush_port_now(Plugin *p) {
+    Engine *e = p->eng;
+    if (!vc_port_is_open(&p->port)) return;
+    for (int n = 0; n < 128; n++)
+        if (e->out_ref[n] > 0) {
+            unsigned char m[3] = {(unsigned char)(0x80 | (e->out_channel & 15)), (unsigned char)n, 0};
+            vc_port_send(&p->port, m);
+        }
+}
+
+static void destroy(Plugin *p) {
+    stop_refresh_thread(p);
+    flush_port_now(p);
+    vc_port_close(&p->port);
+    free(p->scratchL); free(p->scratchR); free(p->chunk); free(p->outEvents); free(p->eng); free(p);
+}
+
+static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t value, void *ptr, float opt) {
+    Plugin *p = (Plugin *)fx->object;
+    switch (op) {
+    case effOpen: p->opened = 1; if (!p->refresh_running) start_refresh_thread(p); scan_import_files(p); return 0; /* host knows us now */
+    case effClose: destroy(p); return 0;
+    case effSetSampleRate: en_set_sr(p->eng, opt); return 0;
+    case effSetBlockSize: ensure_scratch(p, (int)value); return 0;
+    case effMainsChanged: if (!value) { flush_port_now(p); en_reset(p->eng); p->eng->nout = 0; } return 0;
+    case effGetParamName: if (index >= 0 && index < NUM_PARAMS && ptr) copy_str((char *)ptr, PINFO[index].name, 32); return 0;
+    case effGetParamLabel: if (ptr) ((char *)ptr)[0] = 0; return 0;
+    case effGetParamDisplay: if (index >= 0 && index < NUM_PARAMS && ptr) param_display(p, index, (char *)ptr, 64); return 0;
+    case effCanBeAutomated: return (index >= 0 && index < NUM_PARAMS && !PINFO[index].trigger && !is_display_only(index) && index != P_ACTIVE && index != P_VIEW_BANK) ? 1 : 0;
+    case effGetProgram: return 0;
+    case effSetProgram: return 0;
+    case effGetProgramName: case effGetProgramNameIndexed: if (ptr) copy_str((char *)ptr, p->program_name, 24); return op == effGetProgramNameIndexed ? 1 : 0;
+    case effSetProgramName: if (ptr) copy_str(p->program_name, (const char *)ptr, 24); return 0;
+    case effGetChunk: return ptr ? get_chunk(p, (void **)ptr) : 0;
+    case effSetChunk: return set_chunk(p, ptr, (int)value);
+    case effProcessEvents: {
+        VstEvents *ev = (VstEvents *)ptr;
+        if (!ev) return 0;
+        for (int i = 0; i < ev->numEvents; i++) {
+            VstEvent *e = ev->events[i];
+            if (!e || e->type != kVstMidiType) continue;
+            VstMidiEvent *m = (VstMidiEvent *)e;
+            int st = (unsigned char)m->midiData[0];
+            /* feedback guard: with the virtual port on, notes arriving on our own output channel are our chords
+             * coming back (a track listening to all inputs), not pad hits */
+            if ((p->out_mode & OUT_PORT) && ((st & 0xE0) == 0x80) && (st & 0x0F) == p->eng->out_channel) continue;
+            en_push_midi(p->eng, m->deltaFrames, (unsigned char)m->midiData[0], (unsigned char)m->midiData[1], (unsigned char)m->midiData[2]);
+        }
+        return 1;
+    }
+    case effGetPlugCategory: return kPlugCategSynth;
+    case effGetEffectName: if (ptr) copy_str((char *)ptr, "Velvet Chords", 32); return 1;
+    case effGetVendorString: if (ptr) copy_str((char *)ptr, "Velvet Chords", 64); return 1;
+    case effGetProductString: if (ptr) copy_str((char *)ptr, "Velvet Chords", 64); return 1;
+    case effGetVendorVersion: return VC_VERSION;
+    case effCanDo: {
+        const char *s = (const char *)ptr;
+        if (!s) return 0;
+        if (!strcmp(s, "receiveVstEvents") || !strcmp(s, "receiveVstMidiEvent") || !strcmp(s, "sendVstEvents") || !strcmp(s, "sendVstMidiEvent")) return 1;
+        return 0;
+    }
+    case effGetVstVersion: return 2400;
+    case effVendorSpecific: /* test hook: 'VCdb' -> active synth voices (value 0) or held chords (value 1) */
+        if (index == VC_FOURCC('V', 'C', 'd', 'b')) return value ? en_owner_count(p->eng) : sy_active(&p->eng->synth);
+        return 0;
+    case effGetTailSize: return 0;
+    default: return 0;
+    }
+}
+
+VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
+    if (host && !host(0, audioMasterVersion, 0, 0, 0, 0.f)) return 0;
+    init_param_info();
+    Plugin *p = (Plugin *)calloc(1, sizeof(Plugin));
+    if (!p) return 0;
+    p->eng = (Engine *)calloc(1, sizeof(Engine));
+    if (!p->eng) { free(p); return 0; }
+    p->host = host;
+    en_init(p->eng, 44100.f);
+    copy_str(p->program_name, "Default", 32);
+    p->audition_req = -1;
+    p->audition_note = -1;
+    p->seen_pad = -1;
+    for (int k = 0; k < EN_STEPS; k++) p->val[P_STEP0 + k] = norm_of(P_STEP0 + k, en_step_index('.'));
+    memcpy(p->custom_pending, p->eng->custom, sizeof(p->custom_pending));
+    for (int i = 0; i < NUM_PARAMS; i++) p->val[i] = PINFO[i].def;
+    for (int i = 0; i < NUM_PARAMS; i++)
+        if (!PINFO[i].trigger && !(i >= P_EDIT_PAD && i <= P_EDIT_OCT) && !(i >= P_STEP0 && i < P_STEP0 + EN_STEPS)
+            && !(i >= P_RIFF0 && i <= P_RIFF_END) && i != P_NOTE_IV && i != P_PRESET) set_param(p, i, PINFO[i].def, 0);
+    load_edit_fields(p); /* edit fields mirror the seeded custom pad A01 */
+    load_riff_fields(p);
+    load_note_field(p);
+    sync_layout(p);
+
+    AEffect *fx = &p->fx;
+    p->refresh_req = 0;
+    fx->magic = kEffectMagic;
+    fx->dispatcher = dispatcher;
+    fx->process = processAccumulating;
+    fx->processReplacing = processReplacing;
+    fx->setParameter = setParameter;
+    fx->getParameter = getParameter;
+    fx->numPrograms = 1;
+    fx->numParams = NUM_PARAMS;
+    fx->numInputs = 0;
+    fx->numOutputs = 2;
+    fx->flags = effFlagsCanReplacing | effFlagsIsSynth | effFlagsProgramChunks;
+    fx->ioRatio = 1.f;
+    fx->object = p;
+    fx->uniqueID = VC_UID;
+    fx->version = VC_VERSION;
+    return fx;
+}
+
+/* some hosts look for "main" instead of "VSTPluginMain" */
+VC_EXPORT AEffect *vc_main_alias(audioMasterCallback host) __asm__("main");
+AEffect *vc_main_alias(audioMasterCallback host) { return VSTPluginMain(host); }

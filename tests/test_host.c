@@ -1,0 +1,737 @@
+/* Minimal VST2 host used to test velvetchords.so through its binary interface:
+ * load, enumerate parameters, play pads, check audio/stuck notes, save/restore the chunk,
+ * trigger Export MIDI, and render a demo WAV of a song section. Runs natively or under qemu-arm. */
+#include "../src/vst2_abi.h"
+#include <dlfcn.h>
+#include <pthread.h>
+#include <time.h>
+#include <sys/stat.h>
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+
+static int fails = 0, checks = 0;
+#define CHECK(c, ...) do { checks++; if (!(c)) { fails++; printf("FAIL line %d: ", __LINE__); printf(__VA_ARGS__); printf("\n"); } } while (0)
+
+static VstTimeInfo g_time;
+static pthread_t g_main_thread;
+static volatile int g_refresh_calls = 0, g_refresh_on_audio_thread = 0;
+static int g_midi_out_events = 0;
+
+static intptr_t host_cb(AEffect *fx, int32_t op, int32_t index, intptr_t value, void *ptr, float opt) {
+    (void)fx; (void)index; (void)value; (void)opt;
+    switch (op) {
+    case audioMasterVersion: return 2400;
+    case audioMasterGetTime: return (intptr_t)&g_time;
+    case audioMasterProcessEvents: g_midi_out_events += ((VstEvents *)ptr)->numEvents; return 1;
+    case audioMasterUpdateDisplay: /* the test's audio thread is the main thread */
+        g_refresh_calls++;
+        if (pthread_equal(pthread_self(), g_main_thread)) g_refresh_on_audio_thread++;
+        return 1;
+    default: return 0;
+    }
+}
+
+typedef AEffect *(*MainProc)(audioMasterCallback);
+static MainProc g_main;
+
+static AEffect *open_fx(void) {
+    AEffect *fx = g_main(host_cb);
+    if (!fx) return 0;
+    fx->dispatcher(fx, effOpen, 0, 0, 0, 0);
+    fx->dispatcher(fx, effSetSampleRate, 0, 0, 0, 48000.f);
+    fx->dispatcher(fx, effSetBlockSize, 0, 256, 0, 0);
+    fx->dispatcher(fx, effMainsChanged, 0, 1, 0, 0);
+    return fx;
+}
+
+static int find_param(AEffect *fx, const char *name) {
+    char buf[256];
+    for (int i = 0; i < fx->numParams; i++) {
+        buf[0] = 0;
+        fx->dispatcher(fx, effGetParamName, i, 0, buf, 0);
+        if (!strcmp(buf, name)) return i;
+    }
+    return -1;
+}
+
+static void display(AEffect *fx, int i, char *buf) { buf[0] = 0; fx->dispatcher(fx, effGetParamDisplay, i, 0, buf, 0); }
+
+/* same layout as VstEvents but with room for many pointers (VstEvents::events is a variable-length tail) */
+typedef struct { int32_t numEvents; intptr_t reserved; VstEvent *events[80]; } BigEvents;
+typedef struct { BigEvents hdr; VstMidiEvent ev[80]; } EvBuf;
+
+static void send(AEffect *fx, EvBuf *b, int n) {
+    b->hdr.numEvents = n;
+    for (int i = 0; i < n; i++) { b->ev[i].type = kVstMidiType; b->ev[i].byteSize = sizeof(VstMidiEvent); b->hdr.events[i] = (VstEvent *)&b->ev[i]; }
+    fx->dispatcher(fx, effProcessEvents, 0, 0, (VstEvents *)&b->hdr, 0);
+}
+
+static void midi(VstMidiEvent *e, int frame, int s, int d1, int d2) { memset(e, 0, sizeof(*e)); e->deltaFrames = frame; e->midiData[0] = (char)s; e->midiData[1] = (char)d1; e->midiData[2] = (char)d2; }
+
+static double block(AEffect *fx, float *L, float *R, int n) {
+    float *outs[2] = {L, R};
+    fx->processReplacing(fx, 0, outs, n);
+    double e = 0;
+    for (int i = 0; i < n; i++) { e += L[i] * L[i] + R[i] * R[i]; if (!(L[i] == L[i]) || fabsf(L[i]) > 1.f) return -1; }
+    return e;
+}
+
+static void wav_write(const char *path, const short *pcm, int frames) {
+    FILE *f = fopen(path, "wb");
+    if (!f) return;
+    int data = frames * 4, sr = 48000;
+    unsigned char h[44] = {'R','I','F','F'};
+    int v = 36 + data; memcpy(h + 4, &v, 4);
+    memcpy(h + 8, "WAVEfmt ", 8);
+    v = 16; memcpy(h + 16, &v, 4);
+    short s = 1; memcpy(h + 20, &s, 2); s = 2; memcpy(h + 22, &s, 2);
+    memcpy(h + 24, &sr, 4); v = sr * 4; memcpy(h + 28, &v, 4); s = 4; memcpy(h + 32, &s, 2); s = 16; memcpy(h + 34, &s, 2);
+    memcpy(h + 36, "data", 4); memcpy(h + 40, &data, 4);
+    fwrite(h, 1, 44, f); fwrite(pcm, 4, (size_t)frames, f); fclose(f);
+}
+
+static void *audio_once_fn(void *a) {
+    AEffect *x = *(AEffect **)a;
+    static float l[256], r[256];
+    float *o[2] = {l, r};
+    x->processReplacing(x, 0, o, 256);
+    return 0;
+}
+
+int main(int argc, char **argv) {
+    const char *so = argc > 1 ? argv[1] : "./velvetchords.so";
+    const char *demo = argc > 2 ? argv[2] : 0;
+    g_time.tempo = 90.0; g_time.sampleRate = 48000.0; g_time.flags = kVstTempoValid;
+    g_main_thread = pthread_self();
+    void *h = dlopen(so, RTLD_NOW | RTLD_LOCAL);
+    if (!h) { printf("dlopen failed: %s\n", dlerror()); return 1; }
+    g_main = (MainProc)dlsym(h, "VSTPluginMain");
+    CHECK(g_main != 0, "VSTPluginMain exported");
+    CHECK(dlsym(h, "main") != 0, "main alias exported");
+    if (!g_main) return 1;
+
+    AEffect *fx = open_fx();
+    CHECK(fx && fx->magic == kEffectMagic, "magic");
+    CHECK(fx->numOutputs == 2 && fx->numInputs == 0, "stereo instrument");
+    CHECK(fx->flags & effFlagsIsSynth, "is synth");
+    CHECK(fx->uniqueID == VC_FOURCC('V', 'l', 'v', 'C'), "uid VlvC = 0x%08x", (unsigned)fx->uniqueID);
+    CHECK(fx->dispatcher(fx, effGetPlugCategory, 0, 0, 0, 0) == kPlugCategSynth, "category synth");
+    CHECK(fx->dispatcher(fx, effCanDo, 0, 0, (void *)"receiveVstMidiEvent", 0) == 1, "receives MIDI");
+
+    char buf[256], name[256];
+    printf("parameters (%d):\n", fx->numParams);
+    for (int i = 0; i < fx->numParams; i++) {
+        name[0] = 0;
+        fx->dispatcher(fx, effGetParamName, i, 0, name, 0);
+        display(fx, i, buf);
+        CHECK(name[0] != 0, "param %d has a name", i);
+        CHECK(strlen(buf) < 64, "param %d display fits", i);
+        printf("  %2d %-17s %s\n", i, name, buf);
+    }
+
+    int P_MODE = find_param(fx, "Mode"), P_SONG = find_param(fx, "Song"), P_NOW = find_param(fx, "Now playing");
+    int P_EDIT_PAD = find_param(fx, "Edit pad"), P_EDIT_TYPE = find_param(fx, "Edit type"), P_EDIT_ROOT = find_param(fx, "Edit root");
+    int P_EXPORT = find_param(fx, "Export MIDI"), P_SOUND = find_param(fx, "Sound"), P_LEARN = find_param(fx, "Learn pad 1"), P_BASE = find_param(fx, "Pad 1 note");
+    int P_SECTION = find_param(fx, "Section"), P_MIDI_OUT = find_param(fx, "MIDI out");
+    CHECK(P_MODE >= 0 && P_SONG >= 0 && P_NOW >= 0 && P_EDIT_PAD >= 0 && P_EXPORT >= 0, "named params found");
+
+    static float L[48000], R[48000];
+    EvBuf eb;
+    memset(&eb, 0, sizeof(eb));
+
+    /* every song: select it, hit pad 1, expect sound */
+    int nsongs = 0;
+    for (float v = 0.f;; ) {
+        fx->setParameter(fx, P_SONG, v);
+        display(fx, P_SONG, buf);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(fx, &eb, 1);
+        double e = block(fx, L, R, 256) + block(fx, L, R, 256);
+        CHECK(e > 0.01, "song '%s' pad 1 makes sound (%f)", buf, e);
+        display(fx, P_NOW, name);
+        if (nsongs < 3) printf("  %s -> %s\n", buf, name);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(fx, &eb, 1);
+        block(fx, L, R, 256);
+        nsongs++;
+        if (v >= 1.f) break;
+        float before = v;
+        char cur[256]; strcpy(cur, buf);
+        do { v += 0.001f; if (v > 1.f) v = 1.f; fx->setParameter(fx, P_SONG, v); display(fx, P_SONG, buf); } while (!strcmp(buf, cur) && v < 1.f);
+        if (!strcmp(buf, cur)) break;
+        (void)before;
+    }
+    printf("  played pad 1 of %d songs\n", nsongs);
+
+    /* silence after release */
+    for (int i = 0; i < 1000; i++) block(fx, L, R, 256);
+    CHECK(block(fx, L, R, 256) == 0.0, "silent after all pads released");
+
+    /* rapid overlapping pads with strum + arp + sustain, then all off */
+    fx->setParameter(fx, P_MODE, 2.f / 4.f); /* R&B kit */
+    fx->setParameter(fx, P_MIDI_OUT, 1.f);
+    int P_STRUM = find_param(fx, "Strum"), P_ARP = find_param(fx, "Arp");
+    for (int r = 0; r < 300; r++) {
+        if (r == 100) fx->setParameter(fx, P_STRUM, 0.3f);
+        if (r == 200) fx->setParameter(fx, P_ARP, 0.25f);
+        int n = 0;
+        midi(&eb.ev[n++], (r * 7) % 256, 0x90, 36 + (r * 5) % 32, 30 + r % 90);
+        midi(&eb.ev[n++], (r * 11) % 256, 0x80, 36 + (r * 3) % 32, 0);
+        if (r % 50 == 0) midi(&eb.ev[n++], 10, 0xB0, 64, (r / 50) % 2 ? 0 : 127);
+        send(fx, &eb, n);
+        CHECK(block(fx, L, R, 256) >= 0, "finite audio under rapid triggering");
+    }
+    int n = 0;
+    for (int k = 0; k < 64; k++) midi(&eb.ev[n++], 0, 0x80, 36 + k, 0);
+    midi(&eb.ev[n++], 0, 0xB0, 64, 0);
+    send(fx, &eb, n);
+    block(fx, L, R, 256);
+    int held = (int)fx->dispatcher(fx, effVendorSpecific, VC_FOURCC('V', 'C', 'd', 'b'), 1, 0, 0);
+    CHECK(held == 0, "no held chords after all note-offs (%d)", held);
+    for (int i = 0; i < 1500; i++) block(fx, L, R, 256);
+    int voices = (int)fx->dispatcher(fx, effVendorSpecific, VC_FOURCC('V', 'C', 'd', 'b'), 0, 0, 0);
+    CHECK(voices == 0 && block(fx, L, R, 256) == 0.0, "no stuck notes after rapid triggering (%d voices)", voices);
+    CHECK(g_midi_out_events > 0, "MIDI out events delivered to host (%d)", g_midi_out_events);
+
+    /* learn pad 1 */
+    fx->setParameter(fx, P_LEARN, 1.f);
+    midi(&eb.ev[0], 0, 0x90, 48, 100); send(fx, &eb, 1);
+    block(fx, L, R, 256);
+    display(fx, P_BASE, buf);
+    CHECK(strstr(buf, "(48)") != 0, "learned pad 1 = note 48 (%s)", buf);
+    midi(&eb.ev[0], 0, 0x80, 48, 0); send(fx, &eb, 1);
+    block(fx, L, R, 256);
+
+    /* custom edit + chunk round trip */
+    fx->setParameter(fx, P_EDIT_PAD, 5.f / 63.f);
+    fx->setParameter(fx, P_EDIT_ROOT, 2.f / 11.f); /* D */
+    int nq = (int)(1.f / (1.f / 1.f)); (void)nq;
+    fx->setParameter(fx, P_EDIT_TYPE, 21.f / 40.f); /* index 21 -> quality 20 (m9) given 41 steps */
+    display(fx, P_EDIT_TYPE, buf);
+    printf("  edit type -> %s\n", buf);
+    display(fx, P_MODE, name);
+    CHECK(!strcmp(name, "Custom"), "editing switches to Custom (%s)", name);
+    fx->setParameter(fx, P_SOUND, 1.f / 3.f);
+    void *chunk = 0;
+    int size = (int)fx->dispatcher(fx, effGetChunk, 0, 0, &chunk, 0);
+    CHECK(size > 0 && chunk, "chunk saved (%d bytes)", size);
+    float vals[64];
+    char disp[64][64];
+    for (int i = 0; i < fx->numParams && i < 64; i++) { vals[i] = fx->getParameter(fx, i); display(fx, i, disp[i]); }
+    void *copy = malloc((size_t)size);
+    memcpy(copy, chunk, (size_t)size);
+
+    AEffect *fx2 = open_fx();
+    CHECK(fx2->dispatcher(fx2, effSetChunk, 0, size, copy, 0) == 1, "chunk loaded");
+    int P_NOW2 = P_NOW, P_EXPORT2 = P_EXPORT;
+    for (int i = 0; i < fx->numParams && i < 64; i++) {
+        if (i == P_NOW2 || i == P_EXPORT2) continue;
+        char d2[64];
+        display(fx2, i, d2);
+        CHECK(fabsf(fx2->getParameter(fx2, i) - vals[i]) < 1e-6f && !strcmp(d2, disp[i]), "param %d restored ('%s' vs '%s')", i, d2, disp[i]);
+    }
+    /* the edited pad plays the edited chord on the restored instance */
+    midi(&eb.ev[0], 0, 0x90, 48 + 5, 100); send(fx2, &eb, 1);
+    block(fx2, L, R, 256);
+    display(fx2, P_NOW, buf);
+    CHECK(strstr(buf, "Dm9") != 0, "restored custom pad plays Dm9 (%s)", buf);
+    printf("  restored pad: %s\n", buf);
+    CHECK(fx2->dispatcher(fx2, effSetChunk, 0, 5, (void *)"junk!", 0) == 0, "rejects a bad chunk");
+    free(copy);
+
+    /* export */
+    fx2->setParameter(fx2, P_MODE, 0.f);
+    fx2->setParameter(fx2, P_SECTION, 0.f);
+    fx2->setParameter(fx2, P_EXPORT, 1.f);
+    display(fx2, P_EXPORT, buf);
+    CHECK(strstr(buf, "Saved") != 0, "export reports success (%s)", buf);
+    fx2->setParameter(fx2, P_MODE, 2.f / 4.f);
+    fx2->setParameter(fx2, P_EXPORT, 1.f);
+    display(fx2, P_EXPORT, buf);
+    CHECK(strstr(buf, "Saved") != 0, "kit export (%s)", buf);
+
+    /* screen helpers used by the MPC skin */
+    {
+        AEffect *s = open_fx();
+        int P_SNEXT = find_param(s, "Song next"), P_SPAD = find_param(s, "Screen pad"), P_SBANK = find_param(s, "Screen bank");
+        int P_PN1 = find_param(s, "Pad 1 chord"), P_PF1 = find_param(s, "Pad 1 function"), P_KEY = find_param(s, "Key"), P_SCALE = find_param(s, "Scale");
+        int P_HAS_CS = find_param(s, "Scale has C#"), P_TNEXT = find_param(s, "Edit type next"), P_EPNEXT = find_param(s, "Edit pad next");
+        CHECK(P_SNEXT > 0 && P_SPAD > 0 && P_PN1 > 0 && P_HAS_CS > 0 && P_TNEXT > 0, "screen params exist");
+        char a[64], b2[64];
+        display(s, P_SONG, a);
+        s->setParameter(s, P_SNEXT, 1.f);
+        display(s, P_SONG, b2);
+        CHECK(strcmp(a, b2) != 0 && s->getParameter(s, P_SNEXT) == 0.f, "Song next steps the song (%s -> %s) and resets", a, b2);
+        s->setParameter(s, P_MODE, 1.f / 4.f); /* Smart scale, C major */
+        display(s, P_PN1, a); display(s, P_PF1, b2);
+        CHECK(!strcmp(a, "Cmaj7") && !strcmp(b2, "Imaj7"), "pad 1 label Cmaj7 / Imaj7 (%s / %s)", a, b2);
+        CHECK(s->getParameter(s, P_HAS_CS) == 0.f, "C# not in C major");
+        s->setParameter(s, P_KEY, 2.f / 11.f); /* D major */
+        CHECK(s->getParameter(s, P_HAS_CS) == 1.f, "C# in D major");
+        display(s, P_PN1, a);
+        CHECK(!strcmp(a, "Dmaj7"), "pad label follows key (%s)", a);
+        s->setParameter(s, P_SBANK, 1.f / 3.f); /* bank B: triads */
+        display(s, P_PN1, a);
+        CHECK(!strcmp(a, "D"), "screen bank B shows triads (%s)", a);
+        (void)P_SCALE;
+        /* tap pad 3 on screen: it sounds, then stops by itself */
+        s->setParameter(s, P_SBANK, 0.f);
+        s->setParameter(s, P_SPAD, 3.f / 16.f);
+        double e = block(s, L, R, 256) + block(s, L, R, 256);
+        display(s, P_NOW, a);
+        CHECK(e > 0.01 && strstr(a, "A03") && strstr(a, "F#m7"), "screen tap auditions pad A03 (%s)", a);
+        for (int i = 0; i < 1200; i++) block(s, L, R, 256);
+        CHECK(block(s, L, R, 256) == 0.0, "audition stops by itself");
+        /* hitting a hardware pad in bank B moves the screen to bank B and lights the pad */
+        midi(&eb.ev[0], 0, 0x90, 36 + 16 + 4, 90); send(s, &eb, 1);
+        block(s, L, R, 256);
+        display(s, P_SBANK, a); display(s, P_SPAD, b2);
+        CHECK(!strcmp(a, "B") && !strcmp(b2, "B05"), "screen follows played pad (%s %s)", a, b2);
+        midi(&eb.ev[0], 0, 0x80, 36 + 16 + 4, 0); send(s, &eb, 1);
+        block(s, L, R, 256);
+        /* edit type next switches to Custom and changes the edited pad */
+        int P_ET = find_param(s, "Edit type");
+        display(s, P_ET, a);
+        s->setParameter(s, P_TNEXT, 1.f);
+        display(s, P_ET, b2);
+        display(s, P_MODE, name);
+        CHECK(strcmp(a, b2) && !strcmp(name, "Custom"), "edit type next (%s -> %s, mode %s)", a, b2, name);
+        s->setParameter(s, P_EPNEXT, 1.f);
+        display(s, find_param(s, "Edit pad"), a);
+        CHECK(!strcmp(a, "A02"), "edit pad next (%s)", a);
+        CHECK(s->dispatcher(s, effCanBeAutomated, P_SPAD, 0, 0, 0) == 0 && s->dispatcher(s, effCanBeAutomated, P_PN1, 0, 0, 0) == 0, "screen helpers not automatable");
+        s->dispatcher(s, effClose, 0, 0, 0, 0);
+    }
+
+    /* ChordPrism-style output: pattern + MIDI routing */
+    {
+        AEffect *s = open_fx();
+        int P_OUT = find_param(s, "MIDI out"), P_CH = find_param(s, "MIDI channel"), P_PAT = find_param(s, "Pattern");
+        int P_ST1 = find_param(s, "Step 1"), P_PORT = find_param(s, "MIDI port"), P_SND = find_param(s, "Sound");
+        int P_PNEXT = find_param(s, "Pattern next");
+        CHECK(P_OUT > 0 && P_CH > 0 && P_PAT > 0 && P_ST1 > 0 && P_PORT > 0 && P_PNEXT > 0, "pattern/output params exist");
+        char a[64];
+        s->setParameter(s, P_PNEXT, 1.f);
+        s->setParameter(s, P_PNEXT, 1.f);
+        s->setParameter(s, P_PNEXT, 1.f);
+        display(s, P_PAT, a);
+        CHECK(!strcmp(a, "Quarters"), "pattern next x3 = Quarters (%s)", a);
+        display(s, P_ST1, a);
+        CHECK(!strcmp(a, "Accent"), "step 1 shows the preset (%s)", a);
+        display(s, find_param(s, "Step 2"), a);
+        CHECK(!strcmp(a, "Tie"), "step 2 is a tie (%s)", a);
+        /* editing a step of a preset makes it Custom, keeping the other steps */
+        s->setParameter(s, find_param(s, "Step 2"), 1.f / 6.f); /* Chord */
+        display(s, P_PAT, a);
+        CHECK(!strcmp(a, "Custom"), "edited preset becomes Custom (%s)", a);
+        display(s, P_ST1, a);
+        CHECK(!strcmp(a, "Accent"), "other steps kept (%s)", a);
+        s->setParameter(s, P_SND, 1.f);         /* Silent: MIDI only, like ChordPrism */
+        s->setParameter(s, P_CH, 3.f / 15.f);   /* channel 4 */
+        g_midi_out_events = 0;
+        s->setParameter(s, P_OUT, 1.f / 3.f);   /* to host */
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(s, &eb, 1);
+        double en = 0;
+        for (int i = 0; i < 200; i++) en += block(s, L, R, 256);
+        CHECK(en == 0.0, "Silent: no audio from the plugin");
+        CHECK(g_midi_out_events > 4, "pattern sends MIDI to the host (%d events)", g_midi_out_events);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(s, &eb, 1);
+        block(s, L, R, 256);
+        /* virtual port */
+        s->setParameter(s, P_OUT, 2.f / 3.f);
+        display(s, P_PORT, a);
+        const char *fake = getenv("VC_FAKE_ALSA_LOG");
+        printf("  MIDI port status: %s\n", a);
+        if (fake) CHECK(strstr(a, "Port open") != 0, "virtual port opens (%s)", a);
+        else CHECK(strstr(a, "Port open") || strstr(a, "unavailable") || strstr(a, "No ALSA"), "port reports its state (%s)", a);
+        midi(&eb.ev[0], 0, 0x90, 36 + 2, 100); send(s, &eb, 1);
+        for (int i = 0; i < 100; i++) block(s, L, R, 256);
+        midi(&eb.ev[0], 0, 0x80, 36 + 2, 0); send(s, &eb, 1);
+        for (int i = 0; i < 10; i++) block(s, L, R, 256);
+        /* feedback guard: our own output channel (4) coming back in must not trigger chords */
+        s->setParameter(s, P_SND, 0.f);
+        midi(&eb.ev[0], 0, 0x93, 40, 100); send(s, &eb, 1);
+        double fb = block(s, L, R, 256) + block(s, L, R, 256);
+        CHECK(fb == 0.0, "notes on the output channel are ignored while the port is on");
+        midi(&eb.ev[0], 0, 0x90, 40, 100); send(s, &eb, 1);
+        fb = block(s, L, R, 256) + block(s, L, R, 256);
+        CHECK(fb > 0.0, "pad notes on channel 1 still play");
+        midi(&eb.ev[0], 0, 0x80, 40, 0); send(s, &eb, 1);
+        for (int i = 0; i < 10; i++) block(s, L, R, 256);
+        s->setParameter(s, P_OUT, 0.f);
+        block(s, L, R, 256);
+        s->dispatcher(s, effClose, 0, 0, 0, 0);
+        if (fake) {
+            FILE *f = fopen(fake, "r");
+            char line[256];
+            int opened = 0, client = 0, port = 0, on = 0, off = 0, okfmt = 1, closed = 0, ch4 = 1;
+            int bal[128] = {0};
+            long last_open = 0;
+            while (f && fgets(line, sizeof(line), f)) if (!strncmp(line, "open ", 5)) last_open = ftell(f) - (long)strlen(line);
+            if (f) fseek(f, last_open, SEEK_SET); /* this instance's port only */
+            while (f && fgets(line, sizeof(line), f)) {
+                int ty, ch, note, vel, q, dc, dp, sp, sz;
+                if (!strncmp(line, "open default 1 1", 16)) opened = 1;
+                if (!strncmp(line, "client Velvet Chords", 20)) client = 1;
+                if (!strncmp(line, "port Velvet Chords Out 33 ", 26)) port = 1;
+                if (!strncmp(line, "close", 5)) closed = 1;
+                if (sscanf(line, "ev %d %d %d %d %d %d %d %d %d", &ty, &ch, &note, &vel, &q, &dc, &dp, &sp, &sz) == 9) {
+                    if (q != 253 || dc != 254 || dp != 253 || sz != 28) okfmt = 0;
+                    if (ch != 3) ch4 = 0;
+                    if (ty == 6) { on++; bal[note]++; } else if (ty == 7) { off++; bal[note]--; }
+                }
+            }
+            if (f) fclose(f);
+            int balanced = 1;
+            for (int k = 0; k < 128; k++) if (bal[k]) balanced = 0;
+            CHECK(opened && client && port, "ALSA client 'Velvet Chords' with readable, subscribable port 'Velvet Chords Out'");
+            CHECK(on > 4 && balanced, "port got note-ons and matching note-offs (%d on, %d off)", on, off);
+            CHECK(okfmt && ch4, "events sent directly to subscribers on channel 4, 28-byte events");
+            CHECK(closed, "port closed when MIDI out is switched off");
+        }
+    }
+
+    /* Smart Scale pads and a second instance following the first */
+    {
+        AEffect *a = open_fx(), *b = open_fx();
+        int SP = find_param(a, "Smart pads"), SN = find_param(a, "Smart notes"), SONG = find_param(a, "Song");
+        int PN9 = find_param(a, "Pad 9 chord"), PF9 = find_param(a, "Pad 9 function"), PF11 = find_param(a, "Pad 11 function"), NOW = find_param(a, "Now playing");
+        CHECK(SP > 0 && SN > 0, "smart params exist");
+        char x[64], y[64];
+        for (float v = 0.f; v <= 1.f; v += 0.001f) { a->setParameter(a, SONG, v); display(a, SONG, x); if (strstr(x, "Just the Two of Us")) break; }
+        a->setParameter(a, SP, 0.5f); /* pads 9-16 */
+        block(a, L, R, 256);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(a, &eb, 1); block(a, L, R, 256); /* pad 1: Dbmaj7 */
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(a, &eb, 1); block(a, L, R, 256);
+        display(a, PN9, x); display(a, PF9, y);
+        CHECK(!strcmp(x, "Db3") && !strcmp(y, "root"), "pad 9 = root of Dbmaj7 (%s %s)", x, y);
+        display(a, PF11, y);
+        CHECK(!strcmp(y, "5th"), "pad 11 = 5th (%s)", y);
+        midi(&eb.ev[0], 0, 0x90, 36 + 10, 100); send(a, &eb, 1); block(a, L, R, 256); /* pad 11 */
+        display(a, NOW, x);
+        CHECK(strstr(x, "Ab3: 5th of Dbmaj7") != 0, "smart pad plays one note (%s)", x);
+        printf("  %s\n", x);
+        midi(&eb.ev[0], 0, 0x80, 36 + 10, 0); send(a, &eb, 1); block(a, L, R, 256);
+        midi(&eb.ev[0], 0, 0x90, 36 + 1, 100); send(a, &eb, 1); block(a, L, R, 256); /* pad 2: C7 */
+        midi(&eb.ev[0], 0, 0x80, 36 + 1, 0); send(a, &eb, 1); block(a, L, R, 256);
+        display(a, PN9, x); display(a, find_param(a, "Pad 12 chord"), y);
+        CHECK(!strcmp(x, "C3") && !strcmp(y, "Bb3"), "smart pads follow the new chord C7 (%s %s)", x, y);
+        a->setParameter(a, SN, 0.5f); /* scale: C7 tones + F minor scale, upward from C */
+        block(a, L, R, 256);
+        char row[200] = "";
+        for (int k = 9; k <= 16; k++) { char nm[24]; snprintf(nm, 24, "Pad %d chord", k); display(a, find_param(a, nm), x); strcat(row, x); strcat(row, " "); }
+        CHECK(!strcmp(row, "C3 Db3 Eb3 E3 F3 G3 Ab3 Bb3 "), "scale mode adds the key's notes (%s)", row);
+        /* second instance follows the first */
+        b->setParameter(b, SP, 1.f);       /* follow other */
+        b->setParameter(b, SN, 1.f);       /* bass */
+        block(b, L, R, 256);
+        midi(&eb.ev[0], 0, 0x90, 36 + 2, 100); send(a, &eb, 1); block(a, L, R, 256); /* A plays pad 3: Fm7 */
+        block(b, L, R, 256);
+        display(b, find_param(b, "Pad 1 chord"), x); display(b, find_param(b, "Pad 2 chord"), y);
+        CHECK(!strcmp(x, "F1") && !strcmp(y, "Ab1"), "instance B's pads become an Fm7 bassline (%s %s)", x, y);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(b, &eb, 1);
+        double eb2 = block(b, L, R, 256);
+        display(b, NOW, x);
+        CHECK(eb2 > 0 && strstr(x, "F1: root of Fm7"), "B plays the bass note (%s)", x);
+        printf("  %s\n", x);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(b, &eb, 1);
+        midi(&eb.ev[0], 0, 0x80, 36 + 2, 0); send(a, &eb, 1);
+        /* B in follow mode doesn't take over: playing B leaves A's chord as the source */
+        for (int i = 0; i < 1500; i++) { block(a, L, R, 256); block(b, L, R, 256); }
+        CHECK(block(a, L, R, 256) == 0.0 && block(b, L, R, 256) == 0.0, "both instances silent after release");
+        a->dispatcher(a, effClose, 0, 0, 0, 0);
+        b->dispatcher(b, effClose, 0, 0, 0, 0);
+    }
+
+    /* key sync, MIDI import through the plugin, imports saved with the project */
+    {
+        AEffect *a = open_fx(), *b = open_fx();
+        int KEY = find_param(a, "Key"), SCALE = find_param(a, "Scale"), SYNC = find_param(b, "Key sync");
+        CHECK(SYNC > 0 && find_param(a, "Hold") > 0 && find_param(a, "Repeat") > 0 && find_param(a, "Melody") > 0, "tool params exist");
+        b->setParameter(b, SYNC, 1.f);
+        block(b, L, R, 256);
+        a->setParameter(a, KEY, 5.f / 11.f);       /* F */
+        a->setParameter(a, SCALE, 4.f / 16.f);     /* Dorian */
+        block(b, L, R, 256);
+        char x[96], y[96];
+        display(b, KEY, x); display(b, SCALE, y);
+        CHECK(!strcmp(x, "F") && !strcmp(y, "Dorian"), "copy B follows A's key and scale (%s %s)", x, y);
+        /* import: write a MIDI file into <export dir>/Import, load it, pads show the chords */
+        const char *dir = getenv("VC_EXPORT_DIR");
+        if (dir) {
+            char path[512];
+            snprintf(path, sizeof(path), "%s/Import", dir); mkdir(path, 0775);
+            snprintf(path, sizeof(path), "%s/Import/groove.mid", dir);
+            /* hand-made SMF: Cmaj7 then Am7 then D7 */
+            static const unsigned char mid[] = {
+                'M','T','h','d',0,0,0,6,0,0,0,1,0x01,0xE0,
+                'M','T','r','k',0,0,0,72,
+                0,0x90,48,90, 0,0x90,52,90, 0,0x90,55,90, 0,0x90,59,90,
+                0x83,0x60,0x80,48,0, 0,0x80,52,0, 0,0x80,55,0, 0,0x80,59,0,
+                0,0x90,45,90, 0,0x90,48,90, 0,0x90,52,90, 0,0x90,55,90,
+                0x83,0x60,0x80,45,0, 0,0x80,48,0, 0,0x80,52,0, 0,0x80,55,0,
+                0,0xFF,0x2F,0 };
+            FILE *mf = fopen(path, "wb"); fwrite(mid, 1, sizeof(mid), mf); fclose(mf);
+            int LOAD = find_param(a, "Import load"), ST = find_param(a, "Import status"), PADS = find_param(a, "Pads play");
+            a->setParameter(a, find_param(a, "Import next"), 1.f);
+            a->setParameter(a, LOAD, 1.f);
+            display(a, ST, x);
+            CHECK(strstr(x, "Loaded 2 chords") != 0, "import loads the file (%s)", x);
+            display(a, PADS, y);
+            display(a, find_param(a, "Pad 1 chord"), x);
+            CHECK(!strcmp(y, "Imported chords") && !strcmp(x, "Cmaj7"), "pads show imported chords (%s / %s)", y, x);
+            display(a, find_param(a, "Pad 2 chord"), x);
+            CHECK(!strcmp(x, "Am7"), "second imported chord (%s)", x);
+            midi(&eb.ev[0], 0, 0x90, 36 + 1, 100); send(a, &eb, 1); block(a, L, R, 256);
+            display(a, find_param(a, "Now playing"), x);
+            CHECK(strstr(x, "Am7") && strstr(x, "A0 C1 E1 G1") == 0 && strstr(x, "A1"), "pad plays the file's exact notes (%s)", x);
+            printf("  %s\n", x);
+            midi(&eb.ev[0], 0, 0x80, 36 + 1, 0); send(a, &eb, 1); block(a, L, R, 256);
+            /* save/reload */
+            void *chunk = 0;
+            int size = (int)a->dispatcher(a, effGetChunk, 0, 0, &chunk, 0);
+            void *cp = malloc((size_t)size); memcpy(cp, chunk, (size_t)size);
+            AEffect *c = open_fx();
+            CHECK(c->dispatcher(c, effSetChunk, 0, size, cp, 0) == 1, "chunk with imports loads");
+            display(c, find_param(c, "Pad 2 chord"), x);
+            CHECK(!strcmp(x, "Am7"), "imported chords survive save/reload (%s)", x);
+            free(cp);
+            c->dispatcher(c, effClose, 0, 0, 0, 0);
+        }
+        a->dispatcher(a, effClose, 0, 0, 0, 0);
+        b->dispatcher(b, effClose, 0, 0, 0, 0);
+    }
+
+    /* screen taps: refresh immediately on the UI thread; one-tap buttons count every tap; imports don't stick */
+    {
+        AEffect *s = open_fx();
+        pthread_t at;
+        struct { AEffect *fx; } arg = {s};
+        pthread_create(&at, 0, audio_once_fn, &arg); pthread_join(at, 0);   /* plugin now knows its audio thread */
+        int SNEXT = find_param(s, "Song next"), SONG = find_param(s, "Song");
+        char a[96], b2[96];
+        int before = g_refresh_calls;
+        display(s, SONG, a);
+        s->setParameter(s, SNEXT, 1.f);
+        CHECK(g_refresh_calls > before, "a screen tap refreshes immediately (%d)", g_refresh_calls - before);
+        display(s, SONG, b2);
+        CHECK(strcmp(a, b2) != 0, "tap 1 steps the song");
+        /* a host that never re-reads our reset flips its cached 1 back to 0 on the next tap: still a tap */
+        struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0);
+        strcpy(a, b2);
+        s->setParameter(s, SNEXT, 0.f);
+        display(s, SONG, b2);
+        CHECK(strcmp(a, b2) != 0, "tap 2 (host sent 0) still steps the song (%s -> %s)", a, b2);
+        /* but a 1 followed at once by 0 is one tap (press + release) */
+        strcpy(a, b2);
+        s->setParameter(s, SNEXT, 1.f);
+        s->setParameter(s, SNEXT, 0.f);
+        display(s, SONG, b2);
+        int steps = 0;
+        for (float v = 0; v <= 1.f; v += 0.0001f) { (void)v; break; }
+        CHECK(strcmp(a, b2) != 0, "press+release steps once");
+        /* imported chords: choosing a mode afterwards shows that mode again */
+        s->setParameter(s, find_param(s, "Pads play"), 1.f);
+        s->setParameter(s, find_param(s, "Mode"), 1.f / 4.f);
+        display(s, find_param(s, "Pads play"), a);
+        CHECK(!strcmp(a, "Layout"), "picking a mode leaves imported chords (%s)", a);
+        (void)steps;
+        s->dispatcher(s, effClose, 0, 0, 0, 0);
+    }
+
+    /* learned pad layout through the plugin: survives save/reload; screen taps use it */
+    {
+        AEffect *s = open_fx();
+        static const int SENDS[16] = {48, 49, 50, 51, 44, 45, 46, 47, 40, 41, 42, 43, 36, 37, 38, 39};
+        int LA = find_param(s, "Learn all pads"), NOW = find_param(s, "Now playing");
+        CHECK(LA > 0, "learn-all param exists");
+        s->setParameter(s, LA, 1.f);
+        char x[96];
+        display(s, NOW, x);
+        CHECK(strstr(x, "pad 1 of 16") != 0, "screen prompts for pad 1 (%s)", x);
+        for (int k = 0; k < 16; k++) { midi(&eb.ev[0], 0, 0x90, SENDS[k], 100); midi(&eb.ev[1], 5, 0x80, SENDS[k], 0); send(s, &eb, 2); block(s, L, R, 256); }
+        display(s, LA, x);
+        CHECK(!strcmp(x, "Pads learned"), "all 16 learned (%s)", x);
+        void *chunk = 0;
+        int size = (int)s->dispatcher(s, effGetChunk, 0, 0, &chunk, 0);
+        void *cp = malloc((size_t)size); memcpy(cp, chunk, (size_t)size);
+        AEffect *c = open_fx();
+        CHECK(c->dispatcher(c, effSetChunk, 0, size, cp, 0) == 1, "chunk with learned pads loads");
+        free(cp);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(c, &eb, 1); block(c, L, R, 256);   /* physical pad 13 */
+        display(c, NOW, x);
+        CHECK(strstr(x, "A13") != 0, "after reload, MPC pad 13 still plays pad 13 (%s)", x);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(c, &eb, 1); block(c, L, R, 256);
+        c->setParameter(c, find_param(c, "Screen bank"), 0.f);
+        c->setParameter(c, find_param(c, "Screen pad"), 2.f / 16.f);   /* tap pad 2 on screen */
+        block(c, L, R, 256); block(c, L, R, 256);
+        display(c, NOW, x);
+        CHECK(strstr(x, "A02") != 0, "screen tap auditions pad 2 through the learned layout (%s)", x);
+        s->dispatcher(s, effClose, 0, 0, 0, 0);
+        c->dispatcher(c, effClose, 0, 0, 0, 0);
+    }
+
+    /* screen refreshes must never happen on the audio thread (they stalled audio on the MPC) */
+    {
+        AEffect *s = open_fx();
+        block(s, L, R, 256);                 /* the main thread is this instance's audio thread from here on */
+        g_refresh_on_audio_thread = 0;
+        int before = g_refresh_calls;
+        for (int r = 0; r < 20; r++) {
+            midi(&eb.ev[0], 0, 0x90, 36 + r % 8, 100); send(s, &eb, 1); block(s, L, R, 256);
+            midi(&eb.ev[0], 0, 0x80, 36 + r % 8, 0); send(s, &eb, 1); block(s, L, R, 256);
+        }
+        struct timespec ts = {0, 150 * 1000000L};
+        nanosleep(&ts, 0);
+        CHECK(g_refresh_calls > before, "screen still refreshes after pad hits (%d)", g_refresh_calls - before);
+        CHECK(g_refresh_calls - before <= 8, "refreshes are rate-limited (%d for 20 hits)", g_refresh_calls - before);
+        CHECK(g_refresh_on_audio_thread == 0, "no refresh ever called from the audio thread (%d)", g_refresh_on_audio_thread);
+        s->dispatcher(s, effClose, 0, 0, 0, 0);
+    }
+
+    /* demo render: play a song section pad by pad at 90 bpm (Just the Two of Us is song index 9 by year order) */
+    if (demo) {
+        AEffect *d = open_fx();
+        int songCount = 0;
+        for (float v = 0.f; v <= 1.f; v += 0.001f) { d->setParameter(d, P_SONG, v); display(d, P_SONG, buf); if (strstr(buf, "Just the Two of Us")) break; songCount++; }
+        d->setParameter(d, P_SOUND, 0.f);
+        d->setParameter(d, find_param(d, "Tone"), 0.45f);
+        d->setParameter(d, find_param(d, "Release"), 0.35f);
+        if (getenv("VC_DEMO_PATTERN")) { /* Neo-soul push, a little swing */
+            int pp = find_param(d, "Pattern");
+            for (float v = 0.f; v <= 1.f; v += 0.01f) { char nm[64]; d->setParameter(d, pp, v); display(d, pp, nm); if (!strcmp(nm, "Neo-soul push")) break; }
+            d->setParameter(d, find_param(d, "Swing"), 0.25f);
+            d->setParameter(d, find_param(d, "Gate"), 0.75f);
+        }
+        /* pads 1-5 = Dbmaj7 C7 Fm7 Ebm7 Ab7; beats 4 4 4 2 2 at 90 bpm, twice */
+        int beats[5] = {4, 4, 4, 2, 2};
+        int spb = 48000 * 60 / 90;
+        int total = 2 * 16 * spb + 48000 * 2;
+        short *pcm = (short *)calloc((size_t)total * 2, sizeof(short));
+        int pos = 0, ev = 0;
+        long sched[32]; int pad[32], on[32]; int ns = 0;
+        long t = 0;
+        for (int rep = 0; rep < 2; rep++) for (int i = 0; i < 5; i++) {
+            sched[ns] = t; pad[ns] = i; on[ns++] = 1;
+            t += beats[i] * spb;
+            sched[ns] = t - 200; pad[ns] = i; on[ns++] = 0;
+        }
+        while (pos < total) {
+            int m = 0;
+            while (ev < ns && sched[ev] < pos + 256) {
+                midi(&eb.ev[m++], (int)(sched[ev] - pos), on[ev] ? 0x90 : 0x80, 36 + pad[ev], on[ev] ? 88 : 0);
+                ev++;
+            }
+            if (m) send(d, &eb, m);
+            int nfr = total - pos < 256 ? total - pos : 256;
+            block(d, L, R, nfr);
+            for (int k = 0; k < nfr; k++) {
+                pcm[2 * (pos + k)] = (short)(L[k] * 32000.f);
+                pcm[2 * (pos + k) + 1] = (short)(R[k] * 32000.f);
+            }
+            pos += nfr;
+        }
+        char path[512];
+        snprintf(path, sizeof(path), "%s.wav", demo);
+        wav_write(path, pcm, total);
+        printf("  demo written to %s\n", path);
+        free(pcm);
+        d->dispatcher(d, effClose, 0, 0, 0, 0);
+    }
+
+    /* Velvet Chords 1.1 features through the plugin interface: presets, riffs, shift keys, note editor, state */
+    {
+        int P_PRE = find_param(fx, "Preset"), P_PNX = find_param(fx, "Preset next"), P_TN = find_param(fx, "Tone");
+        int P_RIFF = find_param(fx, "Riff"), P_RSL = find_param(fx, "Riff slot"), P_RS1 = find_param(fx, "Riff step 1");
+        int P_ARPO = find_param(fx, "Arp octaves"), P_A2 = find_param(fx, "Arp 2"), P_SH = find_param(fx, "Shift keys");
+        int P_NSEL = find_param(fx, "Edit note"), P_NIV = find_param(fx, "Edit note interval"), P_KEYI = find_param(fx, "Key");
+        CHECK(P_PRE > 0 && P_PNX > 0 && P_RIFF > 0 && P_RSL > 0 && P_RS1 > 0 && P_ARPO > 0 && P_A2 > 0 && P_SH > 0 && P_NSEL > 0 && P_NIV > 0 && P_KEYI > 0,
+              "1.1 parameters exist");
+        fx->setParameter(fx, P_PRE, 1.f / 200.f);
+        display(fx, P_PRE, buf);
+        CHECK(!strcmp(buf, "Neo-Soul Keys Late"), "preset 1 is shown by name (%s)", buf);
+        display(fx, P_TN, buf);
+        CHECK(!strcmp(buf, "45%"), "preset sets Tone (%s)", buf);
+        fx->setParameter(fx, P_PNX, 1.f);
+        display(fx, P_PRE, buf);
+        CHECK(!strcmp(buf, "Neo-Soul Keys Warm"), "Preset next steps to preset 2 (%s)", buf);
+        fx->setParameter(fx, P_PRE, 0.f);
+        display(fx, P_PRE, buf);
+        CHECK(!strcmp(buf, "Manual"), "Manual is shown (%s)", buf);
+
+        fx->setParameter(fx, P_ARPO, 1.f / 3.f);
+        display(fx, P_ARPO, buf);
+        CHECK(!strcmp(buf, "2 oct"), "arp octaves (%s)", buf);
+        fx->setParameter(fx, P_A2, 2.f / 6.f);
+        display(fx, P_A2, buf);
+        CHECK(!strcmp(buf, "Down"), "arp 2 order (%s)", buf);
+        display(fx, P_SH, buf);
+        CHECK(!strcmp(buf, "On"), "shift keys are on by default (%s)", buf);
+
+        fx->setParameter(fx, P_RSL, 1.f / 5.f); /* riff slot 2: Octave bounce */
+        display(fx, P_RS1, buf);
+        CHECK(!strcmp(buf, "+0 st"), "riff step 1 shows its offset (%s)", buf);
+        fx->setParameter(fx, P_RS1 + 1, 0.f); /* step 2: a rest */
+        display(fx, P_RS1 + 1, buf);
+        CHECK(!strcmp(buf, "Rest"), "riff step 2 is a rest (%s)", buf);
+        fx->setParameter(fx, P_RS1 + 2, (5.f + 13.f) / 37.f);
+        display(fx, P_RS1 + 2, buf);
+        CHECK(!strcmp(buf, "+5 st"), "riff step 3 is +5 (%s)", buf);
+        fx->setParameter(fx, P_RIFF, 2.f / 6.f);
+        display(fx, P_RIFF, buf);
+        CHECK(!strcmp(buf, "Octave bounce"), "riff plays slot 2 (%s)", buf);
+
+        fx->setParameter(fx, find_param(fx, "Edit pad"), 5.f / 63.f);
+        fx->setParameter(fx, find_param(fx, "Edit root"), 2.f / 11.f);
+        fx->setParameter(fx, find_param(fx, "Edit type"), 21.f / 40.f);
+        fx->setParameter(fx, P_NSEL, 1.f / 7.f);
+        fx->setParameter(fx, P_NIV, (7.f + 13.f) / 37.f);
+        display(fx, P_NIV, buf);
+        CHECK(!strcmp(buf, "+7 st"), "note 2 is set to +7 (%s)", buf);
+        fx->setParameter(fx, P_NIV, 0.f);
+        display(fx, P_NIV, buf);
+        CHECK(!strcmp(buf, "+7 st"), "note 2 removed, the note above moves down (%s)", buf);
+
+        float k0 = fx->getParameter(fx, P_KEYI);
+        int i0 = (int)(k0 * 11.f + 0.5f);
+        midi(&eb.ev[0], 0, 0x90, 25, 100); send(fx, &eb, 1);
+        block(fx, L, R, 256);
+        float k1 = fx->getParameter(fx, P_KEYI);
+        CHECK((int)(k1 * 11.f + 0.5f) == (i0 + 11) % 12, "C# moves the key down (%d -> %d)", i0, (int)(k1 * 11.f + 0.5f));
+
+        void *c2 = 0;
+        int size2 = (int)fx->dispatcher(fx, effGetChunk, 0, 0, &c2, 0);
+        void *copy2 = malloc((size_t)size2);
+        memcpy(copy2, c2, (size_t)size2);
+        AEffect *fx3 = open_fx();
+        CHECK(fx3->dispatcher(fx3, effSetChunk, 0, size2, copy2, 0) == 1, "1.1 chunk loads");
+        display(fx3, P_RS1 + 2, buf);
+        CHECK(!strcmp(buf, "+5 st"), "riff steps restored from state (%s)", buf);
+        fx3->setParameter(fx3, P_RSL, 0.f);
+        display(fx3, P_RS1, buf);
+        CHECK(!strcmp(buf, "+0 st"), "riff slot 1 keeps its own steps (%s)", buf);
+        free(copy2);
+        fx3->dispatcher(fx3, effClose, 0, 0, 0, 0);
+    }
+
+    fx->dispatcher(fx, effClose, 0, 0, 0, 0);
+    fx2->dispatcher(fx2, effClose, 0, 0, 0, 0);
+    const char *fake = getenv("VC_FAKE_ALSA_LOG");
+    if (fake) {
+        FILE *f = fopen(fake, "r");
+        char line[256];
+            int all[16][128];
+            memset(all, 0, sizeof(all));
+            while (f && fgets(line, sizeof(line), f)) {
+                int ty, ch, note, vel, q, dc, dp, sp, sz;
+                if (sscanf(line, "ev %d %d %d %d %d %d %d %d %d", &ty, &ch, &note, &vel, &q, &dc, &dp, &sp, &sz) == 9 && ch < 16 && note < 128)
+                    all[ch][note] += ty == 6 ? 1 : ty == 7 ? -1 : 0;
+            }
+            if (f) fclose(f);
+            int hanging = 0;
+            for (int c2 = 0; c2 < 16; c2++) for (int k = 0; k < 128; k++) if (all[c2][k] > 0) hanging++;
+            CHECK(hanging == 0, "no instance leaves notes hanging on the port, even when closed mid-chord (%d)", hanging);
+    }
+    printf("%d checks, %d failures\n", checks, fails);
+    return fails ? 1 : 0;
+}
