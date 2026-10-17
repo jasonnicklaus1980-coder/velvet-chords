@@ -6,7 +6,7 @@ It is a native MPC OS plugin (VST2 `.so`) loaded by MPC's built-in plugin host, 
 
 ## What's new in 1.1
 
-- **200 factory presets.** The **Preset** control (and Preset prev / next) sets the sound, tone, voicing, strum, arpeggio,
+- **230 factory presets.** The **Preset** control (and Preset prev / next) sets the sound, tone, voicing, strum, arpeggio,
   pattern, Smart Scale pads and riff. It never changes your chords, key, scale, song or custom pads. Manual changes nothing.
   The presets use the built-in sounds Electric piano, Soft pad and Organ.
 - **Multi arp: four arpeggiator lanes that run at the same time.** Lane 1 is **Arp**, **Arp rate**, **Arp octaves** and
@@ -151,7 +151,7 @@ decides which tracks hear them.
 
 | Parameter | What it does |
 |---|---|
-| Preset, Preset prev, Preset next | Manual, or one of the 200 factory presets |
+| Preset, Preset prev, Preset next | Manual, or one of the 230 factory presets |
 | Arp octaves, Arp 2 to Arp 4 (with rate, octaves, transpose) | The four arp lanes (see above) |
 | Arp transpose | Transposes lane 1 by -12 to +12 semitones |
 | Shift keys | On: the black keys in the octave below the pads move the key, scale and inversion |

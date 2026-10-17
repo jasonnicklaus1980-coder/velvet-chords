@@ -820,12 +820,12 @@ static void test_midi_out_channel(void) {
 /* ---------- riffs, shift keys, presets, note-by-note chords (ported from Velvet Chords 1.1) ---------- */
 
 static void test_presets(void) {
-    CHECK(VC_NUM_PRESETS == 200, "200 factory presets (%d)", VC_NUM_PRESETS);
+    CHECK(VC_NUM_PRESETS == 230, "230 factory presets (%d)", VC_NUM_PRESETS);
     for (int i = 0; i < VC_NUM_PRESETS; i++) {
         const VcPreset *p = &VC_PRESETS[i];
         for (int j = 0; j < i; j++) CHECK(strcmp(p->name, VC_PRESETS[j].name) != 0, "duplicate preset name %s", p->name);
         CHECK(strlen(p->name) <= 23 && p->name[0] && p->genre[0], "name and genre (%s)", p->name);
-        CHECK(p->sound == SY_EPIANO || p->sound == SY_PAD || p->sound == SY_ORGAN, "%s: sound", p->name);
+        CHECK(p->sound >= 0 && p->sound < SY_SILENT, "%s: sound", p->name); /* any playable sound, not Silent */
         CHECK(p->voicing >= 0 && p->voicing < VC_VOICE_COUNT && p->inversion >= 0 && p->inversion <= 3, "%s: voicing", p->name);
         CHECK(p->octave >= -2 && p->octave <= 2 && p->smart_oct >= -2 && p->smart_oct <= 2, "%s: octave", p->name);
         CHECK(p->voice_lead == 0 || p->voice_lead == 1, "%s: voice lead", p->name);

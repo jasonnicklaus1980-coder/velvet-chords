@@ -78,7 +78,7 @@ structure). None is claimed to be the voicing on the original record. Chord symb
 
 | Check | Where | Result |
 |---|---|---|
-| Presets: 200, unique names, values in range; applied through the plugin interface | `tests/test_engine.c`, `tests/test_host.c` | pass |
+| Presets: 230, unique names, values in range; applied through the plugin interface | `tests/test_engine.c`, `tests/test_host.c` | pass |
 | Multi arp: lanes at different rates and orders, lane off, release, new chord restarts every lane; orders checked against computed sequences | `tests/test_engine.c` | pass |
 | Riffs: transposed to the chord root, rests, chord restored after a riff; state round-trip | `tests/test_engine.c`, `tests/test_host.c` | pass |
 | Shift keys: the octave-below black keys queue the action and do not play pads; C# moves the key through the plugin | `tests/test_engine.c`, `tests/test_host.c` | pass |
