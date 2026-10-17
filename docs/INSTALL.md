@@ -101,6 +101,10 @@ Andalusian, Axis, Pop I-IV, Neo-soul ii-V-I or 12-bar blues. Pad 1 plays step 1,
 written as Roman numerals, so the same progression works in every key. Off puts the layout back, and choosing a progression
 replaces imported pads. Pads after the progression keep the layout. The Screen bank Q-Link was replaced; the bank buttons still work.
 
+**Progression play** (Play page Q-Link) plays the progression by itself while the host plays: one chord per bar, starting on
+each bar line, the previous chord released on the line, and nothing after the host stops. It assumes 4/4 and uses the host's
+tempo and position. The Voice lead Q-Link was replaced to make room; Voice lead is still on the Perform page.
+
 ### Two instances: chords on one, bass or melody on the other
 
 Load Velvet Chords on two tracks. On the second, set **Smart pads** to **Follow**: all of its pads become Smart notes that follow whatever chord the *first* instance is playing, live. Set the second to **Bass** for a bassline that always matches, or **Scale** for a lead. Give each its own sound, or route each to a different instrument with the virtual port and different output channels. Instances share the chord directly inside MPC, so no MIDI routing is needed between them.

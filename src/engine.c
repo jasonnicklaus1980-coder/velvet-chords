@@ -1,5 +1,7 @@
 #include "engine.h"
+#include "progression.h"
 #include <string.h>
+#include <math.h>
 
 /* Original rhythm presets in the spirit of common R&B, soul and Caribbean comping figures (16 steps). */
 const PatternPreset EN_PATTERNS[] = {
@@ -146,6 +148,7 @@ void en_set_sr(Engine *e, float sr) {
 
 void en_init(Engine *e, float sr) {
     memset(e, 0, sizeof(*e));
+    e->prog_bar = -1;
     sy_init(&e->synth, sr);
     en_set_sr(e, sr);
     e->lp.mode = VC_MODE_SONG;
@@ -304,6 +307,8 @@ static OwnerRec *alloc_owner(Engine *e, int frame) {
 
 void en_reset(Engine *e) {
     for (int i = 0; i < EN_OWNERS; i++) if (e->owners[i].owner) release_owner(e, &e->owners[i], 0);
+    e->prog_owner = 0;
+    e->prog_bar = -1;
     e->nqueue = 0;
     for (int k = 0; k < EN_ARP_LANES; k++) { e->lanes[k].owner = 0; e->lanes[k].note = -1; }
     e->pat_owner = 0;
@@ -790,6 +795,56 @@ static void sort_in(Engine *e) {
     }
 }
 
+/* ---------- progression play ---------- */
+#define PROG_BEATS_PER_BAR 4
+
+static double prog_tempo(const Engine *e) { return e->tempo > 20.0 && e->tempo < 400.0 ? e->tempo : 90.0; }
+
+/* host beats at a frame of the current block */
+static double prog_beats(const Engine *e, int frame) { return e->ppq + frame / e->sr * prog_tempo(e) / 60.0; }
+
+static void prog_stop(Engine *e, int frame) {
+    OwnerRec *r = e->prog_owner ? find_owner(e, e->prog_owner) : 0;
+    if (r) release_owner(e, r, frame);
+    e->prog_owner = 0;
+    e->prog_bar = -1;
+}
+
+/* the chord for this bar: the progression's step (bar modulo its length), voiced like the pads */
+static void prog_start(Engine *e, int bar, int frame) {
+    prog_stop(e, frame);
+    e->prog_bar = bar;
+    if (e->lp.prog < 1 || e->lp.prog > VC_NUM_PROGRESSIONS) return;
+    const Progression *pr = &VC_PROGRESSIONS[e->lp.prog - 1];
+    int scale = (e->lp.scale >= 0 && e->lp.scale < VC_NUM_SCALES) ? e->lp.scale : 0;
+    ChordSpec c;
+    if (!vc_prog_chord(pr, e->lp.key, scale, bar % pr->n, &c)) return;
+    Voicing v;
+    vc_voice(&c, e->lp.voicing, e->lp.inversion, e->lp.octave, 0, &v);
+    if (v.n == 0) return;
+    OwnerRec *r = alloc_owner(e, frame);
+    if (++e->next_owner <= 0) e->next_owner = 1;
+    r->owner = e->next_owner;
+    r->held = 1;      /* sounds until the next bar or the host stops, not until a pad lets go */
+    r->sustained = 0;
+    r->n = v.n;
+    memcpy(r->notes, v.notes, (size_t)v.n);
+    memset(r->sounding, 0, sizeof(r->sounding));
+    r->vel = r->vel_base = en_vel_curve(e->vel_curve, 100);
+    r->root = c.root;
+    r->base_n = v.n;
+    memcpy(r->base_notes, v.notes, (size_t)v.n);
+    for (int s = 0; s < r->n; s++) note_on_slot(e, r, s, frame);
+    e->prog_owner = r->owner;
+}
+
+/* frames from this point in the block to the next bar line */
+static int prog_frames_to_bar(const Engine *e, int frame) {
+    double b = prog_beats(e, frame);
+    double next_bar = (floor(b / PROG_BEATS_PER_BAR + 1e-9) + 1) * PROG_BEATS_PER_BAR;
+    return (int)ceil((next_bar - b) * 60.0 / prog_tempo(e) * e->sr);
+}
+
 void en_process(Engine *e, float *L, float *R, int n) {
     if (e->dirty) en_rebuild(e);
     memset(L, 0, sizeof(float) * (size_t)n);
@@ -812,6 +867,8 @@ void en_process(Engine *e, float *L, float *R, int n) {
         e->pat_owner = 0;
     }
     if (e->pat_owner && e->pat_sync && e->playing) pat_align(e, 0, 0); /* follow the MPC's song position */
+    if (e->prog_owner && (!e->prog_play || !e->playing || !e->lp.prog)) prog_stop(e, 0);
+    if (!e->playing && e->prog_bar >= 0) prog_stop(e, 0);
     if (e->smart == SMART_FOLLOW && g_vc_shared.version != e->shared_seen) { en_smart_update(e); e->events_changed = 1; }
     sort_in(e);
     int ii = 0, pos = 0;
@@ -862,8 +919,13 @@ void en_process(Engine *e, float *L, float *R, int n) {
             }
         }
 
+        if (e->prog_play && e->playing && e->lp.prog > 0) { /* a bar line reached at this frame starts its chord */
+            int bar = (int)floor((prog_beats(e, pos) + 1e-9) / PROG_BEATS_PER_BAR);
+            if (bar != e->prog_bar) prog_start(e, bar, pos);
+        }
         int next = n;
         if (ii < e->nin && e->in[ii].frame < next) next = e->in[ii].frame;
+        if (e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + prog_frames_to_bar(e, pos); if (d < next) next = d; }
         for (int q = 0; q < e->nqueue; q++) {
             int64_t d = e->queue[q].when - e->now;
             if (d < next) next = (int)d;

@@ -132,6 +132,10 @@ typedef struct Engine {
     int pad_owner[128];
     OwnerRec owners[EN_OWNERS];
     int next_owner;
+    /* progression play: one chord per bar while the host plays (the Progression control picks the progression) */
+    int prog_play;   /* 1 = on */
+    int prog_bar;    /* the bar the progression chord started in, -1 none */
+    int prog_owner;  /* owner sounding the current bar's chord, 0 none */
     int sustain;
     QEvent queue[EN_QUEUE];
     int nqueue;

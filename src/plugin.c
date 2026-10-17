@@ -50,7 +50,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP, P_PROG,
+    P_SMART_MAP, P_PROG, P_PROG_PLAY,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -193,6 +193,7 @@ static void init_param_info(void) {
     P(P_PRESET_VAR, "Preset variation", VC_PRESET_VARS, 0.f, 0)
     P(P_SMART_MAP, "Smart map", SMAP_COUNT, 0.f, 0)
     P(P_PROG, "Progression", VC_NUM_PROGRESSIONS + 1, 0.f, 0)
+    P(P_PROG_PLAY, "Progression play", 2, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -740,6 +741,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_SMART_MODE: e->smart_mode = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_OCT: e->smart_oct = idx_of(p, i) - 2; e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_MAP: e->smart_map = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_PROG_PLAY: e->prog_play = idx_of(p, i); if (from_host) refresh_host(p); break;
     case P_PROG: if (idx_of(p, i) != 0) p->val[P_IMP_PADS] = 0.f; /* choosing a progression replaces imported pads; Off doesn't */
         sync_layout(p); if (from_host) refresh_host(p); break;
     case P_PRESET: apply_preset(p, idx_of(p, i)); sync_preset_knobs(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
@@ -875,6 +877,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_SMART_MODE: { static const char *SN[SMODE_COUNT] = {"Chord tones", "Scale", "Bass"}; copy_str(b, SN[x], sizeof(b)); break; }
     case P_SMART_OCT: snprintf(b, sizeof(b), "%+d", x - 2); break;
     case P_PROG: copy_str(b, x == 0 ? "Off" : VC_PROGRESSIONS[x - 1].name, sizeof(b)); break;
+    case P_PROG_PLAY: copy_str(b, x ? "On: one chord per bar" : "Off", sizeof(b)); break;
     case P_SMART_MAP: { static const char *MN[SMAP_COUNT] = {"Follow mode", "Relative", "Absolute", "Chromatic"}; copy_str(b, MN[x], sizeof(b)); break; }
     case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;
     case P_PRESET_GENRE: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[(x - 1) * VC_PRESET_VARS].genre, sizeof(b)); break;

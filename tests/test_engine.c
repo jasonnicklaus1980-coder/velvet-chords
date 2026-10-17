@@ -998,9 +998,12 @@ static void test_stuck_notes(void) {
             else if (op == 11) e->hold = (int)(st_rnd(&seed) % 2);
             else if (op == 12) en_push_midi(e, 0, 0xB0, 123, 0);
             else if (op == 13) custom_chord(e, (int)(st_rnd(&seed) % 16), st_rnd(&seed) % 2 ? "Am7" : "F", 0);
+            else if (op == 14) { e->prog_play = (int)(st_rnd(&seed) % 2); e->lp.prog = (int)(st_rnd(&seed) % (VC_NUM_PROGRESSIONS + 1)); }
+            else if (op == 15) e->playing = (int)(st_rnd(&seed) % 4) != 0; /* mostly playing, sometimes stopped */
             static float L[512], R[512];
             int n = 0;
             for (int b = 0; b < 2; b++) {
+                e->ppq += 0.5; /* the host moves on, so bar lines come */
                 en_process(e, L, R, 512);
                 for (int i = 0; i < e->nout && n < 4000; i++) {
                     int on = (e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0;
@@ -1015,6 +1018,7 @@ static void test_stuck_notes(void) {
         }
         /* let go of everything the way a host does (Hold off too, or the latched chord keeps sounding), then drain */
         e->hold = 0;
+        e->playing = 0; e->prog_play = 0; /* the host stops: no more progression chords */
         for (int k = 0; k < 128; k++) en_push_midi(e, 0, 0x80, (unsigned char)k, 0);
         en_push_midi(e, 0, 0xB0, 64, 0);
         static float L[512], R[512];
@@ -1198,6 +1202,57 @@ static void test_progression_pads(void) {
     CHECK(same, "Off gives back the layout");
 }
 
+/* progression play: with the host playing, the progression's chord sounds once per bar, the previous chord is released
+ * on the bar line, and stopping the host (or turning Off) makes no further chords */
+static void test_progression_play(void) {
+    static float L[512], R[512];
+    Engine *e = v11_engine();
+    e->lp.mode = VC_MODE_CUSTOM; e->lp.prog = 1; e->lp.key = 0; e->lp.scale = 0; e->lp.voicing = VC_VOICE_CLOSE;
+    e->lp.inversion = 0; e->lp.octave = 0;
+    e->dirty = 1;
+    e->prog_play = 1;
+    e->tempo = 120.0;
+    e->playing = 1;
+    const int64_t bar_frames = 96000; /* 4 beats at 120 bpm */
+    int mask_on[4] = {0}, notes_on[4] = {0}, offs_at_line[4] = {0};
+    int ons_after_stop = 0;
+    int64_t pos_frames = 0;
+    for (int b = 0; b < 4 * (int)bar_frames / 512 + 40; b++) {
+        int64_t t0 = e->now;
+        if (pos_frames >= 4 * bar_frames + 4000) e->playing = 0; /* the host stops after four bars */
+        e->ppq = (double)pos_frames / 48000.0 * 120.0 / 60.0;
+        en_process(e, L, R, 512);
+        for (int i = 0; i < e->nout; i++) {
+            int64_t t = t0 + e->out[i].frame;
+            int on = (e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0;
+            int bar = (int)(t / bar_frames);
+            int64_t into = t - (int64_t)bar * bar_frames;
+            if (on && pos_frames >= 4 * bar_frames + 4000) ons_after_stop++;
+            if (bar >= 0 && bar < 4 && on && into < 2000) { mask_on[bar] |= 1 << (e->out[i].d[1] % 12); notes_on[bar]++; }
+            if (bar >= 1 && bar < 4 && !on && into < 2000) offs_at_line[bar]++;
+        }
+        e->nout = 0;
+        pos_frames += 512;
+    }
+    /* I-V-vi-IV in C: C, G, Am, F */
+    static const int WANT[4] = {(1 << 0) | (1 << 4) | (1 << 7), (1 << 7) | (1 << 11) | (1 << 2), (1 << 9) | (1 << 0) | (1 << 4), (1 << 5) | (1 << 9) | (1 << 0)};
+    for (int bar = 0; bar < 4; bar++)
+        CHECK(notes_on[bar] >= 3 && mask_on[bar] == WANT[bar], "bar %d sounds step %d's chord (mask %x want %x)", bar + 1, bar + 1, mask_on[bar], WANT[bar]);
+    for (int bar = 1; bar < 4; bar++) CHECK(offs_at_line[bar] >= 3, "the bar %d line releases the previous chord (%d offs)", bar + 1, offs_at_line[bar]);
+    CHECK(e->prog_owner == 0, "stopping the host releases the progression chord");
+    CHECK(ons_after_stop == 0, "no chords after the host stops (%d)", ons_after_stop);
+
+    /* Off: the host plays again, but nothing sounds */
+    e->prog_play = 0; e->playing = 1; int ons_off = 0;
+    for (int b = 0; b < 300; b++) {
+        e->ppq = 100.0 + (double)b * 512 / 48000.0 * 2.0;
+        en_process(e, L, R, 512);
+        for (int i = 0; i < e->nout; i++) if ((e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0) ons_off++;
+        e->nout = 0;
+    }
+    CHECK(ons_off == 0, "Progression play off: no chords (%d)", ons_off);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1221,6 +1276,7 @@ int main(void) {
     printf("smart map in all keys...\n"); test_smart_map();
     printf("progressions and harmonic context...\n"); test_progressions();
     printf("progression fills pads...\n"); test_progression_pads();
+    printf("progression plays a chord per bar...\n"); test_progression_play();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

@@ -654,6 +654,7 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_PROGC, 0.f);
         display(fx, P_PROGC, buf);
         CHECK(!strcmp(buf, "Off"), "progression Off (%s)", buf);
+        CHECK(find_param(fx, "Progression play") > 0, "progression play parameter exists");
     }
 
     /* Velvet Chords 1.1 features through the plugin interface: presets, riffs, shift keys, note editor, state */
