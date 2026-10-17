@@ -393,7 +393,7 @@ class Skin:
             key = self.define("vcPad4_%d" % (k + 1), definition([A_QLINK], [
                 button_sub(on, off, k + 1, 17, w, h),
                 label_sub("Chord", "Chord", 6, 24, w - 12, 38, 24, TEXT),
-                label_sub("Function", "Function", 6, 62, w - 12, 22, 13, TEXT_2),
+                label_sub("Function", "Function", 6, 62, w - 12, 22, 14, ACCENT),  # the Roman numeral, as on Chord Prism's keys
             ]))
             col, row = k % 4, 3 - k // 4
             x = x0 + col * (w + gap)
