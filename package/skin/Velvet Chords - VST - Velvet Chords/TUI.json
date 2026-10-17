@@ -11807,7 +11807,7 @@
                     }
                 },
                 {
-                    "key": "vcField_384x36_14_a7a7b8_r",
+                    "key": "vcField_180x36_14_a7a7b8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -11863,7 +11863,75 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "10 0 364 36",
+                                    "bounds": "10 0 160 36",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcBtn_uprog_save",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_btn_uprog_save_on.png",
+                                        "offImage": "vc_btn_uprog_save_off.png",
+                                        "buttonId": 1,
+                                        "numButtonsInGroup": 1,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 192 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -13845,7 +13913,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Export MIDI",
-                                    "type": "vcField_384x36_14_a7a7b8_r",
+                                    "type": "vcField_180x36_14_a7a7b8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -13866,7 +13934,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "868 520 384 36",
+                                    "bounds": "868 520 180 36",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Save progression",
+                                    "type": "vcBtn_uprog_save",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 173"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "1060 520 192 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             }

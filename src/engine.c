@@ -814,11 +814,10 @@ static void prog_stop(Engine *e, int frame) {
 static void prog_start(Engine *e, int bar, int frame) {
     prog_stop(e, frame);
     e->prog_bar = bar;
-    if (e->lp.prog < 1 || e->lp.prog > VC_NUM_PROGRESSIONS) return;
-    const Progression *pr = &VC_PROGRESSIONS[e->lp.prog - 1];
-    int scale = (e->lp.scale >= 0 && e->lp.scale < VC_NUM_SCALES) ? e->lp.scale : 0;
+    int n = vc_prog_length(&e->lp);
+    if (n < 1) return;
     ChordSpec c;
-    if (!vc_prog_chord(pr, e->lp.key, scale, bar % pr->n, &c)) return;
+    if (!vc_prog_step(&e->lp, bar % n, &c)) return;
     Voicing v;
     vc_voice(&c, e->lp.voicing, e->lp.inversion, e->lp.octave, 0, &v);
     if (v.n == 0) return;

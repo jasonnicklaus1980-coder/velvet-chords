@@ -19,7 +19,7 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
-#define CHUNK_VERSION 4 /* 4 adds note lists and riffs (appended after the earlier data) */
+#define CHUNK_VERSION 5 /* 4 adds note lists and riffs; 5 adds the saved progressions (appended after the earlier data) */
 
 enum {
     P_MODE, P_SONG, P_SECTION, P_KEY, P_SCALE, P_TRANSPOSE, P_VOICING, P_INVERSION, P_OCTAVE, P_VL,
@@ -50,7 +50,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP, P_PROG, P_PROG_PLAY,
+    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -192,8 +192,10 @@ static void init_param_info(void) {
     P(P_PRESET_GENRE, "Preset genre", VC_NUM_PRESETS / VC_PRESET_VARS + 1, 0.f, 0)
     P(P_PRESET_VAR, "Preset variation", VC_PRESET_VARS, 0.f, 0)
     P(P_SMART_MAP, "Smart map", SMAP_COUNT, 0.f, 0)
-    P(P_PROG, "Progression", VC_NUM_PROGRESSIONS + 1, 0.f, 0)
+    P(P_PROG, "Progression", VC_NUM_PROGRESSIONS + VC_USER_PROGS + 1, 0.f, 0)
     P(P_PROG_PLAY, "Progression play", 2, 0.f, 0)
+    P(P_UPROG_SLOT, "Progression slot", VC_USER_PROGS, 0.f, 0)
+    P(P_UPROG_SAVE, "Save progression", 2, 0.f, 1)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -287,6 +289,21 @@ static void sync_layout(Plugin *p) {
     if (idx_of(p, P_IMP_PADS) && p->nimp > 0) lp->mode = VC_MODE_IMPORT;
     vc_build_pads(lp, p->custom_pending, p->ui_pads);
     p->gen++;
+}
+
+/* save the 16 chords of bank A (the layout as the mode makes it, not a progression) into a user slot */
+static void save_user_prog(Plugin *p, int slot) {
+    static PadChord pads[VC_PADS];
+    LayoutParams lp = p->lp_pending;
+    lp.prog = 0;
+    vc_build_pads(&lp, p->custom_pending, pads);
+    for (int k = 0; k < VC_PROG_MAX; k++) {
+        int ok = pads[k].valid && pads[k].spec.quality >= 0 && pads[k].spec.quality < VC_NUM_QUALITIES;
+        p->lp_pending.ur[slot][k] = ok ? (unsigned char)pads[k].spec.root : 0;
+        p->lp_pending.uq[slot][k] = ok ? (signed char)pads[k].spec.quality : -1; /* -1: an empty step */
+    }
+    p->lp_pending.un[slot] = VC_PROG_MAX;
+    sync_layout(p);
 }
 
 /* Screen refresh. Never call the host from here: this runs on the audio thread (pad hits, automation), and a
@@ -654,6 +671,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
                 return;
             }
             if (i == P_COPY) do_copy_to_custom(p);
+            if (i == P_UPROG_SAVE) save_user_prog(p, idx_of(p, P_UPROG_SLOT));
             if (i == P_EXPORT) do_export(p, host_tempo(p));
             if (i == P_SONG_PREV || i == P_SONG_NEXT) {
                 step_param(p, P_SONG, i == P_SONG_NEXT ? 1 : -1, VC_NUM_SONGS);
@@ -876,7 +894,14 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_SMART: { static const char *SM[SMART_COUNT] = {"Off", "Pads 9-16", "Follow other"}; copy_str(b, SM[x], sizeof(b)); break; }
     case P_SMART_MODE: { static const char *SN[SMODE_COUNT] = {"Chord tones", "Scale", "Bass"}; copy_str(b, SN[x], sizeof(b)); break; }
     case P_SMART_OCT: snprintf(b, sizeof(b), "%+d", x - 2); break;
-    case P_PROG: copy_str(b, x == 0 ? "Off" : VC_PROGRESSIONS[x - 1].name, sizeof(b)); break;
+    case P_PROG: {
+        if (x == 0) copy_str(b, "Off", sizeof(b));
+        else if (x <= VC_NUM_PROGRESSIONS) copy_str(b, VC_PROGRESSIONS[x - 1].name, sizeof(b));
+        else { int slot = x - VC_NUM_PROGRESSIONS - 1; int nn = p->lp_pending.un[slot];
+            if (nn) snprintf(b, sizeof(b), "User %d (saved)", slot + 1); else snprintf(b, sizeof(b), "User %d (empty)", slot + 1); }
+        break;
+    }
+    case P_UPROG_SLOT: snprintf(b, sizeof(b), "Slot %d", x + 1); break;
     case P_PROG_PLAY: copy_str(b, x ? "On: one chord per bar" : "Off", sizeof(b)); break;
     case P_SMART_MAP: { static const char *MN[SMAP_COUNT] = {"Follow mode", "Relative", "Absolute", "Chromatic"}; copy_str(b, MN[x], sizeof(b)); break; }
     case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;
@@ -1007,7 +1032,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
 /* ---------- chunk (saved inside the MPC project) ---------- */
 
 #define IMP_REC 23
-static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS; }
+static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2); }
 
 static void w32(unsigned char *b, int *k, uint32_t v) { b[(*k)++] = v & 255; b[(*k)++] = (v >> 8) & 255; b[(*k)++] = (v >> 16) & 255; b[(*k)++] = v >> 24; }
 static uint32_t r32(const unsigned char *b, int *k) { uint32_t v = b[*k] | (b[*k + 1] << 8) | (b[*k + 2] << 16) | ((uint32_t)b[*k + 3] << 24); *k += 4; return v; }
@@ -1046,6 +1071,10 @@ static int get_chunk(Plugin *p, void **data) {
     }
     for (int s = 0; s < VC_RIFFS; s++)
         for (int j = 0; j < EN_STEPS; j++) b[k++] = (unsigned char)p->eng->rif[s][j];
+    for (int s = 0; s < VC_USER_PROGS; s++) { /* version 5: saved progressions */
+        b[k++] = p->lp_pending.un[s];
+        for (int j = 0; j < VC_PROG_MAX; j++) { b[k++] = p->lp_pending.ur[s][j]; b[k++] = (unsigned char)p->lp_pending.uq[s][j]; }
+    }
     *data = b;
     return k;
 }
@@ -1055,7 +1084,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
     if (!b || size < 16 || memcmp(b, "VLVC", 4)) return 0;
     int k = 4;
     uint32_t ver = r32(b, &k), np = r32(b, &k);
-    if (ver < 1 || ver > 4 || np > 512 || size < (int)(12 + np * 4 + 4)) return 0;
+    if (ver < 1 || ver > CHUNK_VERSION || np > 512 || size < (int)(12 + np * 4 + 4)) return 0;
     for (uint32_t i = 0; i < np; i++) {
         union { float f; uint32_t u; } u;
         u.u = r32(b, &k);
@@ -1115,6 +1144,16 @@ static int set_chunk(Plugin *p, const void *data, int size) {
                 signed char v = (signed char)b[k++];
                 p->eng->rif[s][j] = (v == RIFF_REST || (v >= RIFF_MIN && v <= RIFF_MAX)) ? v : RIFF_REST;
             }
+    }
+    if (ver >= 5 && size >= k + VC_USER_PROGS * (1 + VC_PROG_MAX * 2)) {
+        for (int s = 0; s < VC_USER_PROGS; s++) {
+            p->lp_pending.un[s] = b[k++] <= VC_PROG_MAX ? b[k - 1] : 0;
+            for (int j = 0; j < VC_PROG_MAX; j++) {
+                p->lp_pending.ur[s][j] = b[k++] % 12;
+                signed char q = (signed char)b[k++];
+                p->lp_pending.uq[s][j] = (q >= 0 && q < VC_NUM_QUALITIES) ? q : -1;
+            }
+        }
     }
     load_riff_fields(p);
     load_note_field(p);

@@ -515,7 +515,8 @@ class Skin:
         self.action_button(c, bg, "learnall", "Learn all 16 pads", "Learn all pads", R + 396, rows[4], w=192)
         self.readout(c, bg, "Now playing", R, rows[4] + 44, 588, 30, size=14, colour=ACCENT)
         self.action_button(c, bg, "export", "Export MIDI", "Export MIDI", R, rows[5])
-        self.readout(c, bg, "Export MIDI", R + 204, rows[5], 384, size=14)
+        self.readout(c, bg, "Export MIDI", R + 204, rows[5], 180, size=14)
+        self.action_button(c, bg, "uprog_save", "Save progression", "Save progression", R + 396, rows[5], w=192)
         self.page("Perform", 1, c, "vc_bg_perform.png", bg)
 
         # ---------- Edit
@@ -639,7 +640,7 @@ class Skin:
                 "Screen bank", "Mode", "Voicing", "Sound", "Volume"]
         pattern = ["Step %d" % (k + 1) for k in range(16)]
         tools = ["Hold", "Repeat", "Melody", "Melody rate", "Key sync", "Import file", "Pads play", "Smart pads",
-                 "Smart notes", "Smart octave", "Pattern", "Strum", "Sound", "Tone", "Release", "Volume"]
+                 "Smart notes", "Smart octave", "Pattern", "Progression slot", "Sound", "Tone", "Release", "Volume"]
         lanes = ["Riff step %d" % (k + 1) for k in range(16)]
         tabs = [{"Tab": i + 1, "SubTab": 1, "Bank Direction": "Column", "Q-Links": m(x)} for i, x in enumerate([play, perform, edit, pattern, tools, lanes])]
         return {"version": 4, "info": {"version": 1, "type": "CompleteDescription"},

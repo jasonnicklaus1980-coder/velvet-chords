@@ -1253,6 +1253,32 @@ static void test_progression_play(void) {
     CHECK(ons_off == 0, "Progression play off: no chords (%d)", ons_off);
 }
 
+/* user progressions: saved chords come back on pads 1.. as they were saved, and empty steps keep the layout */
+static void test_user_progressions(void) {
+    LayoutParams lp;
+    memset(&lp, 0, sizeof(lp));
+    CustomPad custom[VC_PADS];
+    memset(custom, 0, sizeof(custom));
+    static PadChord pads[VC_PADS];
+    lp.mode = VC_MODE_CUSTOM; lp.key = 7; lp.scale = 0; lp.voicing = VC_VOICE_BASS_UPPER;
+    lp.prog = VC_NUM_PROGRESSIONS + 1; /* user slot 1 */
+    lp.un[0] = VC_PROG_MAX;
+    for (int k = 0; k < VC_PROG_MAX; k++) { lp.ur[0][k] = 0; lp.uq[0][k] = -1; }
+    lp.ur[0][0] = 9; lp.uq[0][0] = (signed char)vc_quality_find("7"); /* A7 */
+    lp.ur[0][1] = 2; lp.uq[0][1] = 1;   /* Dm */
+    lp.ur[0][2] = 5; lp.uq[0][2] = 0;   /* F */
+    vc_build_pads(&lp, custom, pads);
+    CHECK(vc_prog_length(&lp) == VC_PROG_MAX, "user slot has its steps (%d)", vc_prog_length(&lp));
+    CHECK(pads[0].valid && !strcmp(pads[0].name, "A7") && !strcmp(pads[1].name, "Dm") && !strcmp(pads[2].name, "F"),
+          "saved chords come back as saved, not transposed (%s %s %s)", pads[0].name, pads[1].name, pads[2].name);
+    /* step 4 was empty, so pad 4 keeps the layout; the chord in the key G is not moved */
+    LayoutParams off = lp; off.prog = 0;
+    static PadChord plain[VC_PADS];
+    vc_build_pads(&off, custom, plain);
+    CHECK(strcmp(pads[3].name, plain[3].name) == 0, "an empty step keeps the layout (%s)", pads[3].name);
+    CHECK(vc_prog_length(&off) == 0, "Off has no steps");
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1277,6 +1303,7 @@ int main(void) {
     printf("progressions and harmonic context...\n"); test_progressions();
     printf("progression fills pads...\n"); test_progression_pads();
     printf("progression plays a chord per bar...\n"); test_progression_play();
+    printf("user progressions...\n"); test_user_progressions();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

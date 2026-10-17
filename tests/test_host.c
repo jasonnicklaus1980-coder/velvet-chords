@@ -646,7 +646,7 @@ int main(int argc, char **argv) {
     {
         int P_PROGC = find_param(fx, "Progression"), P_PAD2 = find_param(fx, "Pad 2 chord");
         CHECK(P_PROGC > 0 && P_PAD2 > 0, "progression and pad 2 parameters exist");
-        fx->setParameter(fx, P_PROGC, 1.f / 8.f); /* template 1, I-V-vi-IV */
+        fx->setParameter(fx, P_PROGC, 1.f / 12.f); /* template 1, I-V-vi-IV: Off, 8 templates, 4 user slots = 13 choices */
         display(fx, P_PROGC, buf);
         CHECK(!strcmp(buf, "I-V-vi-IV"), "progression shows its name (%s)", buf);
         display(fx, P_PAD2, buf);
@@ -655,6 +655,39 @@ int main(int argc, char **argv) {
         display(fx, P_PROGC, buf);
         CHECK(!strcmp(buf, "Off"), "progression Off (%s)", buf);
         CHECK(find_param(fx, "Progression play") > 0, "progression play parameter exists");
+
+        /* save the pads as progression slot 1, then recall it: the same chords come back on pads 1-4 */
+        int P_SAVE = find_param(fx, "Save progression"), P_SLOT = find_param(fx, "Progression slot");
+        char before[4][64], after[4][64];
+        for (int k = 0; k < 4; k++) { char nm[32]; snprintf(nm, sizeof(nm), "Pad %d chord", k + 1); display(fx, find_param(fx, nm), before[k]); }
+        CHECK(P_SAVE > 0 && P_SLOT > 0, "save and slot parameters exist");
+        fx->setParameter(fx, P_SLOT, 0.f);
+        fx->setParameter(fx, P_SAVE, 1.f); /* a press saves bank A into the slot */
+        fx->setParameter(fx, P_PROGC, 9.f / 12.f); /* user slot 1 */
+        display(fx, P_PROGC, buf);
+        CHECK(!strcmp(buf, "User 1 (saved)"), "saved slot shows as saved (%s)", buf);
+        for (int k = 0; k < 4; k++) { char nm[32]; snprintf(nm, sizeof(nm), "Pad %d chord", k + 1); display(fx, find_param(fx, nm), after[k]); }
+        int same = 1;
+        for (int k = 0; k < 4; k++) if (strcmp(before[k], after[k])) same = 0;
+        CHECK(same, "recalling the slot restores pads 1-4 (%s %s %s %s)", after[0], after[1], after[2], after[3]);
+        fx->setParameter(fx, P_PROGC, 0.f);
+
+        /* the saved slot survives a save and reload */
+        void *ck = 0;
+        int csize = (int)fx->dispatcher(fx, effGetChunk, 0, 0, &ck, 0);
+        void *cc = malloc((size_t)csize); memcpy(cc, ck, (size_t)csize);
+        AEffect *fx3 = open_fx();
+        CHECK(fx3->dispatcher(fx3, effSetChunk, 0, csize, cc, 0) == 1, "chunk with saved progressions loads");
+        fx3->setParameter(fx3, find_param(fx3, "Progression"), 9.f / 12.f);
+        int same2 = 1;
+        for (int k = 0; k < 4; k++) {
+            char nm[32], d[64];
+            snprintf(nm, sizeof(nm), "Pad %d chord", k + 1);
+            display(fx3, find_param(fx3, nm), d);
+            if (strcmp(d, before[k])) same2 = 0;
+        }
+        CHECK(same2, "a reloaded project recalls the same saved chords");
+        free(cc);
     }
 
     /* Velvet Chords 1.1 features through the plugin interface: presets, riffs, shift keys, note editor, state */

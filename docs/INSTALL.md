@@ -105,6 +105,12 @@ replaces imported pads. Pads after the progression keep the layout. The Screen b
 each bar line, the previous chord released on the line, and nothing after the host stops. It assumes 4/4 and uses the host's
 tempo and position. The Voice lead Q-Link was replaced to make room; Voice lead is still on the Perform page.
 
+**Your own progressions:** the 16 chords on bank A can be saved as one of four user progressions. Set **Progression slot** (Tools
+Q-Link), then press **Save progression** (Perform page). The progression control then lists **User 1-4**, and recalling one puts
+its chords on pads 1-16 in the order they were saved, as the same chords (not transposed). Chords with custom notes are
+saved as empty steps, so their pads keep the layout. Saved slots are part of the project, so they reload with it.
+The Strum Q-Link on the Tools page was replaced by Progression slot; Strum is still on the Perform page.
+
 ### Two instances: chords on one, bass or melody on the other
 
 Load Velvet Chords on two tracks. On the second, set **Smart pads** to **Follow**: all of its pads become Smart notes that follow whatever chord the *first* instance is playing, live. Set the second to **Bass** for a bassline that always matches, or **Scale** for a lead. Give each its own sound, or route each to a different instrument with the virtual port and different output channels. Instances share the chord directly inside MPC, so no MIDI routing is needed between them.

@@ -309,16 +309,35 @@ void vc_voice_pads(const LayoutParams *p, const PadChord pads[VC_PADS], Voicing 
     }
 }
 
-/* the layout for the mode, then a progression (if one is chosen) on pads 1.. in the key: pad k plays step k */
+int vc_prog_length(const LayoutParams *p) {
+    if (p->prog < 1) return 0;
+    if (p->prog <= VC_NUM_PROGRESSIONS) return VC_PROGRESSIONS[p->prog - 1].n;
+    int slot = p->prog - VC_NUM_PROGRESSIONS - 1;
+    return slot < VC_USER_PROGS ? p->un[slot] : 0;
+}
+
+int vc_prog_step(const LayoutParams *p, int k, ChordSpec *out) {
+    int n = vc_prog_length(p);
+    if (k < 0 || k >= n) return 0;
+    int scale = (p->scale >= 0 && p->scale < VC_NUM_SCALES) ? p->scale : 0;
+    if (p->prog <= VC_NUM_PROGRESSIONS) return vc_prog_chord(&VC_PROGRESSIONS[p->prog - 1], pcmod(p->key), scale, k, out);
+    int slot = p->prog - VC_NUM_PROGRESSIONS - 1;
+    if (p->uq[slot][k] < 0 || p->uq[slot][k] >= VC_NUM_QUALITIES) return 0;
+    memset(out, 0, sizeof(*out));
+    out->root = p->ur[slot][k] % 12;
+    out->quality = p->uq[slot][k];
+    out->bass = -1;
+    return 1;
+}
+
+/* the layout for the mode, then the progression (if one is chosen) on pads 1.. */
 void vc_build_pads(const LayoutParams *p, const CustomPad *custom, PadChord out[VC_PADS]) {
     build_layout(p, custom, out);
-    if (p->prog < 1 || p->prog > VC_NUM_PROGRESSIONS) return;
-    const Progression *pr = &VC_PROGRESSIONS[p->prog - 1];
     int key = pcmod(p->key);
-    int scale = (p->scale >= 0 && p->scale < VC_NUM_SCALES) ? p->scale : 0;
-    int flats = vc_prefer_flats(key, vc_scale_is_minor(scale));
-    for (int k = 0; k < pr->n && k < VC_PADS; k++) {
+    int flats = vc_prefer_flats(key, vc_scale_is_minor((p->scale >= 0 && p->scale < VC_NUM_SCALES) ? p->scale : 0));
+    int n = vc_prog_length(p);
+    for (int k = 0; k < n && k < VC_PADS; k++) {
         ChordSpec c;
-        if (vc_prog_chord(pr, key, scale, k, &c)) set_pad(&out[k], &c, key, flats, 0, 0);
+        if (vc_prog_step(p, k, &c)) set_pad(&out[k], &c, key, flats, 0, 0);
     }
 }

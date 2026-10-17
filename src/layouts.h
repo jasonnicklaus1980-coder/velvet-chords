@@ -3,6 +3,9 @@
 #include "chords.h"
 #include "songs.h"
 #include "midiimport.h"
+#include "progression.h"
+
+#define VC_USER_PROGS 4 /* saved progressions the user can recall */
 
 #define VC_PADS 64 /* 4 MPC pad banks (A-D) x 16 */
 
@@ -33,12 +36,18 @@ typedef struct {
 
 typedef struct {
     int mode, song, section, key, scale, transpose;
-    int prog;                /* progression template 1..N (see progression.h); 0 = off: fills pads 1.. with its chords */
+    int prog;                /* progression: 0 = off, 1..N templates (progression.h), then the user slots; fills pads 1.. */
+    /* the user progressions: saved chords as root and quality (quality -1 = empty step), not transposed */
+    unsigned char un[VC_USER_PROGS], ur[VC_USER_PROGS][VC_PROG_MAX];
+    signed char uq[VC_USER_PROGS][VC_PROG_MAX];
     int voicing, inversion, octave, voice_lead;
     const ImportChord *imp;  /* VC_MODE_IMPORT */
     int nimp;
 } LayoutParams;
 
+/* the progression in use: how many steps, and the chord of step k (0 = empty step) */
+int vc_prog_length(const LayoutParams *p);
+int vc_prog_step(const LayoutParams *p, int k, ChordSpec *out);
 int vc_prefer_flats(int key_pc, int minor);
 int vc_scale_is_minor(int scale);
 void vc_roman(int key_pc, const ChordSpec *c, char *buf, int len);
