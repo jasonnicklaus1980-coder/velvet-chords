@@ -43,6 +43,8 @@ int en_shift_action(int note); /* -1 when the note is not a shift key */
 /* Smart Scale pads: single notes that follow the current chord */
 enum { SMART_OFF, SMART_SPLIT /* pads 9-16 */, SMART_FOLLOW /* all pads, chord from another instance */, SMART_COUNT };
 enum { SMODE_CHORD, SMODE_SCALE, SMODE_BASS, SMODE_COUNT };
+/* Bassline styles, four beats per bar: R root, F fifth, O octave, T third, A approach to the next chord's root, - hold */
+enum { BASS_OFF, BASS_ROOT /* R--- */, BASS_ROOT_FIFTH /* R-F- */, BASS_OCTAVES /* RORO */, BASS_WALKING /* RTFA */, BASS_COUNT };
 /* Smart map: how the smart pads are laid out. FOLLOW uses the Smart mode above and the chord; the others ignore the chord:
  * RELATIVE walks the key's scale from the key root, ABSOLUTE walks the scale from C, CHROMATIC walks all twelve semitones from the key. */
 enum { SMAP_FOLLOW, SMAP_RELATIVE, SMAP_ABSOLUTE, SMAP_CHROMATIC, SMAP_COUNT };
@@ -139,6 +141,10 @@ typedef struct Engine {
     int prog_play;   /* 1 = on */
     int prog_bar;    /* the bar the progression chord started in, -1 none */
     int prog_owner;  /* owner sounding the current bar's chord, 0 none */
+    /* bassline: follows the progression chord on the beat grid while Progression play runs */
+    int bass_style;  /* BASS_*: 0 = off */
+    int bass_beat;   /* the beat a bass note last started on, -1 none */
+    int bass_owner;  /* owner sounding the current bass note, 0 none */
     int sustain;
     QEvent queue[EN_QUEUE];
     int nqueue;

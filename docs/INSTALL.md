@@ -105,6 +105,12 @@ replaces imported pads. Pads after the progression keep the layout. The Screen b
 each bar line, the previous chord released on the line, and nothing after the host stops. It assumes 4/4 and uses the host's
 tempo and position. The Voice lead Q-Link was replaced to make room; Voice lead is still on the Perform page.
 
+**Bassline** (Tools Q-Link) adds a bass line under Progression play, on the beat grid, following the progression's chord for each bar.
+Styles: **Root** (the root on beat 1, held for the bar), **Root + fifth** (root on beat 1, fifth on beat 3), **Octaves** (root, octave, root,
+octave) and **Walking** (root, third, fifth, then a semitone below the next chord's root). The bass sits in the low register (C1-B2), each
+note is released when the next starts, and it stops when the host stops. It needs Progression play on and a progression chosen.
+The Tone Q-Link on the Tools page was replaced by Bassline; Tone is still on the Perform page.
+
 **Pattern length, chance and seed** (Pattern page, bottom row): **Pattern length** loops the pattern after 4, 8, 12 or 16 steps.
 **Pattern chance** plays 25, 50, 75 or 100% of its hits. Which hits are skipped is set by **Pattern seed** (1-4): the same seed and
 settings always play the same hits, so a pattern you like can be reproduced. Rests and ties are not affected by the chance.

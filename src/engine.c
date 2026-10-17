@@ -149,6 +149,7 @@ void en_set_sr(Engine *e, float sr) {
 void en_init(Engine *e, float sr) {
     memset(e, 0, sizeof(*e));
     e->prog_bar = -1;
+    e->bass_beat = -1;
     sy_init(&e->synth, sr);
     en_set_sr(e, sr);
     e->lp.mode = VC_MODE_SONG;
@@ -312,6 +313,8 @@ void en_reset(Engine *e) {
     for (int i = 0; i < EN_OWNERS; i++) if (e->owners[i].owner) release_owner(e, &e->owners[i], 0);
     e->prog_owner = 0;
     e->prog_bar = -1;
+    e->bass_owner = 0;
+    e->bass_beat = -1;
     e->nqueue = 0;
     for (int k = 0; k < EN_ARP_LANES; k++) { e->lanes[k].owner = 0; e->lanes[k].note = -1; }
     e->pat_owner = 0;
@@ -850,11 +853,68 @@ static void prog_start(Engine *e, int bar, int frame) {
     e->prog_owner = r->owner;
 }
 
+/* ---------- bassline ---------- */
+static const char *BASS_PATTERN[BASS_COUNT] = {"----", "R---", "R-F-", "RORO", "RTFA"};
+
+static void bass_release(Engine *e, int frame) {
+    OwnerRec *r = e->bass_owner ? find_owner(e, e->bass_owner) : 0;
+    if (r) release_owner(e, r, frame);
+    e->bass_owner = 0;
+}
+
+static void bass_stop(Engine *e, int frame) {
+    bass_release(e, frame);
+    e->bass_beat = -1;
+}
+
+/* a new bass note for this beat (or hold the last one on a '-'); the chord is the progression step for the bar */
+static void bass_beat_start(Engine *e, int beat, int frame) {
+    e->bass_beat = beat;
+    if (e->bass_style < 1 || e->bass_style >= BASS_COUNT) return;
+    int n = vc_prog_length(&e->lp);
+    if (n < 1) return;
+    int bar = beat / 4, step = beat % 4;
+    char tok = BASS_PATTERN[e->bass_style][step];
+    if (tok == '-') return;
+    ChordSpec c, next;
+    if (!vc_prog_step(&e->lp, bar % n, &c)) return;
+    if (!vc_prog_step(&e->lp, (bar + 1) % n, &next)) next = c;
+    int iv[VC_MAX_IV], m = vc_chord_intervals(&c, iv);
+    int root = 36 + c.root, note = root;
+    if (tok == 'F') note = root + 7;
+    else if (tok == 'O') note = root + 12;
+    else if (tok == 'T') note = root + (m > 1 ? iv[1] : 4);
+    else if (tok == 'A') note = 36 + (next.root + 11) % 12; /* a semitone below the next root */
+    if (note > 127) note -= 12;
+    bass_release(e, frame);
+    OwnerRec *r = alloc_owner(e, frame);
+    if (++e->next_owner <= 0) e->next_owner = 1;
+    r->owner = e->next_owner;
+    r->held = 1;
+    r->sustained = 0;
+    r->n = 1;
+    r->notes[0] = (unsigned char)note;
+    memset(r->sounding, 0, sizeof(r->sounding));
+    r->vel = r->vel_base = en_vel_curve(e->vel_curve, 100);
+    r->root = c.root;
+    r->base_n = 1;
+    r->base_notes[0] = (unsigned char)note;
+    note_on_slot(e, r, 0, frame);
+    e->bass_owner = r->owner;
+}
+
+/* frames from this point in the block to the next beat */
+static int bass_frames_to_beat(const Engine *e, int frame) {
+    double b = prog_beats(e, frame);
+    double next_beat = floor(b + 1e-9) + 1;
+    return (int)ceil((next_beat - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
+}
+
 /* frames from this point in the block to the next bar line */
 static int prog_frames_to_bar(const Engine *e, int frame) {
     double b = prog_beats(e, frame);
     double next_bar = (floor(b / PROG_BEATS_PER_BAR + 1e-9) + 1) * PROG_BEATS_PER_BAR;
-    return (int)ceil((next_bar - b) * 60.0 / prog_tempo(e) * e->sr);
+    return (int)ceil((next_bar - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
 }
 
 void en_process(Engine *e, float *L, float *R, int n) {
@@ -880,6 +940,7 @@ void en_process(Engine *e, float *L, float *R, int n) {
     }
     if (e->pat_owner && e->pat_sync && e->playing) pat_align(e, 0, 0); /* follow the MPC's song position */
     if (e->prog_owner && (!e->prog_play || !e->playing || !e->lp.prog)) prog_stop(e, 0);
+    if ((e->bass_owner || e->bass_beat >= 0) && (!e->bass_style || !e->prog_play || !e->playing || !e->lp.prog)) bass_stop(e, 0);
     if (!e->playing && e->prog_bar >= 0) prog_stop(e, 0);
     if (e->smart == SMART_FOLLOW && g_vc_shared.version != e->shared_seen) { en_smart_update(e); e->events_changed = 1; }
     sort_in(e);
@@ -935,8 +996,13 @@ void en_process(Engine *e, float *L, float *R, int n) {
             int bar = (int)floor((prog_beats(e, pos) + 1e-9) / PROG_BEATS_PER_BAR);
             if (bar != e->prog_bar) prog_start(e, bar, pos);
         }
+        if (e->bass_style && e->prog_play && e->playing && e->lp.prog > 0) { /* a beat reached at this frame */
+            int beat = (int)floor(prog_beats(e, pos) + 1e-9);
+            if (beat >= 0 && beat != e->bass_beat) bass_beat_start(e, beat, pos);
+        }
         int next = n;
         if (ii < e->nin && e->in[ii].frame < next) next = e->in[ii].frame;
+        if (e->bass_style && e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + bass_frames_to_beat(e, pos); if (d < next) next = d; }
         if (e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + prog_frames_to_bar(e, pos); if (d < next) next = d; }
         for (int q = 0; q < e->nqueue; q++) {
             int64_t d = e->queue[q].when - e->now;

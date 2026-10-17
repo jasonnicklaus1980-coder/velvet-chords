@@ -998,7 +998,7 @@ static void test_stuck_notes(void) {
             else if (op == 11) e->hold = (int)(st_rnd(&seed) % 2);
             else if (op == 12) en_push_midi(e, 0, 0xB0, 123, 0);
             else if (op == 13) custom_chord(e, (int)(st_rnd(&seed) % 16), st_rnd(&seed) % 2 ? "Am7" : "F", 0);
-            else if (op == 14) { e->prog_play = (int)(st_rnd(&seed) % 2); e->lp.prog = (int)(st_rnd(&seed) % (VC_NUM_PROGRESSIONS + 1)); }
+            else if (op == 14) { e->prog_play = (int)(st_rnd(&seed) % 2); e->lp.prog = (int)(st_rnd(&seed) % (VC_NUM_PROGRESSIONS + 1)); e->bass_style = (int)(st_rnd(&seed) % BASS_COUNT); }
             else if (op == 15) e->playing = (int)(st_rnd(&seed) % 4) != 0; /* mostly playing, sometimes stopped */
             static float L[512], R[512];
             int n = 0;
@@ -1018,7 +1018,7 @@ static void test_stuck_notes(void) {
         }
         /* let go of everything the way a host does (Hold off too, or the latched chord keeps sounding), then drain */
         e->hold = 0;
-        e->playing = 0; e->prog_play = 0; /* the host stops: no more progression chords */
+        e->playing = 0; e->prog_play = 0; e->bass_style = 0; /* the host stops: no more progression chords or bass */
         for (int k = 0; k < 128; k++) en_push_midi(e, 0, 0x80, (unsigned char)k, 0);
         en_push_midi(e, 0, 0xB0, 64, 0);
         static float L[512], R[512];
@@ -1330,6 +1330,59 @@ static void test_pattern_chance(void) {
     CHECK(same && idx2 == nfirst, "the same seed repeats the same hits (%d compared)", idx2);
 }
 
+/* bassline: with Progression play running, the bass follows the progression chord on the beat grid */
+static void bass_run(int style, int bars, int *nbass, int64_t *tbass, int *notebass, int *offs, int max) {
+    static float L[512], R[512];
+    Engine *e = v11_engine();
+    e->lp.mode = VC_MODE_CUSTOM; e->lp.prog = 1; e->lp.key = 0; e->lp.scale = 0; e->lp.voicing = VC_VOICE_CLOSE;
+    e->lp.inversion = 0; e->lp.octave = 1; /* chords from C4 up, so the bass (C1-B2) is easy to tell apart */
+    e->dirty = 1;
+    e->prog_play = 1; e->bass_style = style;
+    e->tempo = 120.0; e->playing = 1;
+    int64_t pos = 0; *nbass = 0; *offs = 0;
+    for (int b = 0; b < bars * 96000 / 512 + 8; b++) {
+        int64_t t0 = e->now;
+        e->ppq = (double)pos / 48000.0 * 2.0;
+        en_process(e, L, R, 512);
+        for (int i = 0; i < e->nout; i++) {
+            int note = e->out[i].d[1] & 127;
+            int on = (e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0;
+            if (note >= 60) continue; /* a chord note, not the bass */
+            if (on && *nbass < max) { tbass[*nbass] = t0 + e->out[i].frame; notebass[*nbass] = note; (*nbass)++; }
+            else if (!on) (*offs)++;
+        }
+        e->nout = 0;
+        pos += 512;
+    }
+}
+
+static void test_bassline(void) {
+    int64_t t[64]; int note[64], n, offs;
+    /* Root + fifth over I-V-vi-IV in C: C and G, G and D, A and E, F and C */
+    bass_run(BASS_ROOT_FIFTH, 4, &n, t, note, &offs, 64);
+    static const int WANT[8] = {36, 43, 43, 50, 45, 52, 41, 48};
+    int bad = n < 8;
+    for (int i = 0; i < 8 && i < n; i++) {
+        int64_t beat = (t[i] + 100) / 24000; /* the beat the note started on */
+        if (note[i] != WANT[i] || beat != (int64_t)((i / 2) * 4 + (i % 2) * 2)) bad = 1;
+    }
+    CHECK(!bad, "root + fifth bass follows I-V-vi-IV on beats 1 and 3 (%d notes: %d %d %d %d %d %d %d %d)", n,
+          note[0], note[1], note[2], note[3], note[4], note[5], note[6], note[7]);
+    CHECK(offs >= 7, "each bass note is released when the next starts (%d offs)", offs);
+
+    /* Root only: one note per bar, held across it */
+    bass_run(BASS_ROOT, 4, &n, t, note, &offs, 64);
+    CHECK(n >= 4 && note[0] == 36 && note[1] == 43 && note[2] == 45 && note[3] == 41 && t[1] - t[0] == 96000, "root bass: one note per bar (%d notes: %d %d %d %d, gap %lld)", n, note[0], note[1], note[2], note[3], (long long)(t[1] - t[0]));
+
+    /* Walking: root, third, fifth, then a semitone below the next root: bar 1 is C E G Gb? (next root G -> F#) */
+    bass_run(BASS_WALKING, 2, &n, t, note, &offs, 64);
+    CHECK(n >= 4 && note[0] == 36 && note[1] == 40 && note[2] == 43 && note[3] == 42, "walking bass: root, third, fifth, approach (%d %d %d %d)", note[0], note[1], note[2], note[3]);
+
+    /* Off: no bass */
+    bass_run(BASS_OFF, 2, &n, t, note, &offs, 64);
+    CHECK(n == 0, "bass Off plays nothing (%d)", n);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1357,6 +1410,7 @@ int main(void) {
     printf("user progressions...\n"); test_user_progressions();
     printf("pattern length...\n"); test_pattern_length();
     printf("pattern chance...\n"); test_pattern_chance();
+    printf("bassline...\n"); test_bassline();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

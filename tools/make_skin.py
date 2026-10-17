@@ -643,7 +643,7 @@ class Skin:
                 "Screen bank", "Mode", "Voicing", "Sound", "Volume"]
         pattern = ["Step %d" % (k + 1) for k in range(16)]
         tools = ["Hold", "Repeat", "Melody", "Melody rate", "Key sync", "Import file", "Pads play", "Smart pads",
-                 "Smart notes", "Smart octave", "Pattern", "Progression slot", "Sound", "Tone", "Release", "Volume"]
+                 "Smart notes", "Smart octave", "Pattern", "Progression slot", "Sound", "Bassline", "Release", "Volume"]
         lanes = ["Riff step %d" % (k + 1) for k in range(16)]
         tabs = [{"Tab": i + 1, "SubTab": 1, "Bank Direction": "Column", "Q-Links": m(x)} for i, x in enumerate([play, perform, edit, pattern, tools, lanes])]
         return {"version": 4, "info": {"version": 1, "type": "CompleteDescription"},
