@@ -116,6 +116,9 @@ typedef struct Engine {
     double ppq;        /* host song position at block start (quarter notes) */
     int playing;       /* host transport running */
     int pat_owner, pat_is_repeat;
+    int pat_len;                   /* steps before the pattern starts again: 4, 8, 12 or 16 */
+    int pat_chance;                /* % of pattern hits that play: 25, 50, 75 or 100 */
+    int pat_seed;                  /* 1..4: picks which steps the chance skips */
     int hold, latched_note;        /* Hold: the latched pad's input note, -1 none */
     int repeat;                    /* REP_*: retrigger the chord at this rate */
     int mel_mode, mel_rate;        /* melody generator */

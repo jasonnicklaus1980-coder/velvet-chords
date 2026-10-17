@@ -50,7 +50,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE,
+    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -196,6 +196,9 @@ static void init_param_info(void) {
     P(P_PROG_PLAY, "Progression play", 2, 0.f, 0)
     P(P_UPROG_SLOT, "Progression slot", VC_USER_PROGS, 0.f, 0)
     P(P_UPROG_SAVE, "Save progression", 2, 0.f, 1)
+    P(P_PAT_LEN, "Pattern length", 4, 1.f, 0)
+    P(P_PAT_CHANCE, "Pattern chance", 4, 1.f, 0)
+    P(P_PAT_SEED, "Pattern seed", 4, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -760,6 +763,9 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_SMART_OCT: e->smart_oct = idx_of(p, i) - 2; e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_MAP: e->smart_map = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_PROG_PLAY: e->prog_play = idx_of(p, i); if (from_host) refresh_host(p); break;
+    case P_PAT_LEN: e->pat_len = (idx_of(p, i) + 1) * 4; e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_PAT_CHANCE: e->pat_chance = (idx_of(p, i) + 1) * 25; e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_PAT_SEED: e->pat_seed = idx_of(p, i) + 1; e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_PROG: if (idx_of(p, i) != 0) p->val[P_IMP_PADS] = 0.f; /* choosing a progression replaces imported pads; Off doesn't */
         sync_layout(p); if (from_host) refresh_host(p); break;
     case P_PRESET: apply_preset(p, idx_of(p, i)); sync_preset_knobs(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
@@ -902,6 +908,9 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         break;
     }
     case P_UPROG_SLOT: snprintf(b, sizeof(b), "Slot %d", x + 1); break;
+    case P_PAT_LEN: snprintf(b, sizeof(b), "%d steps", (x + 1) * 4); break;
+    case P_PAT_CHANCE: snprintf(b, sizeof(b), "%d%%", (x + 1) * 25); break;
+    case P_PAT_SEED: snprintf(b, sizeof(b), "Seed %d", x + 1); break;
     case P_PROG_PLAY: copy_str(b, x ? "On: one chord per bar" : "Off", sizeof(b)); break;
     case P_SMART_MAP: { static const char *MN[SMAP_COUNT] = {"Follow mode", "Relative", "Absolute", "Chromatic"}; copy_str(b, MN[x], sizeof(b)); break; }
     case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;

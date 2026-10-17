@@ -1279,6 +1279,57 @@ static void test_user_progressions(void) {
     CHECK(vc_prog_length(&off) == 0, "Off has no steps");
 }
 
+/* pattern length: a pattern loops at its own length, so a one-hit pattern in a 4-step loop repeats every four steps */
+static void test_pattern_length(void) {
+    static Hit h[6000];
+    Engine *e = pat_engine("x...............", 120.0, PRATE_16);
+    e->pat_len = 4;
+    en_push_midi(e, 0, 0x90, 36 + 3, 100);
+    int n = collect(e, 220, h, 6000);
+    int lowest = 999;
+    for (int i = 0; i < n; i++) if (h[i].on && h[i].note < lowest) lowest = h[i].note;
+    int64_t ons[8]; int k = 0;
+    for (int i = 0; i < n && k < 8; i++) if (h[i].on && h[i].note == lowest) ons[k++] = h[i].t;
+    int spaced = k >= 4;
+    for (int i = 1; i < k; i++) if (ons[i] - ons[i - 1] != 24000) spaced = 0;
+    CHECK(spaced, "a 4-step pattern repeats every 4 steps (%d hits)", k);
+}
+
+/* pattern chance: 100% plays every hit; 50% plays about half, the same half every time for the same seed */
+static void test_pattern_chance(void) {
+    static Hit h[6000];
+    int hits_full = 0, hits_half = 0, same = 1;
+    int64_t first[64]; int nfirst = 0;
+    for (int run = 0; run < 2; run++) {
+        Engine *e = pat_engine("xxxxxxxxxxxxxxxx", 120.0, PRATE_16);
+        e->pat_chance = run == 0 ? 100 : 50;
+        e->pat_seed = 3;
+        en_push_midi(e, 0, 0x90, 36 + 3, 100);
+        int n = collect(e, 200, h, 6000);
+        int lowest = 999;
+        for (int i = 0; i < n; i++) if (h[i].on && h[i].note < lowest) lowest = h[i].note;
+        int cnt = 0, idx = 0;
+        for (int i = 0; i < n; i++) if (h[i].on && h[i].note == lowest) {
+            cnt++;
+            if (run == 1 && nfirst < 64) first[nfirst++] = h[i].t;
+            idx++;
+        }
+        if (run == 0) hits_full = cnt; else hits_half = cnt;
+    }
+    CHECK(hits_full >= 15, "100%% chance plays every hit (%d)", hits_full);
+    CHECK(hits_half > 0 && hits_half < hits_full, "50%% chance plays some hits, not all (%d of %d)", hits_half, hits_full);
+    /* the same seed plays the same hits: a second engine with the same seed matches the first */
+    Engine *e2 = pat_engine("xxxxxxxxxxxxxxxx", 120.0, PRATE_16);
+    e2->pat_chance = 50; e2->pat_seed = 3;
+    en_push_midi(e2, 0, 0x90, 36 + 3, 100);
+    int n2 = collect(e2, 200, h, 6000);
+    int lowest2 = 999;
+    for (int i = 0; i < n2; i++) if (h[i].on && h[i].note < lowest2) lowest2 = h[i].note;
+    int idx2 = 0;
+    for (int i = 0; i < n2 && idx2 < nfirst; i++) if (h[i].on && h[i].note == lowest2) { if (h[i].t != first[idx2]) same = 0; idx2++; }
+    CHECK(same && idx2 == nfirst, "the same seed repeats the same hits (%d compared)", idx2);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1304,6 +1355,8 @@ int main(void) {
     printf("progression fills pads...\n"); test_progression_pads();
     printf("progression plays a chord per bar...\n"); test_progression_play();
     printf("user progressions...\n"); test_user_progressions();
+    printf("pattern length...\n"); test_pattern_length();
+    printf("pattern chance...\n"); test_pattern_chance();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

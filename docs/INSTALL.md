@@ -105,6 +105,10 @@ replaces imported pads. Pads after the progression keep the layout. The Screen b
 each bar line, the previous chord released on the line, and nothing after the host stops. It assumes 4/4 and uses the host's
 tempo and position. The Voice lead Q-Link was replaced to make room; Voice lead is still on the Perform page.
 
+**Pattern length, chance and seed** (Pattern page, bottom row): **Pattern length** loops the pattern after 4, 8, 12 or 16 steps.
+**Pattern chance** plays 25, 50, 75 or 100% of its hits. Which hits are skipped is set by **Pattern seed** (1-4): the same seed and
+settings always play the same hits, so a pattern you like can be reproduced. Rests and ties are not affected by the chance.
+
 **Your own progressions:** the 16 chords on bank A can be saved as one of four user progressions. Set **Progression slot** (Tools
 Q-Link), then press **Save progression** (Perform page). The progression control then lists **User 1-4**, and recalling one puts
 its chords on pads 1-16 in the order they were saved, as the same chords (not transposed). Chords with custom notes are

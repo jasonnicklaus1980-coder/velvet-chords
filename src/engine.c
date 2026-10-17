@@ -175,6 +175,9 @@ void en_init(Engine *e, float sr) {
     e->pat_sync = 1;
     e->pat_rate = PRATE_16;
     memcpy(e->pat, EN_PATTERNS[0].steps, EN_STEPS);
+    e->pat_len = EN_STEPS;
+    e->pat_chance = 100;
+    e->pat_seed = 1;
     e->instance_id = g_next_instance++;
     e->scale_pcs_mask = 0xAB5; /* C major */
     e->latched_note = -1;
@@ -384,12 +387,22 @@ static void riff_do(Engine *e, OwnerRec *r, int64_t k, int frame) {
     pat_off_after(e, 1, frame);
 }
 
+/* deterministic chance: the same seed and step always give the same answer, so a pattern can be reproduced */
+static int pat_step_plays(const Engine *e, int64_t k) {
+    if (e->pat_chance >= 100) return 1;
+    uint32_t h = (uint32_t)k * 2654435761u ^ (uint32_t)e->pat_seed * 40503u;
+    h ^= h >> 13; h *= 0x5bd1e995u; h ^= h >> 15;
+    return (int)(h % 100) < e->pat_chance;
+}
+
 static void pat_do(Engine *e, int64_t k, int frame) {
     OwnerRec *r = find_owner(e, e->pat_owner);
     if (!r) { e->pat_owner = 0; return; }
     e->pat_last_k = k;
     if (e->riff) { riff_do(e, r, k, frame); return; }
-    char c = e->pat_is_repeat ? 'X' : e->pat[(int)(k % EN_STEPS)]; /* Repeat = every step, full velocity */
+    int steps = e->pat_len > 0 ? e->pat_len : EN_STEPS;
+    char c = e->pat_is_repeat ? 'X' : e->pat[(int)(k % steps)]; /* Repeat = every step, full velocity */
+    if (!e->pat_is_repeat && c != '.' && c != '-' && !pat_step_plays(e, k)) c = '.'; /* the chance skips this hit */
     if (c == '-') return; /* tie */
     pat_release_notes(e, r, frame);
     e->pat_off_at = 0;
@@ -404,7 +417,7 @@ static void pat_do(Engine *e, int64_t k, int frame) {
     for (int s = from; s < to; s++) note_on_slot(e, r, s, frame);
     r->vel = r->vel_base;
     int ties = 1;
-    while (!e->pat_is_repeat && ties < EN_STEPS && e->pat[(int)((k + ties) % EN_STEPS)] == '-') ties++;
+    while (!e->pat_is_repeat && ties < steps && e->pat[(int)((k + ties) % steps)] == '-') ties++;
     double len = ties * pat_step_samples(e) * (e->gate < 0.1f ? 0.1f : e->gate);
     if (len < e->sr * 0.005) len = e->sr * 0.005;
     e->pat_off_at = e->now + frame + (int64_t)len;
