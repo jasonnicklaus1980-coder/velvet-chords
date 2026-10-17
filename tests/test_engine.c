@@ -391,6 +391,18 @@ static void test_patterns(void) {
     for (int i = 0; i < n; i++) { if (h[i].on && on_t < 0) on_t = h[i].t; if (!h[i].on && off_t < 0) off_t = h[i].t; }
     CHECK(off_t - on_t == 12000, "tie + 50%% gate = 2 steps (%lld)", (long long)(off_t - on_t));
 
+    /* a tap on a second pad takes the pattern for as long as it is down; when it lets go, the held pad plays again */
+    e = pat_engine("X.X.X.X.X.X.X.X.", 120.0, PRATE_16);
+    en_push_midi(e, 0, 0x90, 39, 100);
+    collect(e, 20, h, 4000);
+    en_push_midi(e, 0, 0x90, 40, 100);
+    collect(e, 4, h, 4000);
+    en_push_midi(e, 0, 0x80, 40, 0);
+    n = collect(e, 60, h, 4000);
+    k = 0;
+    for (int i = 0; i < n; i++) if (h[i].on) k++;
+    CHECK(k >= 8, "held pad resumes its pattern after a tap on a second pad (%d hits)", k);
+
     /* swing 50%%: odd 16ths late by a quarter step (1500 samples at 120 bpm) */
     e = pat_engine("xxxxxxxxxxxxxxxx", 120.0, PRATE_16);
     e->swing = 0.5f;

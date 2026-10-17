@@ -260,6 +260,8 @@ int en_arp_on(const Engine *e) {
     return 0;
 }
 
+static void pat_resume(Engine *e, OwnerRec *gone, int frame);
+
 static void release_owner(Engine *e, OwnerRec *r, int frame) {
     if (!r || !r->owner) return;
     int k = 0;
@@ -267,7 +269,7 @@ static void release_owner(Engine *e, OwnerRec *r, int frame) {
     e->nqueue = k;
     for (int k = 0; k < EN_ARP_LANES; k++)
         if (e->lanes[k].owner == r->owner) { arp_silence(e, &e->lanes[k], r, frame); e->lanes[k].owner = 0; }
-    if (e->pat_owner == r->owner) { e->pat_owner = 0; e->pat_off_at = 0; }
+    if (e->pat_owner == r->owner) { e->pat_owner = 0; e->pat_off_at = 0; pat_resume(e, r, frame); }
     if (e->mel_parent == r->owner) { int keep = r->owner; e->mel_parent = 0; OwnerRec *m = find_owner(e, e->mel_owner); e->mel_owner = 0; e->mel_off_at = 0; if (m && m->owner != keep) release_owner(e, m, frame); }
     if (e->latched_note >= 0 && e->pad_owner[e->latched_note] == r->owner) e->latched_note = -1;
     for (int s = 0; s < r->n; s++) note_off_slot(e, r, s, frame);
@@ -417,6 +419,22 @@ static void pat_align(Engine *e, int frame, int pressed) {
 static void pat_start(Engine *e, int frame) {
     e->pat_last_k = -1;
     pat_align(e, frame, 1);
+}
+
+/* the pattern's pad was let go while another pad is still held (a tap on a second pad took the pattern):
+ * the most recent held pad that is still down plays the pattern again */
+static void pat_resume(Engine *e, OwnerRec *gone, int frame) {
+    if (!e->pattern_on && e->repeat == REP_OFF) return;
+    OwnerRec *best = 0;
+    for (int i = 0; i < EN_OWNERS; i++) {
+        OwnerRec *o = &e->owners[i];
+        if (!o->owner || o == gone || !o->held) continue;
+        if (!best || o->owner > best->owner) best = o;
+    }
+    if (!best) return;
+    e->pat_owner = best->owner;
+    e->pat_off_at = 0;
+    pat_start(e, frame);
 }
 
 /* ---------- melody generator ---------- */
