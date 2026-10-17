@@ -33,6 +33,7 @@ typedef struct {
 
 typedef struct {
     int mode, song, section, key, scale, transpose;
+    int prog;                /* progression template 1..N (see progression.h); 0 = off: fills pads 1.. with its chords */
     int voicing, inversion, octave, voice_lead;
     const ImportChord *imp;  /* VC_MODE_IMPORT */
     int nimp;

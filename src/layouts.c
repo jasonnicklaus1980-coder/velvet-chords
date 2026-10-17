@@ -1,4 +1,5 @@
 #include "layouts.h"
+#include "progression.h"
 #include <string.h>
 
 const char *VC_MODE_NAMES[VC_MODE_COUNT] = {"Song", "Smart scale", "R&B kit", "Chord types", "Custom"};
@@ -149,7 +150,7 @@ static const KitEntry RNB_MIN_B[16] = {
 static const char *TYPES_A[16] = {"", "m", "7", "maj7", "m7", "m7b5", "dim7", "aug", "sus2", "sus4", "6", "m6", "maj9", "m9", "9", "13"};
 static const char *TYPES_B[16] = {"add9", "madd9", "11", "m11", "maj7#11", "7#9", "7b9", "7#5", "13b9", "mmaj7", "6/9", "7sus4", "maj13", "m13", "dim", "7alt"};
 
-void vc_build_pads(const LayoutParams *p, const CustomPad *custom, PadChord out[VC_PADS]) {
+static void build_layout(const LayoutParams *p, const CustomPad *custom, PadChord out[VC_PADS]) {
     memset(out, 0, sizeof(PadChord) * VC_PADS);
     int key = pcmod(p->key);
     int scale = (p->scale >= 0 && p->scale < VC_NUM_SCALES) ? p->scale : 0;
@@ -305,5 +306,19 @@ void vc_voice_pads(const LayoutParams *p, const PadChord pads[VC_PADS], Voicing 
             } else vc_voice(&pads[k].spec, p->voicing, inv, oct, vl, &out[k]);
             prev = &out[k];
         }
+    }
+}
+
+/* the layout for the mode, then a progression (if one is chosen) on pads 1.. in the key: pad k plays step k */
+void vc_build_pads(const LayoutParams *p, const CustomPad *custom, PadChord out[VC_PADS]) {
+    build_layout(p, custom, out);
+    if (p->prog < 1 || p->prog > VC_NUM_PROGRESSIONS) return;
+    const Progression *pr = &VC_PROGRESSIONS[p->prog - 1];
+    int key = pcmod(p->key);
+    int scale = (p->scale >= 0 && p->scale < VC_NUM_SCALES) ? p->scale : 0;
+    int flats = vc_prefer_flats(key, vc_scale_is_minor(scale));
+    for (int k = 0; k < pr->n && k < VC_PADS; k++) {
+        ChordSpec c;
+        if (vc_prog_chord(pr, key, scale, k, &c)) set_pad(&out[k], &c, key, flats, 0, 0);
     }
 }

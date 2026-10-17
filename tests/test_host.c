@@ -642,6 +642,20 @@ int main(int argc, char **argv) {
         d->dispatcher(d, effClose, 0, 0, 0, 0);
     }
 
+    /* progressions through the plugin interface: the Progression control fills pads 1-4 */
+    {
+        int P_PROGC = find_param(fx, "Progression"), P_PAD2 = find_param(fx, "Pad 2 chord");
+        CHECK(P_PROGC > 0 && P_PAD2 > 0, "progression and pad 2 parameters exist");
+        fx->setParameter(fx, P_PROGC, 1.f / 8.f); /* template 1, I-V-vi-IV */
+        display(fx, P_PROGC, buf);
+        CHECK(!strcmp(buf, "I-V-vi-IV"), "progression shows its name (%s)", buf);
+        display(fx, P_PAD2, buf);
+        CHECK(strstr(buf, "G") != 0, "pad 2 plays the progression's V (%s)", buf);
+        fx->setParameter(fx, P_PROGC, 0.f);
+        display(fx, P_PROGC, buf);
+        CHECK(!strcmp(buf, "Off"), "progression Off (%s)", buf);
+    }
+
     /* Velvet Chords 1.1 features through the plugin interface: presets, riffs, shift keys, note editor, state */
     {
         int P_PRE = find_param(fx, "Preset"), P_PNX = find_param(fx, "Preset next"), P_TN = find_param(fx, "Tone");

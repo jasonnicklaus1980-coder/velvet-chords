@@ -1166,6 +1166,38 @@ static void test_progressions(void) {
     CHECK(!strcmp(n0, "Em") && !strcmp(n1, "A") && !strcmp(n2, "D") && !strcmp(n3, "Em"), "ii-V-I in D wraps to ii (%s %s %s %s)", n0, n1, n2, n3);
 }
 
+/* a chosen progression fills pads 1.. with its chords in the key; the other pads keep the layout, and Off restores it */
+static void test_progression_pads(void) {
+    LayoutParams lp;
+    memset(&lp, 0, sizeof(lp));
+    CustomPad custom[VC_PADS];
+    memset(custom, 0, sizeof(custom));
+    static PadChord off[VC_PADS], on[VC_PADS];
+    lp.mode = VC_MODE_CUSTOM; lp.key = 0; lp.scale = 0; lp.voicing = VC_VOICE_BASS_UPPER;
+    vc_build_pads(&lp, custom, off);
+    lp.prog = 1; /* I-V-vi-IV */
+    vc_build_pads(&lp, custom, on);
+    static const char *C_WANT[4] = {"C", "G", "Am", "F"};
+    int bad = 0;
+    for (int k = 0; k < 4; k++) if (!on[k].valid || strcmp(on[k].name, C_WANT[k])) bad++;
+    CHECK(bad == 0, "I-V-vi-IV fills pads 1-4 with C G Am F in C (%d bad)", bad);
+    int rest = 0;
+    for (int k = 4; k < VC_PADS; k++) if (on[k].valid != off[k].valid || strcmp(on[k].name, off[k].name)) rest++;
+    CHECK(rest == 0, "pads after the progression keep the layout (%d changed)", rest);
+    lp.key = 7; /* G: G D Em C */
+    vc_build_pads(&lp, custom, on);
+    static const char *G_WANT[4] = {"G", "D", "Em", "C"};
+    bad = 0;
+    for (int k = 0; k < 4; k++) if (strcmp(on[k].name, G_WANT[k])) bad++;
+    CHECK(bad == 0, "the same progression in G is G D Em C (%d bad)", bad);
+    lp.prog = 0;
+    vc_build_pads(&lp, custom, on);
+    int same = 1;
+    lp.key = 7;
+    for (int k = 0; k < VC_PADS; k++) if (strcmp(on[k].name, off[k].name) && k < 4) same = 0;
+    CHECK(same, "Off gives back the layout");
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1188,6 +1220,7 @@ int main(void) {
     printf("smart scale in all keys...\n"); test_smart_keys();
     printf("smart map in all keys...\n"); test_smart_map();
     printf("progressions and harmonic context...\n"); test_progressions();
+    printf("progression fills pads...\n"); test_progression_pads();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

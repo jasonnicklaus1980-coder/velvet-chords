@@ -4,6 +4,7 @@
 #include "export.h"
 #include "midiport.h"
 #include "presets.h"
+#include "progression.h"
 #include "midiimport.h"
 #include <dirent.h>
 #include <stdio.h>
@@ -49,7 +50,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP,
+    P_SMART_MAP, P_PROG,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -191,6 +192,7 @@ static void init_param_info(void) {
     P(P_PRESET_GENRE, "Preset genre", VC_NUM_PRESETS / VC_PRESET_VARS + 1, 0.f, 0)
     P(P_PRESET_VAR, "Preset variation", VC_PRESET_VARS, 0.f, 0)
     P(P_SMART_MAP, "Smart map", SMAP_COUNT, 0.f, 0)
+    P(P_PROG, "Progression", VC_NUM_PROGRESSIONS + 1, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -274,6 +276,7 @@ static void sync_layout(Plugin *p) {
     lp->key = idx_of(p, P_KEY);
     lp->scale = idx_of(p, P_SCALE);
     lp->transpose = idx_of(p, P_TRANSPOSE) - 12;
+    lp->prog = idx_of(p, P_PROG);
     lp->voicing = idx_of(p, P_VOICING);
     lp->inversion = idx_of(p, P_INVERSION);
     lp->octave = idx_of(p, P_OCTAVE) - 2;
@@ -694,7 +697,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     if (i == P_VIEW_BANK) { p->val[i] = v; p->val[P_ACTIVE] = 0.f; refresh_host(p); return; }
     /* a preset overwrites the sound and everything else, so only a change of the knob applies it:
      * a host that re-sends its stored values (on a mode or song change, say) must not undo your edits */
-    if ((i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR) && p->val[i] == v) return;
+    if ((i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR || i == P_PROG) && p->val[i] == v) return;
     p->val[i] = v;
     switch (i) {
     case P_MODE: case P_SONG: case P_SECTION: case P_KEY: case P_SCALE: case P_TRANSPOSE:
@@ -737,6 +740,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_SMART_MODE: e->smart_mode = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_OCT: e->smart_oct = idx_of(p, i) - 2; e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_MAP: e->smart_map = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_PROG: if (idx_of(p, i) != 0) p->val[P_IMP_PADS] = 0.f; /* choosing a progression replaces imported pads; Off doesn't */
+        sync_layout(p); if (from_host) refresh_host(p); break;
     case P_PRESET: apply_preset(p, idx_of(p, i)); sync_preset_knobs(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
     case P_PRESET_GENRE: case P_PRESET_VAR: preset_from_knobs(p, from_host); break;
     case P_SHIFT: e->shift_keys = idx_of(p, i); break;
@@ -869,6 +874,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_SMART: { static const char *SM[SMART_COUNT] = {"Off", "Pads 9-16", "Follow other"}; copy_str(b, SM[x], sizeof(b)); break; }
     case P_SMART_MODE: { static const char *SN[SMODE_COUNT] = {"Chord tones", "Scale", "Bass"}; copy_str(b, SN[x], sizeof(b)); break; }
     case P_SMART_OCT: snprintf(b, sizeof(b), "%+d", x - 2); break;
+    case P_PROG: copy_str(b, x == 0 ? "Off" : VC_PROGRESSIONS[x - 1].name, sizeof(b)); break;
     case P_SMART_MAP: { static const char *MN[SMAP_COUNT] = {"Follow mode", "Relative", "Absolute", "Chromatic"}; copy_str(b, MN[x], sizeof(b)); break; }
     case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;
     case P_PRESET_GENRE: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[(x - 1) * VC_PRESET_VARS].genre, sizeof(b)); break;

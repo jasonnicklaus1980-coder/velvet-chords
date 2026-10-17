@@ -96,6 +96,11 @@ The other three ignore the chord, and the 16 pads walk up from the root:
 
 Smart map is a separate control, so projects saved before it existed keep Follow mode.
 
+**Progression** (Play page Q-Link) fills pads 1 onward with a progression in the current key: I-V-vi-IV, ii-V-I, i-VI-III-VII,
+Andalusian, Axis, Pop I-IV, Neo-soul ii-V-I or 12-bar blues. Pad 1 plays step 1, pad 2 plays step 2, and so on. The steps are
+written as Roman numerals, so the same progression works in every key. Off puts the layout back, and choosing a progression
+replaces imported pads. Pads after the progression keep the layout. The Screen bank Q-Link was replaced; the bank buttons still work.
+
 ### Two instances: chords on one, bass or melody on the other
 
 Load Velvet Chords on two tracks. On the second, set **Smart pads** to **Follow**: all of its pads become Smart notes that follow whatever chord the *first* instance is playing, live. Set the second to **Bass** for a bassline that always matches, or **Scale** for a lead. Give each its own sound, or route each to a different instrument with the virtual port and different output channels. Instances share the chord directly inside MPC, so no MIDI routing is needed between them.
