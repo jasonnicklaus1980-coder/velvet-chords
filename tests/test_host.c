@@ -677,6 +677,15 @@ int main(int argc, char **argv) {
         CHECK(!strcmp(buf, "Manual"), "genre Manual turns the presets off (%s)", buf);
         fx->setParameter(fx, P_PRE, 0.f);
 
+        /* a host that re-sends the stored preset must not undo a sound chosen after it */
+        int P_SND2 = find_param(fx, "Sound");
+        fx->setParameter(fx, P_PRE, 1.f / 230.f);
+        fx->setParameter(fx, P_SND2, 1.f);
+        fx->setParameter(fx, P_PRE, 1.f / 230.f);
+        display(fx, P_SND2, buf);
+        CHECK(!strcmp(buf, "Silent (MIDI only)"), "re-sent preset keeps the chosen sound (%s)", buf);
+        fx->setParameter(fx, P_PRE, 0.f);
+
         fx->setParameter(fx, P_ARPO, 1.f / 3.f);
         display(fx, P_ARPO, buf);
         CHECK(!strcmp(buf, "2 oct"), "arp octaves (%s)", buf);

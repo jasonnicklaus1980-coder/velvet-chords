@@ -684,6 +684,9 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
         return;
     }
     if (i == P_VIEW_BANK) { p->val[i] = v; p->val[P_ACTIVE] = 0.f; refresh_host(p); return; }
+    /* a preset overwrites the sound and everything else, so only a change of the knob applies it:
+     * a host that re-sends its stored values (on a mode or song change, say) must not undo your edits */
+    if ((i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR) && p->val[i] == v) return;
     p->val[i] = v;
     switch (i) {
     case P_MODE: case P_SONG: case P_SECTION: case P_KEY: case P_SCALE: case P_TRANSPOSE:
