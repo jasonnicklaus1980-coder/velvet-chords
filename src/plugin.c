@@ -371,6 +371,8 @@ static void step_param(Plugin *p, int i, int dir, int count) {
 static void apply_preset(Plugin *p, int x) {
     if (x < 1 || x > VC_NUM_PRESETS) return;
     const VcPreset *s = &VC_PRESETS[x - 1];
+    set_param(p, P_KEY, norm_of(P_KEY, s->key), 0); /* the genre's key and scale; the layout follows, custom pads stay */
+    set_param(p, P_SCALE, norm_of(P_SCALE, s->scale), 0);
     /* a preset never makes sound or arpeggio you didn't choose: Silent stays silent, and the arpeggio stays as it is
      * unless you already have one running (then the preset sets its order, rate and octaves) */
     if (idx_of(p, P_SOUND) != SY_SILENT) set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0);

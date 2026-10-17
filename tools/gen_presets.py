@@ -6,7 +6,7 @@ ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 SRC = os.path.join(ROOT, "data", "presets.json")
 OUT = os.path.join(ROOT, "src", "presets_gen.c")
 
-INT = ["sound", "voicing", "inversion", "octave", "voice_lead", "strum_dir", "arp", "arp_rate", "arp_oct", "vel",
+INT = ["key", "scale", "sound", "voicing", "inversion", "octave", "voice_lead", "strum_dir", "arp", "arp_rate", "arp_oct", "vel",
        "pattern", "pat_rate", "smart", "smart_mode", "smart_oct", "melody"]
 FLOAT = ["tone", "release", "volume", "strum_ms", "swing", "gate"]
 

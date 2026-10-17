@@ -650,6 +650,13 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_PRE, 1.f / 200.f);
         display(fx, P_PRE, buf);
         CHECK(!strcmp(buf, "Neo-Soul Keys Late"), "preset 1 is shown by name (%s)", buf);
+        { /* the preset sets the genre's key and scale (Neo-Soul Keys: F Dorian) and leaves the chords alone */
+            int P_KEY_ = find_param(fx, "Key"), P_SCALE_ = find_param(fx, "Scale");
+            display(fx, P_KEY_, buf);
+            CHECK(!strcmp(buf, "F"), "preset sets the key (%s)", buf);
+            display(fx, P_SCALE_, buf);
+            CHECK(!strcmp(buf, "Dorian"), "preset sets the scale (%s)", buf);
+        }
         display(fx, P_TN, buf);
         CHECK(!strcmp(buf, "45%"), "preset sets Tone (%s)", buf);
         fx->setParameter(fx, P_PNX, 1.f);

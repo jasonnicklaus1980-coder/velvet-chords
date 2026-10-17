@@ -7,6 +7,7 @@
 
 typedef struct {
     const char *name, *genre;
+    int key, scale;                 /* the key (0 = C) and the scale (index into VC_SCALES) */
     int sound, voicing, inversion, octave, voice_lead, strum_dir, arp, arp_rate, arp_oct, vel;
     int pattern, pat_rate, smart, smart_mode, smart_oct, melody;
     float tone, release, volume, strum_ms, swing, gate;

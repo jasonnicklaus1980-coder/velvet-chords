@@ -843,6 +843,7 @@ static void test_presets(void) {
         CHECK(p->octave >= -2 && p->octave <= 2 && p->smart_oct >= -2 && p->smart_oct <= 2, "%s: octave", p->name);
         CHECK(p->voice_lead == 0 || p->voice_lead == 1, "%s: voice lead", p->name);
         CHECK(p->strum_dir >= 0 && p->strum_dir < STRUM_COUNT && p->strum_ms >= 0.f && p->strum_ms <= 150.f, "%s: strum", p->name);
+        CHECK(p->key >= 0 && p->key < 12 && p->scale >= 0 && p->scale < VC_NUM_SCALES, "%s: key and scale", p->name);
         CHECK(p->arp >= 0 && p->arp < ARP_COUNT && p->arp_rate >= 0 && p->arp_rate < RATE_COUNT, "%s: arp", p->name);
         CHECK(!(p->pattern && p->arp), "%s: a pattern preset leaves the arpeggio off (the pattern plays instead)", p->name);
         CHECK(p->arp_oct >= 1 && p->arp_oct <= 4, "%s: arp octaves", p->name);
