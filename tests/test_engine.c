@@ -1062,6 +1062,42 @@ static void test_smart_keys(void) {
     CHECK(checks_bad == 0, "smart notes stay in their mode's pitch classes, all keys (%d of %d outside)", checks_bad, total);
 }
 
+/* Smart map in every key: Relative follows the key's scale from the key root, Absolute the scale from C, Chromatic
+ * all twelve semitones from the key; none of them looks at the chord */
+static void test_smart_map(void) {
+    int rel_bad = 0, abs_bad = 0, abs_key_dep = 0, chrom_bad = 0;
+    for (int k = 0; k < 12; k++) {
+        for (int map = SMAP_RELATIVE; map <= SMAP_CHROMATIC; map++) {
+            Engine *e = v11_engine();
+            e->lp.key = k; e->lp.scale = 0; e->lp.mode = VC_MODE_CUSTOM; e->dirty = 1;
+            e->smart = SMART_SPLIT; e->smart_map = map;
+            custom_chord(e, 0, "Dm7", 2);
+            en_rebuild(e);
+            int scale_key = 0, scale_c = 0;
+            for (int i = 0; i < VC_SCALES[0].n; i++) { scale_key |= 1 << ((k + VC_SCALES[0].iv[i]) % 12); scale_c |= 1 << VC_SCALES[0].iv[i]; }
+            for (int i = 0; i < 8; i++) {
+                int pc = e->smart_notes[i] % 12;
+                if (map == SMAP_RELATIVE && !((scale_key >> pc) & 1)) rel_bad++;
+                if (map == SMAP_ABSOLUTE && !((scale_c >> pc) & 1)) abs_bad++;
+            }
+            if (map == SMAP_RELATIVE && e->smart_notes[0] % 12 != k) rel_bad++; /* pad 1 sits on the key root */
+            if (map == SMAP_CHROMATIC) for (int i = 0; i < 12; i++) if (e->smart_notes[i] % 12 != (k + i) % 12) chrom_bad++;
+            if (map == SMAP_ABSOLUTE && k > 0) {
+                Engine *c0 = v11_engine();
+                c0->lp.key = 0; c0->lp.scale = 0; c0->lp.mode = VC_MODE_CUSTOM; c0->dirty = 1;
+                c0->smart = SMART_SPLIT; c0->smart_map = SMAP_ABSOLUTE;
+                custom_chord(c0, 0, "Dm7", 2);
+                en_rebuild(c0);
+                for (int i = 0; i < 8; i++) if (c0->smart_notes[i] % 12 != e->smart_notes[i] % 12) abs_key_dep++;
+            }
+        }
+    }
+    CHECK(rel_bad == 0, "relative map stays in the key's scale, pad 1 on the key root (%d bad)", rel_bad);
+    CHECK(abs_bad == 0, "absolute map stays in C's scale whatever the key (%d bad)", abs_bad);
+    CHECK(abs_key_dep == 0, "absolute map doesn't move with the key (%d differences)", abs_key_dep);
+    CHECK(chrom_bad == 0, "chromatic map walks all twelve semitones from the key (%d bad)", chrom_bad);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1082,6 +1118,7 @@ int main(void) {
     printf("multi arp lanes...\n"); test_multi_arp();
     printf("stuck notes under random play...\n"); test_stuck_notes();
     printf("smart scale in all keys...\n"); test_smart_keys();
+    printf("smart map in all keys...\n"); test_smart_map();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

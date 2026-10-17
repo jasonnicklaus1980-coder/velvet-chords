@@ -94,6 +94,20 @@ void en_smart_update(Engine *e) {
         if (!sc.valid) { sc.valid = 1; sc.npcs = 1; sc.pcs[0] = e->lp.key % 12; sc.root = sc.bass = sc.pcs[0]; strcpy(sc.name, "-"); }
         e->smart_src = sc;
     }
+    if (e->smart_map != SMAP_FOLLOW) { /* the fixed maps ignore the chord: 16 pads walk the notes up from the root */
+        const Scale *sc = &VC_SCALES[e->lp.scale];
+        int tones[12], m = 0, root = e->smart_map == SMAP_ABSOLUTE ? 0 : e->lp.key % 12;
+        if (e->smart_map == SMAP_CHROMATIC) for (int i = 0; i < 12; i++) tones[m++] = i;
+        else for (int i = 0; i < sc->n; i++) tones[m++] = sc->iv[i];
+        int base = 60 + root + 12 * e->smart_oct;
+        e->smart_changed = 1;
+        for (int i = 0; i < 16; i++) {
+            int n = base + tones[i % m] + 12 * (i / m);
+            while (n > 127) n -= 12;
+            e->smart_notes[i] = (unsigned char)n;
+        }
+        return;
+    }
     const SmartChord *s = &e->smart_src;
     int tones[12], m = 0;
     if (e->smart_mode == SMODE_SCALE) { /* chord tones plus the key's scale, upward from the chord root */

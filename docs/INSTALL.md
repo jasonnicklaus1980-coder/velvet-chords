@@ -88,6 +88,14 @@ Set **Smart Scale pads** (Play page) to **Pads 9-16** and the bottom row of ever
 
 *Smart octave* (a Q-Link on the Play page) moves them up or down.
 
+**Smart map** chooses how the smart pads are laid out. **Follow mode** (the default) uses Smart notes and the chord above.
+The other three ignore the chord, and the 16 pads walk up from the root:
+- **Relative**: the key's scale from the key root (pad 1 is the key). Works in every key.
+- **Absolute**: the scale from C, whatever the key is, so the notes don't move when you change key.
+- **Chromatic**: all twelve semitones from the key, with no scale restriction.
+
+Smart map is a separate control, so projects saved before it existed keep Follow mode.
+
 ### Two instances: chords on one, bass or melody on the other
 
 Load Velvet Chords on two tracks. On the second, set **Smart pads** to **Follow**: all of its pads become Smart notes that follow whatever chord the *first* instance is playing, live. Set the second to **Bass** for a bassline that always matches, or **Scale** for a lead. Give each its own sound, or route each to a different instrument with the virtual port and different output channels. Instances share the chord directly inside MPC, so no MIDI routing is needed between them.

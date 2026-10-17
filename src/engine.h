@@ -43,6 +43,9 @@ int en_shift_action(int note); /* -1 when the note is not a shift key */
 /* Smart Scale pads: single notes that follow the current chord */
 enum { SMART_OFF, SMART_SPLIT /* pads 9-16 */, SMART_FOLLOW /* all pads, chord from another instance */, SMART_COUNT };
 enum { SMODE_CHORD, SMODE_SCALE, SMODE_BASS, SMODE_COUNT };
+/* Smart map: how the smart pads are laid out. FOLLOW uses the Smart mode above and the chord; the others ignore the chord:
+ * RELATIVE walks the key's scale from the key root, ABSOLUTE walks the scale from C, CHROMATIC walks all twelve semitones from the key. */
+enum { SMAP_FOLLOW, SMAP_RELATIVE, SMAP_ABSOLUTE, SMAP_CHROMATIC, SMAP_COUNT };
 typedef struct {
     int valid, root, bass, npcs, flats;
     int pcs[12];     /* chord pitch classes, ordered upward from the root */
@@ -148,7 +151,7 @@ typedef struct Engine {
     int nout;
 
     /* smart scale */
-    int smart, smart_mode, smart_oct, instance_id;
+    int smart, smart_mode, smart_oct, smart_map, instance_id;
     int scale_pcs_mask;          /* key scale for "Scale" mode */
     SmartChord own_chord;        /* last chord this instance played */
     SmartChord smart_src;        /* chord the smart pads currently follow */

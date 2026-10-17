@@ -49,6 +49,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
+    P_SMART_MAP,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -189,6 +190,7 @@ static void init_param_info(void) {
     P(P_NOTE_IV, "Edit note interval", 38, 0.f, 0)
     P(P_PRESET_GENRE, "Preset genre", VC_NUM_PRESETS / VC_PRESET_VARS + 1, 0.f, 0)
     P(P_PRESET_VAR, "Preset variation", VC_PRESET_VARS, 0.f, 0)
+    P(P_SMART_MAP, "Smart map", SMAP_COUNT, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -734,6 +736,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_IMP_PADS: sync_layout(p); refresh_host(p); break;
     case P_SMART_MODE: e->smart_mode = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_OCT: e->smart_oct = idx_of(p, i) - 2; e->dirty = 1; if (from_host) refresh_host(p); break;
+    case P_SMART_MAP: e->smart_map = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_PRESET: apply_preset(p, idx_of(p, i)); sync_preset_knobs(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
     case P_PRESET_GENRE: case P_PRESET_VAR: preset_from_knobs(p, from_host); break;
     case P_SHIFT: e->shift_keys = idx_of(p, i); break;
@@ -866,6 +869,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_SMART: { static const char *SM[SMART_COUNT] = {"Off", "Pads 9-16", "Follow other"}; copy_str(b, SM[x], sizeof(b)); break; }
     case P_SMART_MODE: { static const char *SN[SMODE_COUNT] = {"Chord tones", "Scale", "Bass"}; copy_str(b, SN[x], sizeof(b)); break; }
     case P_SMART_OCT: snprintf(b, sizeof(b), "%+d", x - 2); break;
+    case P_SMART_MAP: { static const char *MN[SMAP_COUNT] = {"Follow mode", "Relative", "Absolute", "Chromatic"}; copy_str(b, MN[x], sizeof(b)); break; }
     case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;
     case P_PRESET_GENRE: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[(x - 1) * VC_PRESET_VARS].genre, sizeof(b)); break;
     case P_PRESET_VAR: {
