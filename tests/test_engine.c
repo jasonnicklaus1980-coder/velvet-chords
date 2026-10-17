@@ -1,6 +1,7 @@
 #include "../src/engine.h"
 #include "../src/export.h"
 #include "../src/presets.h"
+#include "../src/progression.h"
 #include "../src/vcmath.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -1098,6 +1099,73 @@ static void test_smart_map(void) {
     CHECK(chrom_bad == 0, "chromatic map walks all twelve semitones from the key (%d bad)", chrom_bad);
 }
 
+/* Progressions: Roman numerals give the right chords in every key, the templates keep their relationships when the key
+ * moves, and the harmonic context wraps at the end of a progression */
+static void test_progressions(void) {
+    ChordSpec c;
+    /* C major: I V vi IV = C G Am F */
+    static const char *WANT[4] = {"C", "G", "Am", "F"};
+    const Progression *p = &VC_PROGRESSIONS[0];
+    int ok = 1;
+    for (int i = 0; i < 4; i++) {
+        ok &= vc_prog_chord(p, 0, 0, i, &c) != 0;
+        char name[32]; vc_chord_name(&c, 0, name, sizeof(name));
+        if (!ok || strcmp(name, WANT[i])) ok = 0;
+    }
+    CHECK(ok, "I-V-vi-IV in C is C G Am F");
+
+    /* Roman numerals in a minor key: i VI III VII in A minor = Am F C G */
+    static const char *MINW[4] = {"Am", "F", "C", "G"};
+    p = &VC_PROGRESSIONS[2];
+    ok = 1;
+    for (int i = 0; i < 4; i++) {
+        ok &= vc_prog_chord(p, 9, 1, i, &c) != 0;
+        char name[32]; vc_chord_name(&c, 0, name, sizeof(name));
+        if (!ok || strcmp(name, MINW[i])) ok = 0;
+    }
+    CHECK(ok, "i-VI-III-VII in A minor is Am F C G");
+
+    /* accidentals and suffixes: bVII in C major is Bb, V7 is G7, Imaj7 is Cmaj7, viiø is B half-diminished */
+    CHECK(vc_roman_chord(0, 0, "bVII", &c) && c.root == 10, "bVII is Bb");
+    CHECK(vc_roman_chord(0, 0, "V7", &c) && !strcmp(VC_QUALITIES[c.quality].suffix, "7") && c.root == 7, "V7 is G7");
+    CHECK(vc_roman_chord(0, 0, "Imaj7", &c) && !strcmp(VC_QUALITIES[c.quality].suffix, "maj7"), "Imaj7 is Cmaj7");
+    CHECK(vc_roman_chord(0, 0, "vii\xc3\xb8", &c) && c.root == 11 && !strcmp(VC_QUALITIES[c.quality].suffix, "m7b5"), "viiø is Bm7b5");
+    CHECK(vc_roman_chord(0, 0, "vii\xc2\xb0", &c) && !strcmp(VC_QUALITIES[c.quality].suffix, "dim"), "vii° is diminished");
+    CHECK(!vc_roman_chord(0, 0, "IX", &c) && !vc_roman_chord(0, 0, "Q", &c), "unknown numerals are rejected");
+    CHECK(!vc_roman_chord(0, 0, "I\xff", &c) && !vc_roman_chord(0, 0, "Isomething", &c), "unknown suffixes are rejected");
+
+    /* transposition keeps the relationships: every template step moves by the same amount in every key */
+    int moved_bad = 0, total = 0;
+    for (int t = 0; t < VC_NUM_PROGRESSIONS; t++)
+        for (int k = 0; k < 12; k++)
+            for (int i = 0; i < VC_PROGRESSIONS[t].n; i++) {
+                ChordSpec a, b;
+                int okA = vc_prog_chord(&VC_PROGRESSIONS[t], 0, 0, i, &a);
+                int okB = vc_prog_chord(&VC_PROGRESSIONS[t], k, 0, i, &b);
+                total++;
+                if (!okA || !okB || b.quality != a.quality || b.root != (a.root + k) % 12) moved_bad++;
+            }
+    CHECK(total > 0 && moved_bad == 0, "all templates transpose by the key, step for step (%d bad of %d)", moved_bad, total);
+
+    /* every template plays in all twelve keys */
+    int unplayable = 0;
+    for (int t = 0; t < VC_NUM_PROGRESSIONS; t++)
+        for (int k = 0; k < 12; k++)
+            for (int i = 0; i < VC_PROGRESSIONS[t].n; i++)
+                if (!vc_prog_chord(&VC_PROGRESSIONS[t], k, 0, i, &c)) unplayable++;
+    CHECK(unplayable == 0, "every template step plays in every key (%d unplayable)", unplayable);
+
+    /* the harmonic context follows the progression and wraps */
+    HarmonicContext h;
+    vc_ctx_set(&h, 2, 0, &VC_PROGRESSIONS[1]); /* ii-V-I in D */
+    char n0[32], n1[32], n2[32], n3[32];
+    vc_ctx_chord(&h, &c); vc_chord_name(&c, 0, n0, sizeof(n0));
+    vc_ctx_advance(&h); vc_ctx_chord(&h, &c); vc_chord_name(&c, 0, n1, sizeof(n1));
+    vc_ctx_advance(&h); vc_ctx_chord(&h, &c); vc_chord_name(&c, 0, n2, sizeof(n2));
+    vc_ctx_advance(&h); vc_ctx_chord(&h, &c); vc_chord_name(&c, 0, n3, sizeof(n3));
+    CHECK(!strcmp(n0, "Em") && !strcmp(n1, "A") && !strcmp(n2, "D") && !strcmp(n3, "Em"), "ii-V-I in D wraps to ii (%s %s %s %s)", n0, n1, n2, n3);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1119,6 +1187,7 @@ int main(void) {
     printf("stuck notes under random play...\n"); test_stuck_notes();
     printf("smart scale in all keys...\n"); test_smart_keys();
     printf("smart map in all keys...\n"); test_smart_map();
+    printf("progressions and harmonic context...\n"); test_progressions();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
