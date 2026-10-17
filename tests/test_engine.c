@@ -972,6 +972,69 @@ static void test_note_by_note(void) {
     CHECK(out[2].spec.quality < 0 ? out[2].spec.ncustom == 0 : 1, "root-only list is ignored");
 }
 
+/* stress: random pads, sustain, pattern and Repeat changes, arp lanes, all-notes-off and chord changes.
+ * Every note-on sent to the host must be matched by one note-off, never more, and nothing may hang at the end. */
+static unsigned st_rnd(unsigned *s) { *s = *s * 1103515245u + 12345u; return (*s >> 16) & 0x7fff; }
+
+static void test_stuck_notes(void) {
+    static Hit h[4000];
+    static const char STEPS[] = ".xXbuU-";
+    int trials = 40, bad_range = 0, unbalanced = 0;
+    for (int t = 0; t < trials; t++) {
+        unsigned seed = 1000u + (unsigned)t;
+        Engine *e = v11_engine();
+        e->out_channel = 0;
+        int bal[128] = {0};
+        for (int step = 0; step < 300; step++) {
+            unsigned op = st_rnd(&seed) % 16;
+            if (op < 4) en_push_midi(e, 0, 0x90, (unsigned char)(36 + st_rnd(&seed) % 16), 100);
+            else if (op < 6) en_push_midi(e, 0, 0x80, (unsigned char)(36 + st_rnd(&seed) % 16), 0);
+            else if (op == 6) en_push_midi(e, 0, 0xB0, 64, st_rnd(&seed) % 2 ? 127 : 0);
+            else if (op == 7) e->pattern_on = (int)(st_rnd(&seed) % 2);
+            else if (op == 8) { for (int k = 0; k < EN_STEPS; k++) e->pat[k] = STEPS[st_rnd(&seed) % 7]; }
+            else if (op == 9) e->repeat = st_rnd(&seed) % 2 ? REP_8 : REP_OFF;
+            else if (op == 10) { int l = st_rnd(&seed) % EN_ARP_LANES; e->lanes[l].order = st_rnd(&seed) % 2 ? ARP_UP : ARP_OFF; e->lanes[l].oct = 1 + (int)(st_rnd(&seed) % 2); }
+            else if (op == 11) e->hold = (int)(st_rnd(&seed) % 2);
+            else if (op == 12) en_push_midi(e, 0, 0xB0, 123, 0);
+            else if (op == 13) custom_chord(e, (int)(st_rnd(&seed) % 16), st_rnd(&seed) % 2 ? "Am7" : "F", 0);
+            static float L[512], R[512];
+            int n = 0;
+            for (int b = 0; b < 2; b++) {
+                en_process(e, L, R, 512);
+                for (int i = 0; i < e->nout && n < 4000; i++) {
+                    int on = (e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0;
+                    int note = e->out[i].d[1] & 127;
+                    if ((e->out[i].d[0] & 0xF0) == 0x90 || (e->out[i].d[0] & 0xF0) == 0x80) {
+                        bal[note] += on ? 1 : -1;
+                        if (bal[note] < 0 || bal[note] > 1) bad_range++;
+                    }
+                }
+                e->nout = 0;
+            }
+        }
+        /* let go of everything the way a host does (Hold off too, or the latched chord keeps sounding), then drain */
+        e->hold = 0;
+        for (int k = 0; k < 128; k++) en_push_midi(e, 0, 0x80, (unsigned char)k, 0);
+        en_push_midi(e, 0, 0xB0, 64, 0);
+        static float L[512], R[512];
+        for (int b = 0; b < 400; b++) {
+            en_process(e, L, R, 512);
+            for (int i = 0; i < e->nout; i++) {
+                int on = (e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0;
+                int note = e->out[i].d[1] & 127;
+                if ((e->out[i].d[0] & 0xF0) == 0x90 || (e->out[i].d[0] & 0xF0) == 0x80) {
+                    bal[note] += on ? 1 : -1;
+                    if (bal[note] < 0 || bal[note] > 1) bad_range++;
+                }
+            }
+            e->nout = 0;
+        }
+        for (int k = 0; k < 128; k++) if (bal[k] != 0) { unbalanced++; break; }
+    }
+    CHECK(bad_range == 0, "every note-on has one note-off, never doubled or early (%d)", bad_range);
+    CHECK(unbalanced == 0, "no note hangs after release, all %d runs (%d unbalanced)", trials, unbalanced);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -988,12 +1051,9 @@ int main(void) {
     printf("shift keys...\n"); test_shift_keys();
     printf("riffs...\n"); test_riff();
     printf("note-by-note chords...\n"); test_note_by_note();
-    printf("presets...\n"); test_presets();
-    printf("shift keys...\n"); test_shift_keys();
-    printf("riffs...\n"); test_riff();
-    printf("note-by-note chords...\n"); test_note_by_note();
     printf("multi arp orders...\n"); test_arp_orders();
     printf("multi arp lanes...\n"); test_multi_arp();
+    printf("stuck notes under random play...\n"); test_stuck_notes();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
