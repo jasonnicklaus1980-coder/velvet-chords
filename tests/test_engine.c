@@ -1035,6 +1035,33 @@ static void test_stuck_notes(void) {
     CHECK(unbalanced == 0, "no note hangs after release, all %d runs (%d unbalanced)", trials, unbalanced);
 }
 
+/* Smart Scale in every key: the mapped notes stay inside the mode's pitch classes, and the key's scale is the right one */
+static void test_smart_keys(void) {
+    static const int SCALES[] = {0, 1, 4, 11}; /* Major, Natural minor, Dorian, Blues */
+    int checks_bad = 0, mask_bad = 0, total = 0;
+    for (int k = 0; k < 12; k++)
+        for (int si = 0; si < 4; si++)
+            for (int mode = 0; mode < SMODE_COUNT; mode++) {
+                Engine *e = v11_engine();
+                e->lp.key = k; e->lp.scale = SCALES[si]; e->lp.mode = VC_MODE_CUSTOM; e->dirty = 1;
+                e->smart = SMART_SPLIT; e->smart_mode = mode;
+                custom_chord(e, 0, "Dm7", 2); /* the chord the smart pads follow: D F A C */
+                en_rebuild(e);
+                int chord = (1 << 2) | (1 << 5) | (1 << 9) | (1 << 0);
+                int scale = 0;
+                for (int i = 0; i < VC_SCALES[SCALES[si]].n; i++) scale |= 1 << ((k + VC_SCALES[SCALES[si]].iv[i]) % 12);
+                if ((e->scale_pcs_mask & scale) != scale) mask_bad++;
+                for (int i = 0; i < 8; i++) {
+                    int pc = e->smart_notes[i] % 12;
+                    int allowed = mode == SMODE_SCALE ? (chord | scale) : chord;
+                    total++;
+                    if (!((allowed >> pc) & 1)) checks_bad++;
+                }
+            }
+    CHECK(mask_bad == 0, "the key's scale is in the engine's scale mask for every key (%d bad)", mask_bad);
+    CHECK(checks_bad == 0, "smart notes stay in their mode's pitch classes, all keys (%d of %d outside)", checks_bad, total);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1054,6 +1081,7 @@ int main(void) {
     printf("multi arp orders...\n"); test_arp_orders();
     printf("multi arp lanes...\n"); test_multi_arp();
     printf("stuck notes under random play...\n"); test_stuck_notes();
+    printf("smart scale in all keys...\n"); test_smart_keys();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }
