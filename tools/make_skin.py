@@ -595,6 +595,9 @@ class Skin:
         self.segments(c, bg, "upre", "User preset slot", ["1", "2", "3", "4"], R, 536, 56, caption="Slot")
         self.action_button(c, bg, "upre_save", "Save", "Save user preset", R + 252, 536, w=164)
         self.action_button(c, bg, "upre_load", "Load", "Load user preset", R + 428, 536, w=164)
+        self.action_button(c, bg, "upre_export", "Export file", "Export user preset", R, 580, w=164)
+        self.action_button(c, bg, "upre_import", "Import file", "Import user preset", R + 176, 580, w=164)
+        self.readout(c, bg, "User preset status", R + 352, 580, 240, size=12)
         self.page("Tools", 4, c, "vc_bg_tools.png", bg)
 
         # ---------- Lanes: presets, multi arp, melody riffs, note editor

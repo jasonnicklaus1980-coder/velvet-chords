@@ -742,6 +742,57 @@ int main(int argc, char **argv) {
         display(fx4, find_param(fx4, "Tone"), got);
         CHECK(!strcmp(got, want_tone), "a reloaded project loads the same settings (%s)", got);
         free(cc);
+
+        /* preset files: export, overwrite the slot, import it back; bad files are refused and change nothing */
+        const char *dir = getenv("VC_EXPORT_DIR");
+        int P_EXP = find_param(fx, "Export user preset"), P_IMP = find_param(fx, "Import user preset"), P_ST = find_param(fx, "User preset status");
+        CHECK(P_EXP > 0 && P_IMP > 0 && P_ST > 0, "export, import and status parameters exist");
+        if (dir) {
+            char path[600], text[4096];
+            snprintf(path, sizeof(path), "%s/user-preset-2.vcpreset", dir);
+            fx->setParameter(fx, P_EXP, 1.f);
+            display(fx, P_ST, got);
+            CHECK(!strcmp(got, "Exported slot 2"), "export reports (%s)", got);
+            FILE *pf = fopen(path, "r");
+            size_t nread = pf ? fread(text, 1, sizeof(text) - 1, pf) : 0;
+            if (pf) fclose(pf);
+            text[nread] = 0;
+            CHECK(!strncmp(text, "VELVET-PRESET 1\n", 16) && strstr(text, "Tone=0.9") && strstr(text, "Sound=1.0"), "the file has the header and the settings");
+
+            fx->setParameter(fx, P_T, 0.2f);
+            fx->setParameter(fx, P_UPSV, 1.f); /* the slot now holds Tone 20% */
+            fx->setParameter(fx, P_IMP, 1.f);
+            display(fx, P_ST, got);
+            CHECK(strstr(got, "Imported") != 0, "import reports (%s)", got);
+            fx->setParameter(fx, P_T, 0.5f);
+            fx->setParameter(fx, P_UPLD, 1.f);
+            display(fx, P_T, got);
+            CHECK(!strcmp(got, want_tone), "an imported slot loads the exported settings (%s vs %s)", got, want_tone);
+
+            pf = fopen(path, "w"); fputs("this is not a preset\nTone=0.1\n", pf); fclose(pf);
+            fx->setParameter(fx, P_IMP, 1.f);
+            display(fx, P_ST, got);
+            CHECK(!strcmp(got, "Not a Velvet preset file"), "a file without the header is refused (%s)", got);
+            fx->setParameter(fx, P_T, 0.5f);
+            fx->setParameter(fx, P_UPLD, 1.f);
+            display(fx, P_T, got);
+            CHECK(!strcmp(got, want_tone), "a refused file leaves the slot as it was (%s)", got);
+
+            pf = fopen(path, "w"); fputs("VELVET-PRESET 9\nTone=0.1\n", pf); fclose(pf);
+            fx->setParameter(fx, P_IMP, 1.f);
+            display(fx, P_ST, got);
+            CHECK(!strcmp(got, "Made by a newer version"), "a newer file version is refused (%s)", got);
+
+            pf = fopen(path, "w"); fputs("VELVET-PRESET 1\nTone=7\nSwing=0.5\nNoSuchSetting=0.3\nSound=nan\n", pf); fclose(pf);
+            fx->setParameter(fx, P_IMP, 1.f);
+            display(fx, P_ST, got);
+            CHECK(!strcmp(got, "Imported 1 settings, skipped 2"), "out-of-range and non-numeric values are skipped, unknown names ignored (%s)", got);
+        }
+        fx->setParameter(fx, P_UPS, 2.f / 3.f); /* slot 3 was never saved */
+        fx->setParameter(fx, P_EXP, 1.f);
+        display(fx, P_ST, got);
+        CHECK(!strcmp(got, "Slot 3 is empty: Save first"), "exporting an empty slot says so (%s)", got);
+        fx->setParameter(fx, P_UPS, 1.f / 3.f);
         fx->setParameter(fx, P_SN, 0.f); fx->setParameter(fx, P_T, 0.45f); fx->setParameter(fx, P_SW, 0.f);
     }
 

@@ -52,7 +52,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD,
+    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -68,7 +68,7 @@ static int lane_of(int i, const int *ids) {
 enum { OUT_OFF = 0, OUT_HOST = 1, OUT_PORT = 2, OUT_BOTH = 3 }; /* bit 0 host, bit 1 port */
 
 static int is_display_only(int i) {
-    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
+    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
 }
 
 typedef struct { const char *name; int steps; float def; int trigger; } ParamInfo; /* steps 0 = continuous */
@@ -206,6 +206,9 @@ static void init_param_info(void) {
     P(P_UPRE_SLOT, "User preset slot", VC_USER_PRESETS, 0.f, 0)
     P(P_UPRE_SAVE, "Save user preset", 2, 0.f, 1)
     P(P_UPRE_LOAD, "Load user preset", 2, 0.f, 1)
+    P(P_UPRE_EXPORT, "Export user preset", 2, 0.f, 1)
+    P(P_UPRE_IMPORT, "Import user preset", 2, 0.f, 1)
+    P(P_UPRE_STATUS, "User preset status", 1, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -233,6 +236,7 @@ typedef struct {
     int scratch_n;
     unsigned char *chunk;
     char export_msg[64];
+    char upre_msg[64]; /* what the last user preset export or import did */
     VstEvents *outEvents;
     VstMidiEvent outMidi[EN_MIDI_OUT];
     char program_name[32];
@@ -427,6 +431,65 @@ static void load_user_preset(Plugin *p, int slot) {
     if (slot < 0 || slot >= VC_USER_PRESETS || !p->upre_ok[slot]) return;
     for (int k = 0; k < UPRE_NIDS; k++) set_param(p, UPRE_IDS[k], p->upre[slot][k], 0);
     for (int j = 0; j < EN_STEPS; j++) set_param(p, P_STEP0 + j, p->upre[slot][UPRE_NIDS + j], 0); /* after the pattern, so the saved steps win */
+}
+
+/* Preset files: plain text, one "name=value" line per setting after the header "VELVET-PRESET 1". The names are the plugin's own
+ * parameter names and the values its normalised 0..1 values, so a file stays readable and survives added settings: an import skips names
+ * it doesn't know and keeps the default for any setting the file doesn't mention. Out-of-range or non-numeric values are skipped. */
+static const char *export_dir(void);
+
+static const char *upre_name(int k) { return k < UPRE_NIDS ? PINFO[UPRE_IDS[k]].name : PINFO[P_STEP0 + (k - UPRE_NIDS)].name; }
+
+static void upre_path(char *out, size_t n, int slot) { snprintf(out, n, "%s/user-preset-%d.vcpreset", export_dir(), slot + 1); }
+
+static void export_user_preset(Plugin *p, int slot) {
+    if (slot < 0 || slot >= VC_USER_PRESETS) return;
+    if (!p->upre_ok[slot]) { snprintf(p->upre_msg, sizeof(p->upre_msg), "Slot %d is empty: Save first", slot + 1); return; }
+    char path[512];
+    mkdir(export_dir(), 0775);
+    upre_path(path, sizeof(path), slot);
+    FILE *f = fopen(path, "w");
+    if (!f) { snprintf(p->upre_msg, sizeof(p->upre_msg), "Could not write the file"); return; }
+    fprintf(f, "VELVET-PRESET 1\n# Velvet Chords user preset. One setting per line: name=value, with value 0 to 1 (the plugin's own parameter values).\n");
+    for (int k = 0; k < UPRE_NIDS + EN_STEPS; k++) fprintf(f, "%s=%.6f\n", upre_name(k), (double)p->upre[slot][k]);
+    int ok = fclose(f) == 0;
+    if (ok) snprintf(p->upre_msg, sizeof(p->upre_msg), "Exported slot %d", slot + 1);
+    else snprintf(p->upre_msg, sizeof(p->upre_msg), "Could not write the file");
+}
+
+static void import_user_preset(Plugin *p, int slot) {
+    if (slot < 0 || slot >= VC_USER_PRESETS) return;
+    char path[512], line[160];
+    upre_path(path, sizeof(path), slot);
+    FILE *f = fopen(path, "r");
+    if (!f) { snprintf(p->upre_msg, sizeof(p->upre_msg), "No file for slot %d", slot + 1); return; }
+    if (!fgets(line, sizeof(line), f) || strncmp(line, "VELVET-PRESET ", 14)) {
+        fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Not a Velvet preset file"); return;
+    }
+    if (atoi(line + 14) != 1) { fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Made by a newer version"); return; }
+    float tmp[UPRE_MAX];
+    for (int k = 0; k < UPRE_NIDS; k++) tmp[k] = PINFO[UPRE_IDS[k]].def;
+    for (int j = 0; j < EN_STEPS; j++) tmp[UPRE_NIDS + j] = norm_of(P_STEP0 + j, en_step_index('.'));
+    int applied = 0, skipped = 0;
+    while (fgets(line, sizeof(line), f)) {
+        char *eq = strchr(line, '=');
+        if (line[0] == '#' || line[0] == '\n' || !eq) continue;
+        *eq = 0;
+        char *end = 0;
+        double v = strtod(eq + 1, &end);
+        int k = -1;
+        for (int i = 0; i < UPRE_NIDS + EN_STEPS && k < 0; i++) if (!strcmp(upre_name(i), line)) k = i;
+        if (k < 0) continue; /* a setting this version doesn't have */
+        if (end == eq + 1 || !(v >= 0.0 && v <= 1.0)) { skipped++; continue; } /* also rejects NaN */
+        tmp[k] = (float)v;
+        applied++;
+    }
+    fclose(f);
+    if (!applied) { snprintf(p->upre_msg, sizeof(p->upre_msg), "No settings found in the file"); return; }
+    memcpy(p->upre[slot], tmp, sizeof(float) * (size_t)(UPRE_NIDS + EN_STEPS));
+    p->upre_ok[slot] = 1;
+    if (skipped) snprintf(p->upre_msg, sizeof(p->upre_msg), "Imported %d settings, skipped %d", applied, skipped);
+    else snprintf(p->upre_msg, sizeof(p->upre_msg), "Imported %d settings into slot %d", applied, slot + 1);
 }
 
 static void apply_preset(Plugin *p, int x) {
@@ -712,6 +775,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             if (i == P_UPROG_SAVE) save_user_prog(p, idx_of(p, P_UPROG_SLOT));
             if (i == P_UPRE_SAVE) save_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_UPRE_LOAD) load_user_preset(p, idx_of(p, P_UPRE_SLOT));
+            if (i == P_UPRE_EXPORT) export_user_preset(p, idx_of(p, P_UPRE_SLOT));
+            if (i == P_UPRE_IMPORT) import_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_EXPORT) do_export(p, host_tempo(p));
             if (i == P_SONG_PREV || i == P_SONG_NEXT) {
                 step_param(p, P_SONG, i == P_SONG_NEXT ? 1 : -1, VC_NUM_SONGS);
@@ -947,6 +1012,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         break;
     }
     case P_UPROG_SLOT: snprintf(b, sizeof(b), "Slot %d", x + 1); break;
+    case P_UPRE_STATUS: copy_str(b, p->upre_msg[0] ? p->upre_msg : "Export writes a file you can copy", sizeof(b)); break;
     case P_UPRE_SLOT: snprintf(b, sizeof(b), "Slot %d (%s)", x + 1, p->upre_ok[x] ? "saved" : "empty"); break;
     case P_PAT_LEN: snprintf(b, sizeof(b), "%d steps", (x + 1) * 4); break;
     case P_PAT_CHANCE: snprintf(b, sizeof(b), "%d%%", (x + 1) * 25); break;

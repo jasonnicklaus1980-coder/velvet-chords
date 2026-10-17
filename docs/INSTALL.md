@@ -122,6 +122,14 @@ velocity, the pattern and its 16 steps, rate, swing, gate, length, chance and se
 the bassline, harmony, and the progression with Progression play. Unlike a factory preset it restores all of that, including Silent or an
 arpeggio, because you saved it. Slots are stored with the project. It does not hold your custom pads, saved progressions or imported chords.
 
+**Sharing your presets:** **Export file** writes the chosen slot to `user-preset-N.vcpreset` in the Velvet Chords folder (the same folder as
+Export MIDI), and **Import file** reads that file back into the slot. Copy the file to another MPC or keep it as a backup. The file is
+plain text, version 1: the first line is `VELVET-PRESET 1`, then lines starting with `#` are comments, and every other line is
+`name=value`, where `name` is the setting's name as shown by the plugin (Sound, Tone, Swing, Step 1 ...) and `value` is the plugin's own
+0 to 1 value for it. On import, a file without the header is refused, a file from a newer version is refused, names the plugin
+doesn't know are ignored, settings the file doesn't mention keep their default, and values that aren't numbers between 0 and 1 are
+skipped. The readout next to the buttons says what happened, and a refused file never changes the slot.
+
 **Pattern length, chance and seed** (Pattern page, bottom row): **Pattern length** loops the pattern after 4, 8, 12 or 16 steps.
 **Pattern chance** plays 25, 50, 75 or 100% of its hits. Which hits are skipped is set by **Pattern seed** (1-4): the same seed and
 settings always play the same hits, so a pattern you like can be reproduced. Rests and ties are not affected by the chance.
