@@ -28,6 +28,8 @@ build/native/velvetchords.so: $(SRC) src/plugin.c src/*.h | build/native
 	$(NATIVE_CC) $(COMMON) -shared -o $@ $(SRC) src/plugin.c -Wl,-z,defs -ldl -lm
 build/native/test_engine: $(SRC) tests/test_engine.c src/*.h | build/native
 	$(NATIVE_CC) -std=gnu99 -O1 -g $(WARN) -o $@ $(SRC) tests/test_engine.c -ldl -lm
+build/native/alloc_probe.so: tests/alloc_probe.c | build/native
+	$(NATIVE_CC) -std=gnu99 -O1 -shared -fPIC -o $@ tests/alloc_probe.c -ldl
 build/native/test_host: tests/test_host.c src/vst2_abi.h | build/native
 	$(NATIVE_CC) -std=gnu99 -O1 -g $(WARN) -o $@ tests/test_host.c src/chords.c -ldl -lm -lpthread
 build/native/vc_export: $(SRC) tools/export_cli.c | build/native
@@ -35,14 +37,14 @@ build/native/vc_export: $(SRC) tools/export_cli.c | build/native
 build/native build/arm:
 	mkdir -p $@
 
-native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/vc_export
+native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
 test: native
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
-	VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
+	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
 	mkdir -p build/native/fakealsa && $(NATIVE_CC) -shared -fPIC -o build/native/fakealsa/libasound.so.2 tests/fake_alsa.c
-	LD_LIBRARY_PATH=$(CURDIR)/build/native/fakealsa VC_FAKE_ALSA_LOG=$(CURDIR)/build/native/fake_alsa.log VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so | tail -3
+	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so LD_LIBRARY_PATH=$(CURDIR)/build/native/fakealsa VC_FAKE_ALSA_LOG=$(CURDIR)/build/native/fake_alsa.log VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so | tail -3
 	rm -rf build/native/library && ./build/native/vc_export build/native/library && python3 tools/make_charts.py build/native/library/database.json build/native/library && cp build/native/library/SONG_CHARTS.md build/native/library/VERIFICATION_REPORT.md docs/
 	python3 tests/check_midi.py build/native/library build/native/exports
 	$(NATIVE_CC) -std=gnu99 -O1 -o build/native/list_params tools/list_params.c -ldl

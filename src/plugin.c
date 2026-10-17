@@ -1233,6 +1233,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
 
 static void ensure_scratch(Plugin *p, int n) {
     if (n <= p->scratch_n) return;
+    if (n < 16384) n = 16384; /* generous, so a host's block size never makes the audio thread allocate */
     free(p->scratchL); free(p->scratchR);
     p->scratchL = (float *)calloc((size_t)n, sizeof(float));
     p->scratchR = (float *)calloc((size_t)n, sizeof(float));
@@ -1261,10 +1262,7 @@ static void send_midi_out(Plugin *p) {
         for (int i = 0; i < e->nout; i++) vc_port_send(&p->port, e->out[i].d);
     if (!(routes & OUT_HOST) || !p->host) { e->nout = 0; return; }
     int n = e->nout;
-    if (!p->outEvents) {
-        p->outEvents = (VstEvents *)calloc(1, sizeof(VstEvents) + sizeof(VstEvent *) * EN_MIDI_OUT);
-        if (!p->outEvents) { e->nout = 0; return; }
-    }
+    if (!p->outEvents) { e->nout = 0; return; } /* allocated when the plugin is created: nothing is allocated while processing audio */
     for (int i = 0; i < n; i++) {
         VstMidiEvent *m = &p->outMidi[i];
         memset(m, 0, sizeof(*m));
@@ -1434,6 +1432,10 @@ VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
     if (!p) return 0;
     p->eng = (Engine *)calloc(1, sizeof(Engine));
     if (!p->eng) { free(p); return 0; }
+    p->outEvents = (VstEvents *)calloc(1, sizeof(VstEvents) + sizeof(VstEvent *) * EN_MIDI_OUT);
+    if (!p->outEvents) { free(p->eng); free(p); return 0; }
+    ensure_scratch(p, 16384);
+    if (!p->scratch_n) { free(p->outEvents); free(p->eng); free(p); return 0; }
     p->host = host;
     en_init(p->eng, 44100.f);
     copy_str(p->program_name, "Default", 32);

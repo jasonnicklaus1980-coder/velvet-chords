@@ -65,17 +65,29 @@ static void display(AEffect *fx, int i, char *buf) { buf[0] = 0; fx->dispatcher(
 typedef struct { int32_t numEvents; intptr_t reserved; VstEvent *events[80]; } BigEvents;
 typedef struct { BigEvents hdr; VstMidiEvent ev[80]; } EvBuf;
 
+/* the allocation probe (tests/alloc_probe.c, preloaded by `make test`): counts heap calls inside the audio and MIDI entry points */
+static volatile int *g_probe_on;
+static volatile long *g_probe_count;
+static long g_probe_blocks;
+#define PROBE_ON() do { if (g_probe_on) *g_probe_on = 1; } while (0)
+#define PROBE_OFF() do { if (g_probe_on) *g_probe_on = 0; } while (0)
+
 static void send(AEffect *fx, EvBuf *b, int n) {
     b->hdr.numEvents = n;
     for (int i = 0; i < n; i++) { b->ev[i].type = kVstMidiType; b->ev[i].byteSize = sizeof(VstMidiEvent); b->hdr.events[i] = (VstEvent *)&b->ev[i]; }
+    PROBE_ON();
     fx->dispatcher(fx, effProcessEvents, 0, 0, (VstEvents *)&b->hdr, 0);
+    PROBE_OFF();
 }
 
 static void midi(VstMidiEvent *e, int frame, int s, int d1, int d2) { memset(e, 0, sizeof(*e)); e->deltaFrames = frame; e->midiData[0] = (char)s; e->midiData[1] = (char)d1; e->midiData[2] = (char)d2; }
 
 static double block(AEffect *fx, float *L, float *R, int n) {
     float *outs[2] = {L, R};
+    PROBE_ON();
     fx->processReplacing(fx, 0, outs, n);
+    PROBE_OFF();
+    g_probe_blocks++;
     double e = 0;
     for (int i = 0; i < n; i++) { e += L[i] * L[i] + R[i] * R[i]; if (!(L[i] == L[i]) || fabsf(L[i]) > 1.f) return -1; }
     return e;
@@ -111,6 +123,8 @@ int main(int argc, char **argv) {
     void *h = dlopen(so, RTLD_NOW | RTLD_LOCAL);
     if (!h) { printf("dlopen failed: %s\n", dlerror()); return 1; }
     g_main = (MainProc)dlsym(h, "VSTPluginMain");
+    g_probe_on = (volatile int *)dlsym(RTLD_DEFAULT, "vc_probe_on");
+    g_probe_count = (volatile long *)dlsym(RTLD_DEFAULT, "vc_probe_count");
     CHECK(g_main != 0, "VSTPluginMain exported");
     CHECK(dlsym(h, "main") != 0, "main alias exported");
     if (!g_main) return 1;
@@ -872,6 +886,8 @@ int main(int argc, char **argv) {
             for (int c2 = 0; c2 < 16; c2++) for (int k = 0; k < 128; k++) if (all[c2][k] > 0) hanging++;
             CHECK(hanging == 0, "no instance leaves notes hanging on the port, even when closed mid-chord (%d)", hanging);
     }
+    if (g_probe_count) CHECK(*g_probe_count == 0, "no heap allocation or free inside processReplacing or effProcessEvents (%ld calls in %ld blocks)", *g_probe_count, g_probe_blocks);
+    else printf("  (allocation probe not loaded: run through make test to check heap use on the audio path)\n");
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

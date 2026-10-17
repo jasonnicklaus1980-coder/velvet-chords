@@ -90,3 +90,22 @@ structure). None is claimed to be the voicing on the original record. Chord symb
 | 32-bit ARM build | `make arm` | builds; the glibc gate refuses it for `dlopen`, `dlsym`, `__nanosleep64`, `__clock_gettime64` (the same four as the 1.0 build on this toolchain) |
 | Skin: six pages, binding and image check | `make test` | pass (166 parameters bound) |
 | Not run | — | ARM tests under emulation (no qemu here), and anything on an MPC |
+
+## Real-time audit (audio and MIDI entry points)
+
+What was checked, and what was not:
+
+- **Heap use on the audio path: tested.** `tests/alloc_probe.c` is preloaded into the host test by `make test` and counts every
+  `malloc`, `calloc`, `realloc` and `free` made inside `processReplacing` and `effProcessEvents`, across the whole host test
+  (about 12,000 blocks, including MIDI out and patterns). The count is 0. The audit found two allocations that could happen on the
+  audio thread, and both are fixed: the MIDI-out event buffer was allocated the first time it was needed, and the scratch buffers
+  were allocated if a host sent a block larger than it announced. Both are now allocated when the plugin is created (scratch is
+  sized for 16,384 frames, so only a larger block would allocate).
+- **Engine code: read, not only tested.** `engine.c`, `synth.c` and `vcmath.c` contain no allocation, file, locking or sleep calls.
+- **Known limits, not fixed:**
+  - `setParameter` can open or close the virtual MIDI port (ALSA) and read the Import folder. If a host calls `setParameter` on its
+    audio thread, those calls can block. On MPC OS parameter changes come from the UI thread as far as I know, but I have not
+    verified that on a device.
+  - A layout change (key, scale, mode, progression) rebuilds the 64 pads inside the next audio block. It allocates nothing, but it
+    costs CPU for that block.
+  - The probe does not cover the ARM build, the MPC, or a real host. The probe only sees heap calls, not locks or system calls.
