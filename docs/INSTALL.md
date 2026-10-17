@@ -111,6 +111,11 @@ octave) and **Walking** (root, third, fifth, then a semitone below the next chor
 note is released when the next starts, and it stops when the host stops. It needs Progression play on and a progression chosen.
 The Tone Q-Link on the Tools page was replaced by Bassline; Tone is still on the Perform page.
 
+**Harmony** (Tools Q-Link) adds a second voice to every note the smart pads play, in the key's scale: **Third up**, **Sixth up**, **Third down**
+or **Octave up**. It follows the key and scale you've chosen, so the extra note is always in key, and it is released with the note it
+belongs to. It works on the smart pads only (Smart Scale pads on Pads 9-16 or Follow). The Release Q-Link on the Tools page was replaced
+by Harmony; Release is still on the Perform page.
+
 **Pattern length, chance and seed** (Pattern page, bottom row): **Pattern length** loops the pattern after 4, 8, 12 or 16 steps.
 **Pattern chance** plays 25, 50, 75 or 100% of its hits. Which hits are skipped is set by **Pattern seed** (1-4): the same seed and
 settings always play the same hits, so a pattern you like can be reproduced. Rests and ties are not affected by the chance.

@@ -656,6 +656,7 @@ int main(int argc, char **argv) {
         CHECK(!strcmp(buf, "Off"), "progression Off (%s)", buf);
         CHECK(find_param(fx, "Progression play") > 0, "progression play parameter exists");
         CHECK(find_param(fx, "Bassline") > 0, "bassline parameter exists");
+        CHECK(find_param(fx, "Harmony") > 0, "harmony parameter exists");
 
         /* save the pads as progression slot 1, then recall it: the same chords come back on pads 1-4 */
         int P_SAVE = find_param(fx, "Save progression"), P_SLOT = find_param(fx, "Progression slot");

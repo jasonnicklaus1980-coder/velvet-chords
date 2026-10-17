@@ -54,6 +54,32 @@ SharedChord g_vc_shared;
 SharedKey g_vc_key;
 static int g_next_instance = 1;
 
+/* the scale note `steps` scale degrees from `note` in the key's scale (a note off the scale counts as the degree below it) */
+static int scale_step_note(const Engine *e, int note, int steps) {
+    const Scale *sc = &VC_SCALES[(e->lp.scale >= 0 && e->lp.scale < VC_NUM_SCALES) ? e->lp.scale : 0];
+    int key = ((e->lp.key % 12) + 12) % 12;
+    int rel = (((note - key) % 12) + 12) % 12;
+    int base = note - rel;
+    int i = 0;
+    for (int k = 0; k < sc->n; k++) if (sc->iv[k] <= rel) i = k;
+    int j = i + steps;
+    int q = j >= 0 ? j / sc->n : -((-j + sc->n - 1) / sc->n); /* floor division */
+    int idx = j - q * sc->n;
+    int out = base + q * 12 + sc->iv[idx];
+    return out < 0 ? out + 12 : out > 127 ? out - 12 : out;
+}
+
+/* the second voice for a melody note, or -1 */
+static int harmony_note(const Engine *e, int note) {
+    switch (e->harmony) {
+    case HARM_THIRD_UP: return scale_step_note(e, note, 2);
+    case HARM_SIXTH_UP: return scale_step_note(e, note, 5);
+    case HARM_THIRD_DOWN: return scale_step_note(e, note, -2);
+    case HARM_OCTAVE: return note + 12 <= 127 ? note + 12 : -1;
+    default: return -1;
+    }
+}
+
 int en_smart_index(const Engine *e, int pad) {
     int k = pad % 16;
     if (e->smart == SMART_FOLLOW) return k;
@@ -622,10 +648,12 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
         r->held = 1;
         r->n = 1;
         r->notes[0] = e->smart_notes[si];
+        int hn = harmony_note(e, r->notes[0]);
+        if (hn >= 0 && hn != r->notes[0]) { r->notes[1] = (unsigned char)hn; r->n = 2; } /* the harmony voice shares the owner, so it is released with it */
         memset(r->sounding, 0, sizeof(r->sounding));
         r->vel = r->vel_base = en_vel_curve(e->vel_curve, vel);
         e->pad_owner[note] = r->owner;
-        note_on_slot(e, r, 0, frame);
+        for (int s = 0; s < r->n; s++) note_on_slot(e, r, s, frame);
         return;
     }
     const Voicing *v = &e->voicings[idx];

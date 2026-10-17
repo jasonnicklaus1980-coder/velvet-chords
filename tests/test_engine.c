@@ -998,7 +998,8 @@ static void test_stuck_notes(void) {
             else if (op == 11) e->hold = (int)(st_rnd(&seed) % 2);
             else if (op == 12) en_push_midi(e, 0, 0xB0, 123, 0);
             else if (op == 13) custom_chord(e, (int)(st_rnd(&seed) % 16), st_rnd(&seed) % 2 ? "Am7" : "F", 0);
-            else if (op == 14) { e->prog_play = (int)(st_rnd(&seed) % 2); e->lp.prog = (int)(st_rnd(&seed) % (VC_NUM_PROGRESSIONS + 1)); e->bass_style = (int)(st_rnd(&seed) % BASS_COUNT); }
+            else if (op == 14) { e->prog_play = (int)(st_rnd(&seed) % 2); e->lp.prog = (int)(st_rnd(&seed) % (VC_NUM_PROGRESSIONS + 1)); e->bass_style = (int)(st_rnd(&seed) % BASS_COUNT);
+                e->smart = (int)(st_rnd(&seed) % 2); e->harmony = (int)(st_rnd(&seed) % HARM_COUNT); }
             else if (op == 15) e->playing = (int)(st_rnd(&seed) % 4) != 0; /* mostly playing, sometimes stopped */
             static float L[512], R[512];
             int n = 0;
@@ -1383,6 +1384,56 @@ static void test_bassline(void) {
     CHECK(n == 0, "bass Off plays nothing (%d)", n);
 }
 
+/* harmony: each smart-pad note gets a second voice in the key's scale, released with it */
+static int harm_run(int style, int pad_note, int key, int *notes, int *offs) {
+    static float L[512], R[512];
+    Engine *e = v11_engine();
+    e->lp.key = key; e->lp.scale = 0; e->lp.mode = VC_MODE_CUSTOM; e->dirty = 1;
+    e->smart = SMART_SPLIT; e->smart_map = SMAP_RELATIVE; e->harmony = style;
+    en_rebuild(e);
+    en_push_midi(e, 0, 0x90, (unsigned char)pad_note, 100);
+    int n = 0; *offs = 0;
+    for (int b = 0; b < 6; b++) {
+        if (b == 3) en_push_midi(e, 0, 0x80, (unsigned char)pad_note, 0);
+        en_process(e, L, R, 512);
+        for (int i = 0; i < e->nout; i++) {
+            int on = (e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0;
+            if (on && n < 4) notes[n++] = e->out[i].d[1];
+            else if (!on) (*offs)++;
+        }
+        e->nout = 0;
+    }
+    return n;
+}
+
+static void test_harmony(void) {
+    int notes[4], offs;
+    /* pad 9 plays the key's root in the Relative map (C4 in C), pad 11 the third (E4), pad 15 the seventh (B4) */
+    int n = harm_run(HARM_THIRD_UP, 44, 0, notes, &offs);
+    CHECK(n == 2 && notes[0] == 60 && notes[1] == 64 && offs == 2, "third up from C is E, both released (%d: %d %d, %d offs)", n, notes[0], notes[1], offs);
+    n = harm_run(HARM_THIRD_UP, 50, 0, notes, &offs);
+    CHECK(n == 2 && notes[0] == 71 && notes[1] == 74, "third up from B is D across the octave (%d %d)", notes[0], notes[1]);
+    n = harm_run(HARM_SIXTH_UP, 44, 0, notes, &offs);
+    CHECK(n == 2 && notes[1] == 69, "sixth up from C is A (%d)", notes[1]);
+    n = harm_run(HARM_THIRD_DOWN, 44, 0, notes, &offs);
+    CHECK(n == 2 && notes[1] == 57, "third down from C is A below (%d)", notes[1]);
+    n = harm_run(HARM_OCTAVE, 44, 0, notes, &offs);
+    CHECK(n == 2 && notes[1] == 72, "octave up from C (%d)", notes[1]);
+    n = harm_run(HARM_OFF, 44, 0, notes, &offs);
+    CHECK(n == 1 && offs == 1, "harmony Off adds nothing (%d notes)", n);
+    /* in every key the third above lies in the key's scale */
+    int bad = 0;
+    for (int k = 0; k < 12; k++) {
+        int mask = 0;
+        for (int i = 0; i < VC_SCALES[0].n; i++) mask |= 1 << ((k + VC_SCALES[0].iv[i]) % 12);
+        for (int pad = 44; pad <= 51; pad++) {
+            n = harm_run(HARM_THIRD_UP, pad, k, notes, &offs);
+            if (n != 2 || !((mask >> (notes[1] % 12)) & 1)) bad++;
+        }
+    }
+    CHECK(bad == 0, "the third above stays in the key's scale, all keys (%d bad)", bad);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1411,6 +1462,7 @@ int main(void) {
     printf("pattern length...\n"); test_pattern_length();
     printf("pattern chance...\n"); test_pattern_chance();
     printf("bassline...\n"); test_bassline();
+    printf("harmony...\n"); test_harmony();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

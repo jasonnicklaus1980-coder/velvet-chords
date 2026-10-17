@@ -43,6 +43,8 @@ int en_shift_action(int note); /* -1 when the note is not a shift key */
 /* Smart Scale pads: single notes that follow the current chord */
 enum { SMART_OFF, SMART_SPLIT /* pads 9-16 */, SMART_FOLLOW /* all pads, chord from another instance */, SMART_COUNT };
 enum { SMODE_CHORD, SMODE_SCALE, SMODE_BASS, SMODE_COUNT };
+/* Harmony: a second voice added to each smart-pad note, in the key's scale (octave is a plain 12 semitones) */
+enum { HARM_OFF, HARM_THIRD_UP, HARM_SIXTH_UP, HARM_THIRD_DOWN, HARM_OCTAVE, HARM_COUNT };
 /* Bassline styles, four beats per bar: R root, F fifth, O octave, T third, A approach to the next chord's root, - hold */
 enum { BASS_OFF, BASS_ROOT /* R--- */, BASS_ROOT_FIFTH /* R-F- */, BASS_OCTAVES /* RORO */, BASS_WALKING /* RTFA */, BASS_COUNT };
 /* Smart map: how the smart pads are laid out. FOLLOW uses the Smart mode above and the chord; the others ignore the chord:
@@ -164,7 +166,7 @@ typedef struct Engine {
     int nout;
 
     /* smart scale */
-    int smart, smart_mode, smart_oct, smart_map, instance_id;
+    int smart, smart_mode, smart_oct, smart_map, harmony, instance_id;
     int scale_pcs_mask;          /* key scale for "Scale" mode */
     SmartChord own_chord;        /* last chord this instance played */
     SmartChord smart_src;        /* chord the smart pads currently follow */
