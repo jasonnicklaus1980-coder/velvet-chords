@@ -25,7 +25,7 @@ src/presets_gen.c: data/presets.json tools/gen_presets.py
 	python3 tools/gen_presets.py
 
 build/native/velvetchords.so: $(SRC) src/plugin.c src/*.h | build/native
-	$(NATIVE_CC) $(COMMON) -shared -o $@ $(SRC) src/plugin.c -Wl,-z,defs -ldl -lm
+	$(NATIVE_CC) $(COMMON) -shared -o $@ $(SRC) src/plugin.c -Wl,-z,defs -ldl
 build/native/test_engine: $(SRC) tests/test_engine.c src/*.h | build/native
 	$(NATIVE_CC) -std=gnu99 -O1 -g $(WARN) -o $@ $(SRC) tests/test_engine.c -ldl -lm
 build/native/alloc_probe.so: tests/alloc_probe.c | build/native
@@ -58,8 +58,8 @@ skin: native
 	python3 tools/preview_skin.py "package/skin/Velvet Chords - VST - Velvet Chords" build/native/velvetchords.so build/native/list_params docs/skin-preview/preview "Play=1=0.103093" "Play=34=0.1875" "Play=114=0.5" "Edit=0=1" "Edit=34=0.6875" "Pattern=90=0.375" "Pattern=21=0.6667" "Pattern=92=0.3" "Pattern=15=1" "Tools=117=1" "Tools=118=0.333333" "Tools=119=0.5"
 
 arm: src/songs_gen.c | build/arm
-	$(ARM_CC) $(COMMON) $(ARM_FLAGS) -shared -o build/arm/velvetchords.so $(SRC) src/plugin.c $(ARM_LDEXTRA) -Wl,-z,defs -ldl -lm -Wl,--hash-style=both -s
-	$(ARM_CC) -std=gnu99 -O1 $(WARN) $(ARM_FLAGS) -o build/arm/test_host tests/test_host.c -ldl -lm -lpthread
+	$(ARM_CC) $(COMMON) $(ARM_FLAGS) -shared -o build/arm/velvetchords.so $(SRC) src/plugin.c $(ARM_LDEXTRA) -Wl,-z,defs -ldl -Wl,--hash-style=both -s
+	$(ARM_CC) -std=gnu99 -O1 $(WARN) $(ARM_FLAGS) -o build/arm/test_host tests/test_host.c src/chords.c -ldl -lm -lpthread
 	sh scripts/check_so.sh build/arm/velvetchords.so
 
 arm-test: arm

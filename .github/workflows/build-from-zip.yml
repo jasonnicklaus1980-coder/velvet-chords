@@ -36,7 +36,7 @@ jobs:
             -fPIC -fvisibility=hidden -fno-strict-aliasing -shared -o build/arm/velvetchords.so src/*.c \
             -Wl,-z,defs -ldl -s
           zig cc -target arm-linux-gnueabihf.2.17 -mcpu=cortex_a7 -std=gnu99 -O1 \
-            -o build/arm/test_host tests/test_host.c -ldl -lm -lpthread
+            -o build/arm/test_host tests/test_host.c src/chords.c -ldl -lm -lpthread
 
       - name: Check the ARM binary
         working-directory: ${{ env.PROJECT }}

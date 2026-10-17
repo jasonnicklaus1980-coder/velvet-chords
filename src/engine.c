@@ -1,7 +1,6 @@
 #include "engine.h"
 #include "progression.h"
 #include <string.h>
-#include <math.h>
 
 /* Original rhythm presets in the spirit of common R&B, soul and Caribbean comping figures (16 steps). */
 const PatternPreset EN_PATTERNS[] = {
@@ -840,6 +839,10 @@ static void sort_in(Engine *e) {
 }
 
 /* ---------- progression play ---------- */
+/* floor and ceil without libm: the plugin links no maths library (scripts/check_so.sh refuses one) */
+static double vc_floor(double x) { int64_t i = (int64_t)x; if ((double)i > x) i--; return (double)i; }
+static double vc_ceil(double x) { int64_t i = (int64_t)x; if ((double)i < x) i++; return (double)i; }
+
 #define PROG_BEATS_PER_BAR 4
 
 static double prog_tempo(const Engine *e) { return e->tempo > 20.0 && e->tempo < 400.0 ? e->tempo : 90.0; }
@@ -934,15 +937,15 @@ static void bass_beat_start(Engine *e, int beat, int frame) {
 /* frames from this point in the block to the next beat */
 static int bass_frames_to_beat(const Engine *e, int frame) {
     double b = prog_beats(e, frame);
-    double next_beat = floor(b + 1e-9) + 1;
-    return (int)ceil((next_beat - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
+    double next_beat = vc_floor(b + 1e-9) + 1;
+    return (int)vc_ceil((next_beat - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
 }
 
 /* frames from this point in the block to the next bar line */
 static int prog_frames_to_bar(const Engine *e, int frame) {
     double b = prog_beats(e, frame);
-    double next_bar = (floor(b / PROG_BEATS_PER_BAR + 1e-9) + 1) * PROG_BEATS_PER_BAR;
-    return (int)ceil((next_bar - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
+    double next_bar = (vc_floor(b / PROG_BEATS_PER_BAR + 1e-9) + 1) * PROG_BEATS_PER_BAR;
+    return (int)vc_ceil((next_bar - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
 }
 
 void en_process(Engine *e, float *L, float *R, int n) {
@@ -1021,11 +1024,11 @@ void en_process(Engine *e, float *L, float *R, int n) {
         }
 
         if (e->prog_play && e->playing && e->lp.prog > 0) { /* a bar line reached at this frame starts its chord */
-            int bar = (int)floor((prog_beats(e, pos) + 1e-9) / PROG_BEATS_PER_BAR);
+            int bar = (int)vc_floor((prog_beats(e, pos) + 1e-9) / PROG_BEATS_PER_BAR);
             if (bar != e->prog_bar) prog_start(e, bar, pos);
         }
         if (e->bass_style && e->prog_play && e->playing && e->lp.prog > 0) { /* a beat reached at this frame */
-            int beat = (int)floor(prog_beats(e, pos) + 1e-9);
+            int beat = (int)vc_floor(prog_beats(e, pos) + 1e-9);
             if (beat >= 0 && beat != e->bass_beat) bass_beat_start(e, beat, pos);
         }
         int next = n;
