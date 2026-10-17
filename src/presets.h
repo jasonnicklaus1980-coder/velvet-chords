@@ -14,5 +14,7 @@ typedef struct {
 
 extern const VcPreset VC_PRESETS[];
 extern const int VC_NUM_PRESETS;
+/* presets per genre: the genre and variation knobs split the list this way (preset = genre * 10 + variation) */
+#define VC_PRESET_VARS 10
 
 #endif

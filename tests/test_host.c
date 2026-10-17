@@ -659,6 +659,24 @@ int main(int argc, char **argv) {
         display(fx, P_PRE, buf);
         CHECK(!strcmp(buf, "Manual"), "Manual is shown (%s)", buf);
 
+        /* the genre and variation knobs reach every preset: genre 3 (of 23) and variation 5 (of 10) is preset 25 */
+        int P_GEN = find_param(fx, "Preset genre"), P_VAR = find_param(fx, "Preset variation");
+        CHECK(P_GEN > 0 && P_VAR > 0, "genre and variation knobs exist");
+        fx->setParameter(fx, P_GEN, 3.f / 23.f);
+        fx->setParameter(fx, P_VAR, 4.f / 9.f);
+        char gname[160];
+        display(fx, P_GEN, gname);
+        display(fx, P_PRE, buf);
+        CHECK(!strncmp(buf, gname, strlen(gname)) && buf[strlen(gname)] == ' ' && !strcmp(buf + strlen(gname) + 1, "Dusty"),
+              "genre and variation pick a preset (%s)", buf);
+        fx->setParameter(fx, P_PNX, 1.f); /* the stepper moves on, and the knobs follow it */
+        display(fx, P_VAR, buf);
+        CHECK(!strcmp(buf, "Sparkle"), "variation knob follows the stepper (%s)", buf);
+        fx->setParameter(fx, P_GEN, 0.f);
+        display(fx, P_PRE, buf);
+        CHECK(!strcmp(buf, "Manual"), "genre Manual turns the presets off (%s)", buf);
+        fx->setParameter(fx, P_PRE, 0.f);
+
         fx->setParameter(fx, P_ARPO, 1.f / 3.f);
         display(fx, P_ARPO, buf);
         CHECK(!strcmp(buf, "2 oct"), "arp octaves (%s)", buf);

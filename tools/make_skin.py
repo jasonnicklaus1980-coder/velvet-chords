@@ -631,8 +631,8 @@ class Skin:
         def m(names):
             names = (names + [None] * 16)[:16]
             return {"Q-Link %d" % (i + 1): (self.p(n) if n else -1) for i, n in enumerate(names)}
-        play = ["Mode", "Song", "Section", "Screen bank", "Key", "Scale", "Transpose", "Voicing",
-                "Inversion", "Octave", "Voice lead", "Sound", "Smart pads", "Smart notes", "Smart octave", "Volume"]
+        play = ["Mode", "Song", "Section", "Screen bank", "Key", "Scale", "Preset genre", "Voicing",
+                "Inversion", "Octave", "Voice lead", "Sound", "Smart pads", "Smart notes", "Preset variation", "Volume"]
         perform = ["Sound", "Tone", "Release", "Volume", "Velocity", "Strum", "Strum dir", "Arp",
                    "Arp rate", "Voicing", "Inversion", "Octave", "Transpose", "Voice lead", "MIDI out", "Pad 1 note"]
         edit = ["Edit pad", "Edit root", "Edit type", "Edit bass", "Edit inversion", "Edit octave", "Edit follows pad",

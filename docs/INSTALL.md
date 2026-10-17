@@ -6,8 +6,10 @@ It is a native MPC OS plugin (VST2 `.so`) loaded by MPC's built-in plugin host, 
 
 ## What's new in 1.1
 
-- **230 factory presets.** The **Preset** control (and Preset prev / next) sets the sound, tone, voicing, strum, arpeggio,
-  pattern, Smart Scale pads and riff. It never changes your chords, key, scale, song or custom pads. Manual changes nothing.
+- **230 factory presets.** The presets are 23 genres with 10 variations each. The **Preset genre** and **Preset variation**
+  knobs (Play page Q-Links) pick one: genre first, then the variation within it, so every preset is reachable by knob.
+  **Preset** and Preset prev / next still step through all 230 in order. A preset sets the sound, tone, voicing, strum,
+  arpeggio, pattern, Smart Scale pads and riff. It never changes your chords, key, scale, song or custom pads. Manual changes nothing.
   The presets use the built-in sounds Electric piano, Soft pad and Organ.
 - **Multi arp: four arpeggiator lanes that run at the same time.** Lane 1 is **Arp**, **Arp rate**, **Arp octaves** and
   **Arp transpose**; lanes 2 to 4 are **Arp 2**, **Arp 3** and **Arp 4**, each with its own order, rate, octaves and
@@ -152,6 +154,7 @@ decides which tracks hear them.
 | Parameter | What it does |
 |---|---|
 | Preset, Preset prev, Preset next | Manual, or one of the 230 factory presets |
+| Preset genre, Preset variation | Manual or one of the 23 genres, then one of its 10 variations (Play page Q-Links) |
 | Arp octaves, Arp 2 to Arp 4 (with rate, octaves, transpose) | The four arp lanes (see above) |
 | Arp transpose | Transposes lane 1 by -12 to +12 semitones |
 | Shift keys | On: the black keys in the octave below the pads move the key, scale and inversion |

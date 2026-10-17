@@ -821,6 +821,7 @@ static void test_midi_out_channel(void) {
 
 static void test_presets(void) {
     CHECK(VC_NUM_PRESETS == 230, "230 factory presets (%d)", VC_NUM_PRESETS);
+    CHECK(VC_NUM_PRESETS % VC_PRESET_VARS == 0, "presets split evenly into genres of %d", VC_PRESET_VARS);
     for (int i = 0; i < VC_NUM_PRESETS; i++) {
         const VcPreset *p = &VC_PRESETS[i];
         for (int j = 0; j < i; j++) CHECK(strcmp(p->name, VC_PRESETS[j].name) != 0, "duplicate preset name %s", p->name);

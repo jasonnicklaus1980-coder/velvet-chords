@@ -47,6 +47,8 @@ enum {
     P_ARP_TR, P_ARP2_TR, P_ARP3_TR, P_ARP4_TR,
     /* riffs, shift keys and the note-by-note editor */
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
+    /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
+    P_PRESET_GENRE, P_PRESET_VAR,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -185,6 +187,8 @@ static void init_param_info(void) {
     P(P_RIFF_SLOT, "Riff slot", VC_RIFFS, 0.f, 0)
     P(P_NOTE_SEL, "Edit note", 8, 0.f, 0)
     P(P_NOTE_IV, "Edit note interval", 38, 0.f, 0)
+    P(P_PRESET_GENRE, "Preset genre", VC_NUM_PRESETS / VC_PRESET_VARS + 1, 0.f, 0)
+    P(P_PRESET_VAR, "Preset variation", VC_PRESET_VARS, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -392,6 +396,19 @@ static void apply_preset(Plugin *p, int x) {
     set_param(p, P_SMART_MODE, norm_of(P_SMART_MODE, s->smart_mode), 0);
     set_param(p, P_SMART_OCT, norm_of(P_SMART_OCT, s->smart_oct + 2), 0);
     set_param(p, P_RIFF, norm_of(P_RIFF, s->melody), 0);
+}
+
+/* the preset list is genre by variation: the genre knob sets the group, the variation knob the preset in it */
+static void sync_preset_knobs(Plugin *p, int x) {
+    if (x < 1) { p->val[P_PRESET_GENRE] = 0.f; return; } /* Manual: the variation knob keeps its place */
+    p->val[P_PRESET_GENRE] = norm_of(P_PRESET_GENRE, (x - 1) / VC_PRESET_VARS + 1);
+    p->val[P_PRESET_VAR] = norm_of(P_PRESET_VAR, (x - 1) % VC_PRESET_VARS);
+}
+static void preset_from_knobs(Plugin *p, int from_host) {
+    int g = idx_of(p, P_PRESET_GENRE);
+    int x = g == 0 ? 0 : (g - 1) * VC_PRESET_VARS + idx_of(p, P_PRESET_VAR) + 1;
+    set_param(p, P_PRESET, norm_of(P_PRESET, x), 0);
+    if (from_host) refresh_host(p);
 }
 
 /* riffs: 0 = Off, 1..6 = the riff in slot; the 16 steps shown are the slot chosen in Riff slot */
@@ -708,7 +725,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_IMP_PADS: sync_layout(p); refresh_host(p); break;
     case P_SMART_MODE: e->smart_mode = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_OCT: e->smart_oct = idx_of(p, i) - 2; e->dirty = 1; if (from_host) refresh_host(p); break;
-    case P_PRESET: apply_preset(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
+    case P_PRESET: apply_preset(p, idx_of(p, i)); sync_preset_knobs(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
+    case P_PRESET_GENRE: case P_PRESET_VAR: preset_from_knobs(p, from_host); break;
     case P_SHIFT: e->shift_keys = idx_of(p, i); break;
     case P_RIFF: e->riff = idx_of(p, i); apply_pattern(p); if (from_host) refresh_host(p); break;
     case P_RIFF_SLOT: p->riff_sel = idx_of(p, i); load_riff_fields(p); if (from_host) refresh_host(p); break;
@@ -840,6 +858,14 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_SMART_MODE: { static const char *SN[SMODE_COUNT] = {"Chord tones", "Scale", "Bass"}; copy_str(b, SN[x], sizeof(b)); break; }
     case P_SMART_OCT: snprintf(b, sizeof(b), "%+d", x - 2); break;
     case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;
+    case P_PRESET_GENRE: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[(x - 1) * VC_PRESET_VARS].genre, sizeof(b)); break;
+    case P_PRESET_VAR: {
+        int g = idx_of(p, P_PRESET_GENRE);
+        if (g == 0) { copy_str(b, "-", sizeof(b)); break; }
+        const VcPreset *s = &VC_PRESETS[(g - 1) * VC_PRESET_VARS + x]; /* the variation is the name after the genre */
+        copy_str(b, s->name + strlen(s->genre) + 1, sizeof(b));
+        break;
+    }
     case P_ARP_OCT: case P_ARP2_OCT: case P_ARP3_OCT: case P_ARP4_OCT: snprintf(b, sizeof(b), "%d oct", x + 1); break;
     case P_ARP2: case P_ARP3: case P_ARP4: copy_str(b, ARPS[x], sizeof(b)); break;
     case P_ARP2_RATE: case P_ARP3_RATE: case P_ARP4_RATE: copy_str(b, RATES[x], sizeof(b)); break;
@@ -1011,7 +1037,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
     for (uint32_t i = 0; i < np; i++) {
         union { float f; uint32_t u; } u;
         u.u = r32(b, &k);
-        if (i == P_PRESET) p->val[i] = u.f; /* shown only: the parameters saved with it already hold the preset's values */
+        if (i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR) p->val[i] = u.f; /* shown only: the parameters saved with it already hold the preset's values */
         else if (i >= P_RIFF0 && i <= P_RIFF_END) p->val[i] = u.f; /* riff steps are stored as data below */
         else if (i == P_NOTE_IV) p->val[i] = u.f;                  /* the note list is stored as data below */
         else if (i < NUM_PARAMS && !PINFO[i].trigger) set_param(p, (int)i, u.f, 0);
@@ -1291,7 +1317,8 @@ VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
     for (int i = 0; i < NUM_PARAMS; i++) p->val[i] = PINFO[i].def;
     for (int i = 0; i < NUM_PARAMS; i++)
         if (!PINFO[i].trigger && !(i >= P_EDIT_PAD && i <= P_EDIT_OCT) && !(i >= P_STEP0 && i < P_STEP0 + EN_STEPS)
-            && !(i >= P_RIFF0 && i <= P_RIFF_END) && i != P_NOTE_IV && i != P_PRESET) set_param(p, i, PINFO[i].def, 0);
+            && !(i >= P_RIFF0 && i <= P_RIFF_END) && i != P_NOTE_IV && i != P_PRESET
+            && i != P_PRESET_GENRE && i != P_PRESET_VAR) set_param(p, i, PINFO[i].def, 0);
     load_edit_fields(p); /* edit fields mirror the seeded custom pad A01 */
     load_riff_fields(p);
     load_note_field(p);
