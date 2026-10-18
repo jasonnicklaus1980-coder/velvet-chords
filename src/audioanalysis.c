@@ -105,8 +105,8 @@ int va_read_wav(const char *path, float **mono, int *n, int *rate, char *msg, in
     }
     if (!have_fmt || !data_size) { fclose(f); va_msg(msg, msglen, "No audio data in the file"); return -5; }
     int is_float = fmt == 3, is_pcm = fmt == 1;
-    if (!(is_float && bits == 32) && !(is_pcm && bits == 16)) {
-        fclose(f); va_msg(msg, msglen, "Use a 16-bit PCM or 32-bit float WAV"); return -6;
+    if (!(is_float && bits == 32) && !(is_pcm && (bits == 16 || bits == 24))) {
+        fclose(f); va_msg(msg, msglen, "Use a 16-bit, 24-bit PCM or 32-bit float WAV"); return -6;
     }
     if (ch < 1 || ch > 8 || sr < 8000 || sr > 192000) { fclose(f); va_msg(msg, msglen, "Unsupported channel count or rate"); return -7; }
     int bps = bits / 8, fb = bps * ch;
@@ -131,9 +131,13 @@ int va_read_wav(const char *path, float **mono, int *n, int *rate, char *msg, in
                     float v;
                     memcpy(&v, &u, 4);
                     acc += (double)v;
-                } else {
+                } else if (bps == 2) {
                     short s = (short)va_le16(p);
                     acc += (double)s / 32768.0;
+                } else { /* 24-bit: three bytes, little-endian, signed */
+                    int v = (int)p[0] | ((int)p[1] << 8) | ((int)p[2] << 16);
+                    if (v & 0x800000) v -= 0x1000000;
+                    acc += (double)v / 8388608.0;
                 }
             }
             out[done + i] = (float)(acc / ch);

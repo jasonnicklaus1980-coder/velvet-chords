@@ -850,9 +850,15 @@ int main(int argc, char **argv) {
             fx->setParameter(fx, P_UCL, 1.f);
             display(fx, P_ANS, st);
             CHECK(strstr(st, "Cleared progression 1") != 0, "clearing empties the slot (%s)", st);
+            { /* a renamed export is still found: the first WAV in the folder is used */
+                char renamed[700];
+                snprintf(renamed, sizeof(renamed), "%s/my song.wav", adir);
+                rename(apath, renamed);
+            }
             fx->setParameter(fx, P_AN, 1.f);
             display(fx, P_ANS, st);
-            CHECK(strstr(st, "No sample yet") != 0 || strstr(st, "Read failed") != 0 || strstr(st, "chords in progression") != 0, "analysis says what to do without a sample (%s)", st);
+            CHECK(strstr(st, "chords in progression 1") != 0, "a renamed WAV in the folder is analysed (%s)", st);
+            fx->setParameter(fx, P_UCL, 1.f);
         }
     }
 

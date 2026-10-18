@@ -8,6 +8,8 @@
 #include "audioanalysis.h"
 #include "midiimport.h"
 #include <dirent.h>
+#include <strings.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -535,11 +537,25 @@ static void analyze_sample(Plugin *p, int slot) {
     snprintf(dir, sizeof(dir), "%s/Analyze", export_dir());
     mkdir(dir, 0775); /* made on first use, so the folder is there to copy a sample into */
     snprintf(path, sizeof(path), "%s/sample.wav", dir);
+    char found[160] = "sample.wav";
+    if (access(path, R_OK) != 0) { /* no sample.wav: use the first WAV in the folder, so a renamed export still works */
+        DIR *d = opendir(dir);
+        struct dirent *de;
+        while (d && (de = readdir(d)) != NULL) {
+            size_t len = strlen(de->d_name);
+            if (len > 4 && !strcasecmp(de->d_name + len - 4, ".wav")) {
+                snprintf(path, sizeof(path), "%s/%s", dir, de->d_name);
+                snprintf(found, sizeof(found), "%s", de->d_name);
+                break;
+            }
+        }
+        if (d) closedir(d);
+    }
     float *mono = 0;
     int n = 0, rate = 0;
     if (va_read_wav(path, &mono, &n, &rate, msg, sizeof(msg)) != 0) {
-        if (!strcmp(msg, "Could not open the file")) snprintf(p->ana_msg, sizeof(p->ana_msg), "No sample yet: put sample.wav in Velvet Chords/Analyze");
-        else snprintf(p->ana_msg, sizeof(p->ana_msg), "Read failed: %s", msg);
+        if (!strcmp(msg, "Could not open the file")) snprintf(p->ana_msg, sizeof(p->ana_msg), "No WAV yet: put a .wav file in Velvet Chords/Analyze");
+        else snprintf(p->ana_msg, sizeof(p->ana_msg), "Read failed (%s): %s", found, msg);
         return;
     }
     VaResult *r = (VaResult *)malloc(sizeof(VaResult));

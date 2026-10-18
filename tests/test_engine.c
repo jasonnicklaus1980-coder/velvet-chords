@@ -1553,6 +1553,38 @@ static void test_audio_analysis(void) {
         CHECK(va_read_wav("/nonexistent/none.wav", &bad, &bn, &brate, em, sizeof(em)) < 0, "a missing file is refused");
     }
 
+    /* a 24-bit WAV (what many MPC exports are) reads back, and so does a 16-bit one with the same tone */
+    {
+        const char *d24 = getenv("VC_EXPORT_DIR");
+        char p24[512];
+        snprintf(p24, sizeof(p24), "%s/an_test24.wav", d24 ? d24 : "/tmp");
+        FILE *g = fopen(p24, "wb");
+        if (g) {
+            int nn = 4800;
+            unsigned dsz = (unsigned)(nn * 3), rsz = 36 + dsz, sr = 48000, br = 48000 * 3;
+            unsigned char h[44] = {'R','I','F','F',0,0,0,0,'W','A','V','E','f','m','t',' ',16,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,3,0,24,0,'d','a','t','a',0,0,0,0};
+            for (int k = 0; k < 4; k++) { h[4 + k] = (rsz >> (8 * k)) & 255; h[40 + k] = (dsz >> (8 * k)) & 255; h[24 + k] = (sr >> (8 * k)) & 255; h[28 + k] = (br >> (8 * k)) & 255; }
+            fwrite(h, 1, 44, g);
+            for (int i = 0; i < nn; i++) {
+                double v = 0.5 * sin(2 * M_PI * 440.0 * i / 48000.0);
+                int q = (int)(v * 8388607.0);
+                unsigned char b[3] = {(unsigned char)(q & 255), (unsigned char)((q >> 8) & 255), (unsigned char)((q >> 16) & 255)};
+                fwrite(b, 1, 3, g);
+            }
+            fclose(g);
+            float *m24 = NULL; int n24 = 0, r24 = 0; char e24[96];
+            int rc24 = va_read_wav(p24, &m24, &n24, &r24, e24, sizeof(e24));
+            int good24 = rc24 == 0 && n24 == nn && r24 == 48000;
+            if (good24) {
+                double worst = 0;
+                for (int i = 0; i < nn; i++) { double want = 0.5 * sin(2 * M_PI * 440.0 * i / 48000.0); double dd = fabs(m24[i] - want); if (dd > worst) worst = dd; }
+                good24 = worst < 1e-5;
+            }
+            CHECK(good24, "a 24-bit WAV reads back with the same samples (rc %d, %d samples)", rc24, n24);
+            free(m24);
+        }
+    }
+
     /* silence: no chords, and no error */
     float *z = (float *)calloc((size_t)rate, sizeof(float));
     VaResult rz;
