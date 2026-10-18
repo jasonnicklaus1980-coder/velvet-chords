@@ -24,6 +24,10 @@ no test or device run covers it. Nothing here has been run on an MPC.
 | 3 progressions | Roman numeral progressions in any key, 8 templates, fill pads 1.., transposes with the key | Tested |
 | 3 progressions | Four saved user progressions, stored with the project | Tested (recall, empty steps, save and reload) |
 | 3 progressions | Drag-and-drop reordering, a step-by-step progression editor | Not built |
+| 3 progressions | Chord detection from a WAV file (STFT chroma, median harmonic/percussive separation, bass tracking, chord templates, key estimate) into a progression slot | Tested on generated audio with drums only. Not tested on real recordings. Analyze button on the Edit page |
+| 3 progressions | Recording audio, sample region selection, preview, trim and loop, waveform and chord timeline views | Not built (the plugin has no audio input, and the MPC screen has no waveform view yet) |
+| 3 progressions | Sample slice mode (pads trigger the original audio) | Not built |
+| 3 progressions | Tempo estimate | Not built |
 | 4 Smart Scale | Chord tones, scale, bass modes; Relative, Absolute, Chromatic maps; all twelve keys | Tested |
 | 4 Smart Scale | User-defined scales | Not built |
 | 5 harmonic context | Key, scale, progression position shared by progression play and bass | Tested. Cross-instance key sync exists (the Key sync switch) but is not tested here |

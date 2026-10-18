@@ -122,6 +122,18 @@ velocity, the pattern and its 16 steps, rate, swing, gate, length, chance and se
 the bassline, harmony, and the progression with Progression play. Unlike a factory preset it restores all of that, including Silent or an
 arpeggio, because you saved it. Slots are stored with the project. It does not hold your custom pads, saved progressions or imported chords.
 
+**Analyze a sample** (Edit page, bottom): put a WAV file at `Velvet Chords/Analyze/sample.wav` (16-bit PCM or 32-bit float, mono or
+stereo, up to 120 seconds is read). Pick the progression slot with the **Progression slot** Q-Link on the Tools page, then press
+**Analyze sample**. Velvet estimates the chords, the key and how sure it is, and writes the chords into that slot in time order, one
+per pad from pad 1. Choose the slot's progression on the Play page (**Progression**) to play them. The status line says what it found,
+for example "5 chords in progression 1, key Am (72% sure)". A slot that already holds chords is never overwritten: press **Clear
+progression** on the Edit page first. Results are estimates; the confidence is in the readout, and a wrong chord can be fixed by
+editing the custom pad it came from (Copy layout to Custom, then the Edit page).
+
+The analysis separates sustained harmony from drum hits, reads the bass note, and matches each stretch against the chord table
+(triads, sevenths, ninths, sus, altered, and more). It has been tested on generated audio with drums; it has not been tested on
+real recordings or on the MPC.
+
 **Starred presets** (Tools page, bottom left): with a factory preset chosen, **Star preset** marks it (press again to un-star), and
 **Prev star** and **Next star** jump to the previous or next starred preset, wrapping round. The readout shows whether the current preset is
 starred and how many you have starred. Stars are stored with the project. **Clear** (Tools page, next to Export and Import) empties the

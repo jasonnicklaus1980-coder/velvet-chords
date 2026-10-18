@@ -796,6 +796,63 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_SN, 0.f); fx->setParameter(fx, P_T, 0.45f); fx->setParameter(fx, P_SW, 0.f);
     }
 
+    /* sample analysis: a WAV in the Analyze folder becomes a progression on the pads; a filled slot is never overwritten */
+    {
+        const char *edir = getenv("VC_EXPORT_DIR");
+        int P_AN = find_param(fx, "Analyze sample"), P_ANS = find_param(fx, "Analysis status"), P_UCL = find_param(fx, "Clear progression");
+        int P_UPS2 = find_param(fx, "Progression slot"), P_PRG = find_param(fx, "Progression"), P_P1 = find_param(fx, "Pad 1 chord");
+        CHECK(P_AN > 0 && P_ANS > 0 && P_UCL > 0, "analysis parameters exist");
+        if (edir) {
+            char adir[600], apath[700];
+            snprintf(adir, sizeof(adir), "%s/Analyze", edir);
+            mkdir(adir, 0775);
+            snprintf(apath, sizeof(apath), "%s/sample.wav", adir);
+            /* a four-chord WAV: Cmaj7, Am7, Fmaj7, G7, each 1.5 s, with the bass an octave down */
+            const int rate = 44100, secs = 6;
+            static const int ROOT[4] = {0, 9, 5, 7};
+            static const int TONES[4][4] = {{0, 4, 7, 11}, {0, 3, 7, 10}, {0, 4, 7, 11}, {0, 4, 7, 10}};
+            int nsamp = rate * secs;
+            short *pcm = (short *)calloc((size_t)nsamp, sizeof(short));
+            for (int i = 0; i < nsamp; i++) {
+                double t = (double)i / rate, acc = 0;
+                int seg = (int)(t / 1.5); if (seg > 3) seg = 3;
+                double f0 = 440.0 * pow(2.0, (36 + ROOT[seg] - 69) / 12.0);
+                acc += 0.4 * sin(2 * M_PI * f0 * t);
+                for (int k = 0; k < 4; k++) {
+                    double f = 440.0 * pow(2.0, (60 + (ROOT[seg] + TONES[seg][k]) % 12 - 69) / 12.0);
+                    acc += 0.15 * sin(2 * M_PI * f * t) + 0.05 * sin(4 * M_PI * f * t);
+                }
+                pcm[i] = (short)(acc * 12000);
+            }
+            FILE *wf = fopen(apath, "wb");
+            if (wf) {
+                unsigned dsz = (unsigned)(nsamp * 2), rsz = 36 + dsz, sr = rate, br = rate * 2;
+                unsigned char h[44] = {'R','I','F','F',0,0,0,0,'W','A','V','E','f','m','t',' ',16,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,2,0,16,0,'d','a','t','a',0,0,0,0};
+                for (int k = 0; k < 4; k++) { h[4 + k] = (rsz >> (8 * k)) & 255; h[40 + k] = (dsz >> (8 * k)) & 255; h[24 + k] = (sr >> (8 * k)) & 255; h[28 + k] = (br >> (8 * k)) & 255; }
+                fwrite(h, 1, 44, wf);
+                fwrite(pcm, 2, (size_t)nsamp, wf);
+                fclose(wf);
+            }
+            free(pcm);
+            char st[160];
+            fx->setParameter(fx, P_UPS2, 0.f);          /* slot 1 */
+            fx->setParameter(fx, P_UCL, 1.f);           /* start from an empty slot */
+            fx->setParameter(fx, P_AN, 1.f);
+            display(fx, P_ANS, st);
+            CHECK(strstr(st, "chords in progression 1") != 0, "analysis fills progression 1 (%s)", st);
+            fx->setParameter(fx, P_PRG, 9.f / 12.f);    /* User progression 1 */
+            display(fx, P_P1, st);
+            CHECK(strstr(st, "maj7") != 0 || strstr(st, "Cmaj7") != 0, "pad 1 plays the first detected chord (%s)", st);
+            fx->setParameter(fx, P_PRG, 0.f);
+            fx->setParameter(fx, P_AN, 1.f);            /* a filled slot is not overwritten */
+            display(fx, P_ANS, st);
+            CHECK(strstr(st, "Clear progression first") != 0, "a filled slot is refused (%s)", st);
+            fx->setParameter(fx, P_UCL, 1.f);
+            display(fx, P_ANS, st);
+            CHECK(strstr(st, "Cleared progression 1") != 0, "clearing empties the slot (%s)", st);
+        }
+    }
+
     /* starred presets, and clearing a user preset slot */
     {
         int P_PR = find_param(fx, "Preset"), P_FT = find_param(fx, "Star preset"), P_FP = find_param(fx, "Previous starred preset");

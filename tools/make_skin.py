@@ -538,7 +538,10 @@ class Skin:
         self.segments(c, bg, "einv", "Edit inversion", ["Root", "1st", "2nd", "3rd"], 656, 370, 84, caption="Inversion")
         self.segments(c, bg, "eoct", "Edit octave", ["-2", "-1", "0", "+1", "+2"], 1012, 370, 48, caption="Octave")
         self.readout(c, bg, "Now playing", 656, 444, 596, 40, size=15, colour=ACCENT, caption="Now playing")
-        self.action_button(c, bg, "copy", "Copy layout to Custom", "Copy to Custom", 656, 516, w=596)
+        self.action_button(c, bg, "copy", "Copy layout to Custom", "Copy to Custom", 656, 496, w=596)
+        self.action_button(c, bg, "analyze", "Analyze sample", "Analyze sample", 656, 548, w=292)
+        self.action_button(c, bg, "clear_prog", "Clear progression", "Clear progression", 960, 548, w=292)
+        self.readout(c, bg, "Analysis status", 656, 596, 596, 24, size=12, caption=None)
         self.page("Edit", 2, c, "vc_bg_edit.png", bg)
 
         # ---------- Pattern

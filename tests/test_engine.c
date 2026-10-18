@@ -2,6 +2,8 @@
 #include "../src/export.h"
 #include "../src/presets.h"
 #include "../src/progression.h"
+#include "../src/audioanalysis.h"
+#include <math.h>
 #include "../src/vcmath.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -1434,6 +1436,130 @@ static void test_harmony(void) {
     CHECK(bad == 0, "the third above stays in the key's scale, all keys (%d bad)", bad);
 }
 
+/* audio analysis: synthetic chords (with a bass note, harmonics, and drum-like bursts) must come back as the chords played */
+static unsigned an_seed = 7;
+static float an_noise(void) { an_seed = an_seed * 1103515245u + 12345u; return ((an_seed >> 16) & 0x7fff) / 32768.0f - 0.5f; }
+
+/* add one note (MIDI number) with three harmonics to x over [t0, t1) seconds */
+static void an_note(float *x, int n, int rate, int midi, double t0, double t1, float amp) {
+    double f = 440.0 * pow(2.0, (midi - 69) / 12.0);
+    long a = (long)(t0 * rate), b = (long)(t1 * rate);
+    if (b > n) b = n;
+    for (long i = a; i < b; i++) {
+        double t = (double)i / rate, env = 1.0;
+        double att = (t - t0) < 0.02 ? (t - t0) / 0.02 : 1.0;
+        env = att * (1.0 - (t - t0) / (t1 - t0) * 0.3);
+        double v = sin(2 * M_PI * f * t) + 0.5 * sin(2 * M_PI * 2 * f * t) + 0.25 * sin(2 * M_PI * 3 * f * t);
+        x[i] += (float)(amp * env * v / 1.75);
+    }
+}
+
+/* a progression: each step is a root, a quality and its pitch classes; the bass plays the root an octave down */
+typedef struct { int root; const char *suffix; int pcs[4]; int npcs; double t0, t1; } AnChord;
+
+static int an_synth(float *x, int n, int rate, const AnChord *c, int nc) {
+    for (int k = 0; k < nc; k++) {
+        an_note(x, n, rate, 36 + c[k].root, c[k].t0, c[k].t1, 0.45f);
+        an_note(x, n, rate, 60 + c[k].root, c[k].t0, c[k].t1, 0.22f); /* the root sits in the voicing too */
+        for (int i = 0; i < c[k].npcs; i++) an_note(x, n, rate, 60 + ((c[k].root + c[k].pcs[i]) % 12), c[k].t0, c[k].t1, 0.22f);
+    }
+    /* drums: a short noise burst every half second, on top of everything */
+    for (double t = 0.25; t < n / (double)rate - 0.05; t += 0.5)
+        for (long i = (long)(t * rate); i < (long)((t + 0.04) * rate) && i < n; i++) {
+            double env = exp(-(i - t * rate) / (0.012 * rate));
+            x[i] += (float)(0.25 * env * an_noise());
+        }
+    return 0;
+}
+
+static void test_audio_analysis(void) {
+    const int rate = 44100;
+    /* Cmaj7 -> Am7 -> Fmaj7 -> G7, two seconds each; the bass decides Am7 against the C6 it shares notes with */
+    AnChord prog[4] = {
+        {0, "maj7", {4, 7, 11}, 3, 0.0, 2.0},
+        {9, "m7", {3, 7, 10}, 3, 2.0, 4.0},
+        {5, "maj7", {4, 7, 11}, 3, 4.0, 6.0},
+        {7, "7", {4, 7, 10}, 3, 6.0, 8.0},
+    };
+    /* the same chords need their own notes: Am7 is A C E G, Fmaj7 is F A C E, G7 is G B D F */
+    prog[0].pcs[0] = 4; prog[0].pcs[1] = 7; prog[0].pcs[2] = 11; /* Cmaj7 above C: E G B */
+    prog[1].pcs[0] = 3; prog[1].pcs[1] = 7; prog[1].pcs[2] = 10; /* Am7 above A: C E G */
+    prog[2].pcs[0] = 4; prog[2].pcs[1] = 7; prog[2].pcs[2] = 11; /* Fmaj7 above F: A C E */
+    prog[3].pcs[0] = 4; prog[3].pcs[1] = 7; prog[3].pcs[2] = 10; /* G7 above G: B D F */
+    int n = (int)(8.0 * rate);
+    float *x = (float *)calloc((size_t)n, sizeof(float));
+    an_synth(x, n, rate, prog, 4);
+    VaResult r;
+    char msg[64];
+    int rc = va_analyze(x, n, rate, &r, msg, sizeof(msg));
+    CHECK(rc == 0 && r.nseg >= 4 && r.nseg <= VA_MAX_SEG, "four chords found (%d segments, rc %d)", r.nseg, rc);
+    static const int ROOTS[4] = {0, 9, 5, 7};
+    static const char *SUF[4] = {"maj7", "m7", "maj7", "7"};
+    int hit = 0;
+    for (int k = 0; k < 4; k++) {
+        double mid = (k * 2.0) + 1.0;
+        for (int s = 0; s < r.nseg; s++)
+            if (r.seg[s].start <= mid && r.seg[s].end >= mid) {
+                int q = vc_quality_find(SUF[k]);
+                if (r.seg[s].root == ROOTS[k] && r.seg[s].quality == q) hit++;
+                else printf("  chord %d: found %d %s (conf %.2f)\n", k, r.seg[s].root, VC_QUALITIES[r.seg[s].quality].suffix, r.seg[s].conf);
+                break;
+            }
+    }
+    CHECK(hit == 4, "each chord is named correctly (%d of 4)", hit);
+    int seg_bass_ok = 0;
+    for (int s = 0; s < r.nseg; s++) if (r.seg[s].bass >= 0) seg_bass_ok++;
+    CHECK(seg_bass_ok == r.nseg, "every segment has a bass note (%d of %d)", seg_bass_ok, r.nseg);
+    int ordered = 1;
+    for (int s = 1; s < r.nseg; s++) if (r.seg[s].start < r.seg[s - 1].start) ordered = 0;
+    CHECK(ordered, "segments come in time order");
+    CHECK(r.key_conf >= 0.f && r.key_conf <= 1.f && r.seconds > 7.9, "key confidence in range, length %.2f s", r.seconds);
+    free(x);
+
+    /* a WAV round trip: write the audio as 16-bit PCM, read it back, and get the same first chord */
+    const char *dir = getenv("VC_EXPORT_DIR");
+    char path[512];
+    snprintf(path, sizeof(path), "%s/an_test.wav", dir ? dir : "/tmp");
+    FILE *f = fopen(path, "wb");
+    if (f) {
+        float *y = (float *)calloc((size_t)n, sizeof(float));
+        an_synth(y, n, rate, prog, 4);
+        unsigned data = (unsigned)(n * 2), riff = 36 + data;
+        unsigned char hdr[44] = {'R','I','F','F', 0,0,0,0, 'W','A','V','E', 'f','m','t',' ', 16,0,0,0, 1,0, 1,0,
+                                 0,0,0,0, 0,0,0,0, 2,0, 16,0, 'd','a','t','a', 0,0,0,0};
+        for (int k = 0; k < 4; k++) { hdr[4 + k] = (riff >> (8 * k)) & 255; hdr[40 + k] = (data >> (8 * k)) & 255; }
+        unsigned sr = rate, br = rate * 2;
+        for (int k = 0; k < 4; k++) { hdr[24 + k] = (sr >> (8 * k)) & 255; hdr[28 + k] = (br >> (8 * k)) & 255; }
+        fwrite(hdr, 1, 44, f);
+        for (int i = 0; i < n; i++) {
+            float v = y[i] < -1.f ? -1.f : y[i] > 1.f ? 1.f : y[i];
+            short s = (short)(v * 32767.f);
+            unsigned char b[2] = {(unsigned char)(s & 255), (unsigned char)((s >> 8) & 255)};
+            fwrite(b, 1, 2, f);
+        }
+        fclose(f);
+        free(y);
+        float *m = NULL; int mn = 0, mr = 0;
+        char em[96];
+        int rr = va_read_wav(path, &m, &mn, &mr, em, sizeof(em));
+        CHECK(rr == 0 && mn == n && mr == rate, "a 16-bit WAV reads back at its length and rate (rc %d, %d samples)", rr, mn);
+        if (rr == 0) {
+            VaResult r2;
+            va_analyze(m, mn, mr, &r2, msg, sizeof(msg));
+            CHECK(r2.nseg >= 1 && r2.seg[0].root == 0 && r2.seg[0].quality == vc_quality_find("maj7"), "the WAV's first chord is Cmaj7 (%d segments)", r2.nseg);
+            free(m);
+        }
+        float *bad = NULL; int bn = 0, brate = 0;
+        CHECK(va_read_wav("/nonexistent/none.wav", &bad, &bn, &brate, em, sizeof(em)) < 0, "a missing file is refused");
+    }
+
+    /* silence: no chords, and no error */
+    float *z = (float *)calloc((size_t)rate, sizeof(float));
+    VaResult rz;
+    CHECK(va_analyze(z, rate, rate, &rz, msg, sizeof(msg)) == 0 && rz.nseg == 0, "silence gives no chords");
+    free(z);
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1463,6 +1589,7 @@ int main(void) {
     printf("pattern chance...\n"); test_pattern_chance();
     printf("bassline...\n"); test_bassline();
     printf("harmony...\n"); test_harmony();
+    printf("audio analysis...\n"); test_audio_analysis();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

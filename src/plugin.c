@@ -5,6 +5,7 @@
 #include "midiport.h"
 #include "presets.h"
 #include "progression.h"
+#include "audioanalysis.h"
 #include "midiimport.h"
 #include <dirent.h>
 #include <stdio.h>
@@ -52,7 +53,7 @@ enum {
     P_SHIFT, P_RIFF, P_RIFF_SLOT, P_RIFF0, P_RIFF_END = P_RIFF0 + EN_STEPS - 1, P_NOTE_SEL, P_NOTE_IV,
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
-    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS,
+    P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS, P_ANALYZE, P_ANA_STATUS, P_UPROG_CLEAR,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -68,7 +69,7 @@ static int lane_of(int i, const int *ids) {
 enum { OUT_OFF = 0, OUT_HOST = 1, OUT_PORT = 2, OUT_BOTH = 3 }; /* bit 0 host, bit 1 port */
 
 static int is_display_only(int i) {
-    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
+    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || i == P_ANA_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
 }
 
 typedef struct { const char *name; int steps; float def; int trigger; } ParamInfo; /* steps 0 = continuous */
@@ -214,6 +215,9 @@ static void init_param_info(void) {
     P(P_FAV_PREV, "Previous starred preset", 2, 0.f, 1)
     P(P_FAV_NEXT, "Next starred preset", 2, 0.f, 1)
     P(P_FAV_STATUS, "Starred preset status", 1, 0.f, 0)
+    P(P_ANALYZE, "Analyze sample", 2, 0.f, 1)
+    P(P_ANA_STATUS, "Analysis status", 1, 0.f, 0)
+    P(P_UPROG_CLEAR, "Clear progression", 2, 0.f, 1)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -243,6 +247,7 @@ typedef struct {
     char export_msg[64];
     char upre_msg[64]; /* what the last user preset export or import did */
     unsigned char fav[32]; /* starred factory presets: bit n is preset n (1..230) */
+    char ana_msg[160];     /* what the last analysis did */
     VstEvents *outEvents;
     VstMidiEvent outMidi[EN_MIDI_OUT];
     char program_name[32];
@@ -519,6 +524,32 @@ static void fav_step(Plugin *p, int dir) { /* the next starred preset after the 
         int y = ((x - 1 + dir * n) % VC_NUM_PRESETS + VC_NUM_PRESETS) % VC_NUM_PRESETS + 1;
         if (fav_get(p, y)) { set_param(p, P_PRESET, norm_of(P_PRESET, y), 0); return; }
     }
+}
+
+/* Sample analysis: reads Velvet Chords/Analyze/sample.wav, finds its chords, and writes them into the chosen progression slot
+ * (which must be empty; Clear progression first). The result is a user progression, so it plays and maps like any other. */
+static void analyze_sample(Plugin *p, int slot) {
+    if (slot < 0 || slot >= VC_USER_PROGS) return;
+    if (p->lp_pending.un[slot]) { snprintf(p->ana_msg, sizeof(p->ana_msg), "Progression %d holds chords: Clear progression first", slot + 1); return; }
+    char path[512], msg[96];
+    snprintf(path, sizeof(path), "%s/Analyze/sample.wav", export_dir());
+    float *mono = 0;
+    int n = 0, rate = 0;
+    if (va_read_wav(path, &mono, &n, &rate, msg, sizeof(msg)) != 0) { snprintf(p->ana_msg, sizeof(p->ana_msg), "Read failed: %s", msg); return; }
+    VaResult *r = (VaResult *)malloc(sizeof(VaResult));
+    if (!r) { free(mono); snprintf(p->ana_msg, sizeof(p->ana_msg), "Out of memory"); return; }
+    int rc = va_analyze(mono, n, rate, r, msg, sizeof(msg));
+    free(mono);
+    if (rc != 0 || r->nseg == 0) { snprintf(p->ana_msg, sizeof(p->ana_msg), "No chords found in the sample"); free(r); return; }
+    for (int k = 0; k < VC_PROG_MAX; k++) {
+        if (k < r->nseg) { p->lp_pending.ur[slot][k] = (unsigned char)r->seg[k].root; p->lp_pending.uq[slot][k] = (signed char)r->seg[k].quality; }
+        else { p->lp_pending.ur[slot][k] = 0; p->lp_pending.uq[slot][k] = -1; }
+    }
+    p->lp_pending.un[slot] = VC_PROG_MAX;
+    snprintf(p->ana_msg, sizeof(p->ana_msg), "%d chords in progression %d, key %s%s (%d%% sure)%s", r->nseg, slot + 1,
+             vc_pc_name(r->key, 0), r->minor ? "m" : "", (int)(r->key_conf * 100 + 0.5f), r->truncated ? ", first 120 s" : "");
+    free(r);
+    sync_layout(p);
 }
 
 static void apply_preset(Plugin *p, int x) {
@@ -808,6 +839,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             if (i == P_UPRE_IMPORT) import_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_UPRE_CLEAR) { int sl = idx_of(p, P_UPRE_SLOT); p->upre_ok[sl] = 0; snprintf(p->upre_msg, sizeof(p->upre_msg), "Cleared slot %d", sl + 1); }
             if (i == P_FAV_TOGGLE) fav_toggle(p);
+            if (i == P_ANALYZE) analyze_sample(p, idx_of(p, P_UPROG_SLOT));
+            if (i == P_UPROG_CLEAR) { int sl = idx_of(p, P_UPROG_SLOT); if (sl >= 0 && sl < VC_USER_PROGS) { p->lp_pending.un[sl] = 0; snprintf(p->ana_msg, sizeof(p->ana_msg), "Cleared progression %d", sl + 1); sync_layout(p); } }
             if (i == P_FAV_PREV) fav_step(p, -1);
             if (i == P_FAV_NEXT) fav_step(p, 1);
             if (i == P_EXPORT) do_export(p, host_tempo(p));
@@ -1045,6 +1078,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         break;
     }
     case P_UPROG_SLOT: snprintf(b, sizeof(b), "Slot %d", x + 1); break;
+    case P_ANA_STATUS: copy_str(b, p->ana_msg[0] ? p->ana_msg : "Put a WAV in Velvet Chords/Analyze/sample.wav, then Analyze", sizeof(b)); break;
     case P_FAV_STATUS: {
         int cur = idx_of(p, P_PRESET), nf = fav_count(p);
         if (cur < 1) snprintf(b, sizeof(b), "Manual. %d starred", nf);
