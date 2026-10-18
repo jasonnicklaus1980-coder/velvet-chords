@@ -1017,6 +1017,15 @@ int main(int argc, char **argv) {
         display(fx, P_SND2, buf);
         CHECK(!strcmp(buf, "Silent (MIDI only)"), "re-sent preset keeps the chosen sound (%s)", buf);
 
+        /* a preset leaves the pattern you chose alone */
+        {
+            int P_PATT = find_param(fx, "Pattern"), P_PN = find_param(fx, "Pattern next");
+            fx->setParameter(fx, P_PATT, 0.f);
+            for (int k = 0; k < 3; k++) fx->setParameter(fx, P_PN, 1.f);
+            fx->setParameter(fx, P_PRE, 40.f / 530.f);
+            display(fx, P_PATT, buf);
+            CHECK(!strcmp(buf, "Quarters"), "a preset keeps the pattern you chose (%s)", buf);
+        }
         /* the host's preset box: Manual plus all 530 presets, past the first hundred, and picking one sets the Preset knob */
         CHECK(fx->numPrograms == 531, "host preset box lists 531 programs (%d)", fx->numPrograms);
         char pn[64], pk[64];

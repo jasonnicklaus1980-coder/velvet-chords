@@ -9,10 +9,11 @@ It is a native MPC OS plugin (VST2 `.so`) loaded by MPC's built-in plugin host, 
 - **530 factory presets.** The presets are 53 genres with 10 variations each. The **Preset genre** and **Preset variation**
   knobs (Play page Q-Links) pick one: genre first, then the variation within it, so every preset is reachable by knob.
   **Preset** and Preset prev / next still step through all 530 in order. The top left of the Play page shows the preset in use, with prev / next beside it, and the MPC's own preset box lists Manual and all 530 presets, so you can pick one from there too. A preset sets the key and scale of its genre, and the
-  sound, tone, voicing, strum, pattern, Smart Scale pads and riff. It never changes your song or your custom pads; the layout
+  sound, tone, voicing, strum, Smart Scale pads and riff. It leaves the pattern, its rate, swing and gate as you set them, so a
+  pattern you choose stays put. It never changes your song or your custom pads; the layout
   pads follow the new key and scale. Manual changes nothing.
   Nothing turns on by itself: a preset never replaces **Silent** and never turns the arpeggio on. It sets the arpeggio's
-  order, rate and octaves only when you already have an arpeggio running. A preset with a pattern plays the pattern, not the arpeggio.
+  order, rate and octaves only when you already have an arpeggio running. A pattern you have chosen plays instead of the arpeggio.
   The presets use the built-in sounds Electric piano, Soft pad and Organ.
 - **Multi arp: four arpeggiator lanes that run at the same time.** Lane 1 is **Arp**, **Arp rate**, **Arp octaves** and
   **Arp transpose**; lanes 2 to 4 are **Arp 2**, **Arp 3** and **Arp 4**, each with its own order, rate, octaves and
