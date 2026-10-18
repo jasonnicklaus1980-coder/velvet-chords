@@ -1,0 +1,25 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Cadillac Glow - Verse",
+        "rootNote": "F",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 56, 60, 63, 67]
+            },
+            {
+                "name": "Bbm9",
+                "role": "Normal",
+                "notes": [46, 56, 60, 61, 65]
+            },
+            {
+                "name": "C7#9",
+                "role": "Normal",
+                "notes": [36, 55, 58, 63, 64]
+            }
+        ]
+    }
+}

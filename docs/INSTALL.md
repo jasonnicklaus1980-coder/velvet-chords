@@ -50,7 +50,7 @@ The installer checks the device and file checksums, **stops MPC** (save your pro
 
 1. Make a new plugin track and choose **Velvet Chords** from the plugin browser (instrument plugins).
 2. Hit pad A01. If you hear nothing, open the plugin's parameters, turn **Learn pad 1** on, and hit the pad you want as pad 1. Pads 2-64 follow from there (16 per bank, banks A-D).
-3. Pick a **Mode**: Song, Smart scale, R&B kit, Chord types or Custom.
+3. Pick a **Mode**: Scale, R&B kit, Chord types or Custom. (Song mode has been removed from the screen; an old project saved in Song mode opens in Scale.)
 
 ## The screen
 
@@ -83,7 +83,7 @@ Set **Smart Scale pads** (Play page) to **Pads 9-16** and the bottom row of ever
 
 **Smart notes** chooses what those pads play:
 - **Chord**: only the chord's notes, rising across two octaves.
-- **Scale**: the chord's notes plus the rest of the key's scale (the song's key in Song mode), for melodies with passing notes.
+- **Scale**: the chord's notes plus the rest of the key's scale , for melodies with passing notes.
 - **Bass**: the chord's notes down in the bass register, starting on the slash-bass note for chords like Fmaj7/G.
 
 *Smart octave* (a Q-Link on the Play page) moves them up or down.
@@ -181,11 +181,10 @@ The grid shows the 16 steps. Tap a cell to set what a step does: **Accent** or *
 
 | Parameter | What it does |
 |---|---|
-| Mode | Song, Smart scale, R&B kit, Chord types, Custom |
-| Song | Song for Song mode |
+| Mode | Scale, R&B kit, Chord types, Custom |
 | Section | Section on bank A; banks B-D get the following sections |
 | Key, Scale | Key and scale for Smart scale, R&B kit and Chord types (17 scales) |
-| Transpose | Shifts Song mode by -12 to +12 semitones; the song's original key stays in the data |
+| Transpose | Shifts the chords by -12 to +12 semitones |
 | Voicing | Bass + upper (default), Close, Drop 2, Spread, Upper only |
 | Inversion, Octave | Global chord inversion and register |
 | Voice lead | Pads in a bank are voiced to move smoothly from pad to pad |
@@ -204,7 +203,6 @@ The grid shows the 16 steps. Tap a cell to set what a step does: **Accent** or *
 | Copy to Custom | Copies the current layout into the custom pads so you can tweak it |
 | Export MIDI | Saves the current section (or bank) as `.mid` and `.progression` in the `Velvet Chords` folder |
 | Now playing | Last pad: chord, function and exact notes |
-| Info | Song data status and confidence, or the scale's notes |
 
 Custom pads, edits and settings are saved inside the MPC project.
 
@@ -256,6 +254,6 @@ decides which tracks hear them.
 
 `payload/data/midi` holds a MIDI file per song section and per R&B kit, importable into any MPC sequence or DAW. `payload/data/progressions` holds Pad Perform `.progression` files. Their format follows commonly shared `.progression` files and has not been confirmed on a device, so compare one with a progression saved from your own MPC before relying on them.
 
-## Song data
+## Song data (removed from the screen)
 
-None of the songs is marked verified. Every entry is labeled `unverified-analysis` with a confidence level: the chord functions are well known, but extensions, bar placement and exact keys still need checking against the recordings. Pad voicings are generated performance voicings, not transcriptions of the records. To correct or add songs, edit `data/songs.json` in the source and rebuild.
+Song mode is no longer on the screen. The song data stays in the source for reference. None of the songs is marked verified. Every entry is labeled `unverified-analysis` with a confidence level: the chord functions are well known, but extensions, bar placement and exact keys still need checking against the recordings. Pad voicings are generated performance voicings, not transcriptions of the records. To correct or add songs, edit `data/songs.json` in the source and rebuild.

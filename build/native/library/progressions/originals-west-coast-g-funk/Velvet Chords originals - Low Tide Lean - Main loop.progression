@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Low Tide Lean - Main loop",
+        "rootNote": "F",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 56, 60, 63, 67]
+            },
+            {
+                "name": "Db9",
+                "role": "Normal",
+                "notes": [37, 56, 59, 63, 65]
+            },
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 56, 60, 63, 67]
+            },
+            {
+                "name": "Db9",
+                "role": "Normal",
+                "notes": [37, 56, 59, 63, 65]
+            }
+        ]
+    }
+}

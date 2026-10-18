@@ -13,8 +13,8 @@
                 "Bank Direction": "Column",
                 "Q-Links": {
                     "Q-Link 1": 0,
-                    "Q-Link 2": 1,
-                    "Q-Link 3": 2,
+                    "Q-Link 2": 5,
+                    "Q-Link 3": 33,
                     "Q-Link 4": 170,
                     "Q-Link 5": 3,
                     "Q-Link 6": 4,
@@ -149,8 +149,8 @@
     },
     "Program Mode Q-Links": {
         "Q-Link 1": 0,
-        "Q-Link 2": 1,
-        "Q-Link 3": 2,
+        "Q-Link 2": 5,
+        "Q-Link 3": 33,
         "Q-Link 4": 170,
         "Q-Link 5": 3,
         "Q-Link 6": 4,

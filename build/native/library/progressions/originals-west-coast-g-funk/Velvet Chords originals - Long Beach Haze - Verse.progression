@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Long Beach Haze - Verse",
+        "rootNote": "F",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 56, 60, 63, 67]
+            },
+            {
+                "name": "Gbmaj7",
+                "role": "Normal",
+                "notes": [42, 58, 61, 65]
+            },
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 56, 60, 63, 67]
+            },
+            {
+                "name": "Gbmaj7",
+                "role": "Normal",
+                "notes": [42, 58, 61, 65]
+            }
+        ]
+    }
+}

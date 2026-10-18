@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Pacific Coast Drift - Hook",
+        "rootNote": "Eb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bmaj7",
+                "role": "Normal",
+                "notes": [47, 63, 66, 70]
+            },
+            {
+                "name": "Bbm7",
+                "role": "Normal",
+                "notes": [46, 61, 65, 68]
+            },
+            {
+                "name": "Abm9",
+                "role": "Normal",
+                "notes": [44, 59, 63, 66, 70]
+            },
+            {
+                "name": "Bb7#9",
+                "role": "Normal",
+                "notes": [46, 62, 65, 68, 73]
+            }
+        ]
+    }
+}

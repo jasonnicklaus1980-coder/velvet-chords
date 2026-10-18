@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Mirror Groove - Verse",
+        "rootNote": "Bb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bbm7",
+                "role": "Normal",
+                "notes": [46, 61, 65, 68]
+            },
+            {
+                "name": "Ebm7",
+                "role": "Normal",
+                "notes": [39, 61, 66, 70]
+            },
+            {
+                "name": "Bbm7",
+                "role": "Normal",
+                "notes": [46, 61, 65, 68]
+            },
+            {
+                "name": "Ebm7",
+                "role": "Normal",
+                "notes": [39, 61, 66, 70]
+            }
+        ]
+    }
+}

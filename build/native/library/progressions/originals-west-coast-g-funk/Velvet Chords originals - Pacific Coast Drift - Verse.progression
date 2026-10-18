@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Pacific Coast Drift - Verse",
+        "rootNote": "Eb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Ebm9",
+                "role": "Normal",
+                "notes": [39, 54, 58, 61, 65]
+            },
+            {
+                "name": "Ab13",
+                "role": "Normal",
+                "notes": [44, 54, 58, 65, 72]
+            },
+            {
+                "name": "Ebm9",
+                "role": "Normal",
+                "notes": [39, 54, 58, 61, 65]
+            },
+            {
+                "name": "Ab13",
+                "role": "Normal",
+                "notes": [44, 54, 58, 65, 72]
+            }
+        ]
+    }
+}

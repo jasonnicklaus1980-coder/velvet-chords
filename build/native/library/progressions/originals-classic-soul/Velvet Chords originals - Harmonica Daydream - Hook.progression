@@ -1,0 +1,35 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Harmonica Daydream - Hook",
+        "rootNote": "B",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Emaj7",
+                "role": "Normal",
+                "notes": [40, 56, 59, 63]
+            },
+            {
+                "name": "D#m7",
+                "role": "Normal",
+                "notes": [39, 54, 58, 61]
+            },
+            {
+                "name": "G#7b9",
+                "role": "Normal",
+                "notes": [44, 54, 57, 60, 63]
+            },
+            {
+                "name": "C#m9",
+                "role": "Normal",
+                "notes": [37, 56, 59, 63, 64]
+            },
+            {
+                "name": "F#13",
+                "role": "Normal",
+                "notes": [42, 52, 56, 63, 70]
+            }
+        ]
+    }
+}

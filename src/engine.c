@@ -177,7 +177,7 @@ void en_init(Engine *e, float sr) {
     e->bass_beat = -1;
     sy_init(&e->synth, sr);
     en_set_sr(e, sr);
-    e->lp.mode = VC_MODE_SONG;
+    e->lp.mode = VC_MODE_KEY;
     e->lp.scale = 0;
     e->lp.voicing = VC_VOICE_BASS_UPPER;
     e->lp.voice_lead = 1;

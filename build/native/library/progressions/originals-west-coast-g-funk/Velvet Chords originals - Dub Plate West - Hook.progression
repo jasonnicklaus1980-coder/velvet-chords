@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Dub Plate West - Hook",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Fmaj7",
+                "role": "Normal",
+                "notes": [41, 57, 60, 64]
+            },
+            {
+                "name": "E7#9",
+                "role": "Normal",
+                "notes": [40, 56, 59, 62, 67]
+            },
+            {
+                "name": "Am7",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67]
+            },
+            {
+                "name": "E7#9",
+                "role": "Normal",
+                "notes": [40, 59, 62, 67, 68]
+            }
+        ]
+    }
+}

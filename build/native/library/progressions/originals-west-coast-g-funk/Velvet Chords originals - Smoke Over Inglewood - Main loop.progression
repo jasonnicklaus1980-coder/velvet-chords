@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Smoke Over Inglewood - Main loop",
+        "rootNote": "G",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Gm9",
+                "role": "Normal",
+                "notes": [43, 58, 62, 65, 69]
+            },
+            {
+                "name": "Cm9",
+                "role": "Normal",
+                "notes": [36, 58, 62, 63, 67]
+            },
+            {
+                "name": "Gm9",
+                "role": "Normal",
+                "notes": [43, 58, 62, 65, 69]
+            },
+            {
+                "name": "D7#9",
+                "role": "Normal",
+                "notes": [38, 60, 65, 66, 69]
+            }
+        ]
+    }
+}

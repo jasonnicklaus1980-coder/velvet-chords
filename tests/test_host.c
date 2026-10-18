@@ -415,6 +415,7 @@ int main(int argc, char **argv) {
         int PN9 = find_param(a, "Pad 9 chord"), PF9 = find_param(a, "Pad 9 function"), PF11 = find_param(a, "Pad 11 function"), NOW = find_param(a, "Now playing");
         CHECK(SP > 0 && SN > 0, "smart params exist");
         char x[64], y[64];
+        a->setParameter(a, find_param(a, "Mode"), 0.f); /* Song mode: the engine still supports it, the screen no longer offers it */
         for (float v = 0.f; v <= 1.f; v += 0.001f) { a->setParameter(a, SONG, v); display(a, SONG, x); if (strstr(x, "Just the Two of Us")) break; }
         a->setParameter(a, SP, 0.5f); /* pads 9-16 */
         block(a, L, R, 256);
@@ -439,6 +440,7 @@ int main(int argc, char **argv) {
         for (int k = 9; k <= 16; k++) { char nm[24]; snprintf(nm, 24, "Pad %d chord", k); display(a, find_param(a, nm), x); strcat(row, x); strcat(row, " "); }
         CHECK(!strcmp(row, "C3 Db3 Eb3 E3 F3 G3 Ab3 Bb3 "), "scale mode adds the key's notes (%s)", row);
         /* second instance follows the first */
+        b->setParameter(b, find_param(b, "Mode"), 0.f);
         b->setParameter(b, SP, 1.f);       /* follow other */
         b->setParameter(b, SN, 1.f);       /* bass */
         block(b, L, R, 256);

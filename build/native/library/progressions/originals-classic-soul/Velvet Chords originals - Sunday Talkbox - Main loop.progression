@@ -1,0 +1,35 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Sunday Talkbox - Main loop",
+        "rootNote": "Ab",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Abmaj7",
+                "role": "Normal",
+                "notes": [44, 60, 63, 67]
+            },
+            {
+                "name": "Cm7",
+                "role": "Normal",
+                "notes": [36, 58, 63, 67]
+            },
+            {
+                "name": "F7#9",
+                "role": "Normal",
+                "notes": [41, 57, 60, 63, 68]
+            },
+            {
+                "name": "Bbm9",
+                "role": "Normal",
+                "notes": [46, 56, 60, 61, 65]
+            },
+            {
+                "name": "Eb13",
+                "role": "Normal",
+                "notes": [39, 55, 61, 65, 72]
+            }
+        ]
+    }
+}

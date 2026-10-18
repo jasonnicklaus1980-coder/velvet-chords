@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Blue Hour Ride - Hook",
+        "rootNote": "D",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bbmaj7",
+                "role": "Normal",
+                "notes": [46, 62, 65, 69]
+            },
+            {
+                "name": "C9",
+                "role": "Normal",
+                "notes": [36, 58, 62, 64, 67]
+            },
+            {
+                "name": "Am7",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67]
+            },
+            {
+                "name": "Dm9",
+                "role": "Normal",
+                "notes": [38, 60, 64, 65, 69]
+            }
+        ]
+    }
+}

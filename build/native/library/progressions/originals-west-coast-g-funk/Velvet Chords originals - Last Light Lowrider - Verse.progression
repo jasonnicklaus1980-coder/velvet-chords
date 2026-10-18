@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Last Light Lowrider - Verse",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Am9",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67, 71]
+            },
+            {
+                "name": "Dm9",
+                "role": "Normal",
+                "notes": [38, 60, 64, 65, 69]
+            },
+            {
+                "name": "G9",
+                "role": "Normal",
+                "notes": [43, 59, 62, 65, 69]
+            },
+            {
+                "name": "Cmaj7",
+                "role": "Normal",
+                "notes": [36, 59, 64, 67]
+            }
+        ]
+    }
+}

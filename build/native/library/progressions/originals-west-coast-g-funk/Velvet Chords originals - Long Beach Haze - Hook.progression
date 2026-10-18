@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Long Beach Haze - Hook",
+        "rootNote": "F",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Dbmaj7",
+                "role": "Normal",
+                "notes": [37, 53, 56, 60]
+            },
+            {
+                "name": "Eb9",
+                "role": "Normal",
+                "notes": [39, 49, 53, 55, 58]
+            },
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 48, 51, 55, 56]
+            },
+            {
+                "name": "C7#9",
+                "role": "Normal",
+                "notes": [36, 46, 51, 52, 55]
+            }
+        ]
+    }
+}

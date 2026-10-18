@@ -1,0 +1,35 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Lace and Lightning - Main loop",
+        "rootNote": "E",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Eadd9",
+                "role": "Normal",
+                "notes": [40, 56, 59, 66]
+            },
+            {
+                "name": "C#m7",
+                "role": "Normal",
+                "notes": [37, 56, 59, 64]
+            },
+            {
+                "name": "Aadd9",
+                "role": "Normal",
+                "notes": [45, 52, 59, 61]
+            },
+            {
+                "name": "Bsus4",
+                "role": "Normal",
+                "notes": [47, 52, 54, 59]
+            },
+            {
+                "name": "B",
+                "role": "Normal",
+                "notes": [47, 51, 54, 59]
+            }
+        ]
+    }
+}

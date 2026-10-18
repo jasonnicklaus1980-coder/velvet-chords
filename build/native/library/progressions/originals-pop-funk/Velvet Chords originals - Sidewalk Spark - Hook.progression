@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Sidewalk Spark - Hook",
+        "rootNote": "C#",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "F#m9",
+                "role": "Normal",
+                "notes": [42, 57, 61, 64, 68]
+            },
+            {
+                "name": "G#7#9",
+                "role": "Normal",
+                "notes": [44, 60, 63, 66, 71]
+            },
+            {
+                "name": "C#m7",
+                "role": "Normal",
+                "notes": [37, 64, 68, 71]
+            },
+            {
+                "name": "G#7#9",
+                "role": "Normal",
+                "notes": [44, 63, 66, 71, 72]
+            }
+        ]
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "progression": {
+        "name": "Stevie Wonder - Superstition - Verse vamp",
+        "rootNote": "Eb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Ebm7",
+                "role": "Normal",
+                "notes": [39, 54, 58, 61]
+            }
+        ]
+    }
+}

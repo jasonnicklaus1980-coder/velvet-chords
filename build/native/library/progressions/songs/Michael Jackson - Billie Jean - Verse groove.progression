@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Michael Jackson - Billie Jean - Verse groove",
+        "rootNote": "F#",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "F#m",
+                "role": "Normal",
+                "notes": [42, 54, 57, 61]
+            },
+            {
+                "name": "G#m/F#",
+                "role": "Normal",
+                "notes": [42, 56, 59, 63]
+            },
+            {
+                "name": "A/F#",
+                "role": "Normal",
+                "notes": [42, 57, 61, 64]
+            },
+            {
+                "name": "G#m/F#",
+                "role": "Normal",
+                "notes": [42, 56, 59, 63]
+            }
+        ]
+    }
+}

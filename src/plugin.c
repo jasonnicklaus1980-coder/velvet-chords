@@ -82,7 +82,7 @@ static void init_param_info(void) {
     static int done = 0;
     if (done) return;
 #define P(i, n, s, d, t) PINFO[i].name = n; PINFO[i].steps = s; PINFO[i].def = d; PINFO[i].trigger = t;
-    P(P_MODE, "Mode", VC_MODE_COUNT, 0.f, 0)
+    P(P_MODE, "Mode", VC_MODE_COUNT, 1.f / (VC_MODE_COUNT - 1), 0) /* Scale: Song mode is no longer offered */
     P(P_SONG, "Song", VC_NUM_SONGS, 0.f, 0)
     P(P_SECTION, "Section", 8, 0.f, 0)
     P(P_KEY, "Key", 12, 0.f, 0)
@@ -1385,6 +1385,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
         }
     }
     if (ver >= 7 && size >= k + 32) { for (int j = 0; j < 32; j++) p->fav[j] = b[k++]; p->fav[0] &= 0xFE; } /* bit 0 is not a preset */
+    if (idx_of(p, P_MODE) == VC_MODE_SONG) set_param(p, P_MODE, norm_of(P_MODE, VC_MODE_KEY), 0); /* Song mode is gone: an old project moves to Scale */
     load_riff_fields(p);
     load_note_field(p);
     load_edit_fields(p);

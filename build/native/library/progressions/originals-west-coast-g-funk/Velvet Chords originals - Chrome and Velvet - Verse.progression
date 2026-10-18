@@ -1,0 +1,25 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Chrome and Velvet - Verse",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Am9",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67, 71]
+            },
+            {
+                "name": "Dm9",
+                "role": "Normal",
+                "notes": [38, 60, 64, 65, 69]
+            },
+            {
+                "name": "E7#9",
+                "role": "Normal",
+                "notes": [40, 59, 62, 67, 68]
+            }
+        ]
+    }
+}

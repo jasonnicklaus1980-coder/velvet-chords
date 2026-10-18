@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Dub Plate West - Verse",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Am7",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67]
+            },
+            {
+                "name": "Bbmaj7",
+                "role": "Normal",
+                "notes": [46, 62, 65, 69]
+            },
+            {
+                "name": "Am7",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67]
+            },
+            {
+                "name": "Bbmaj7",
+                "role": "Normal",
+                "notes": [46, 62, 65, 69]
+            }
+        ]
+    }
+}

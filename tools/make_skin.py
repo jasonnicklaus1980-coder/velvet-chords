@@ -464,12 +464,9 @@ class Skin:
         # ---------- Play
         bg = Background("Play")
         c = []
-        self.segments(c, bg, "mode", "Mode", ["Song", "Scale", "R&B kit", "Types", "Custom"], 456, 12, 104, 32)
+        self.segments(c, bg, "mode", "Mode", ["Scale", "R&B kit", "Types", "Custom"], 456, 12, 104, 32, ids=[1, 2, 3, 4], ntotal=5)
         self.header_banks(c, bg, "bank")
         bg.panel((12, 64, 1268, 144))
-        self.stepper(c, bg, "Song", "Song prev", "Song next", 28, 96, 548, "Song")
-        self.stepper(c, bg, "Section", "Section prev", "Section next", 592, 96, 300, "Section")
-        self.readout(c, bg, "Info", 908, 96, 344, size=14, caption="Song data")
         bg.panel((12, 152, 632, 620))
         self.pad_grid(c, 20, 162)
         bg.panel((640, 152, 1268, 620))
@@ -650,7 +647,7 @@ class Skin:
         def m(names):
             names = (names + [None] * 16)[:16]
             return {"Q-Link %d" % (i + 1): (self.p(n) if n else -1) for i, n in enumerate(names)}
-        play = ["Mode", "Song", "Section", "Progression", "Key", "Scale", "Preset genre", "Voicing",
+        play = ["Mode", "Transpose", "Screen bank", "Progression", "Key", "Scale", "Preset genre", "Voicing",
                 "Inversion", "Octave", "Progression play", "Sound", "Smart pads", "Smart notes", "Preset variation", "Volume"]
         perform = ["Sound", "Tone", "Release", "Volume", "Velocity", "Strum", "Strum dir", "Arp",
                    "Arp rate", "Voicing", "Inversion", "Octave", "Transpose", "Voice lead", "MIDI out", "Pad 1 note"]

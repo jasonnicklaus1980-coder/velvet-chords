@@ -1,0 +1,90 @@
+{
+    "progression": {
+        "name": "RnB kit B minor bank B",
+        "rootNote": "B",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bm6/9",
+                "role": "Normal",
+                "notes": [47, 62, 66, 68, 73]
+            },
+            {
+                "name": "Dmaj9",
+                "role": "Normal",
+                "notes": [38, 61, 64, 66, 69]
+            },
+            {
+                "name": "Em11",
+                "role": "Normal",
+                "notes": [40, 55, 59, 62, 66, 69]
+            },
+            {
+                "name": "F#m11",
+                "role": "Normal",
+                "notes": [42, 52, 56, 59, 69, 73]
+            },
+            {
+                "name": "G9",
+                "role": "Normal",
+                "notes": [43, 57, 71, 74, 77]
+            },
+            {
+                "name": "A7sus4",
+                "role": "Normal",
+                "notes": [45, 67, 74, 76]
+            },
+            {
+                "name": "C9",
+                "role": "Normal",
+                "notes": [36, 67, 70, 74, 76]
+            },
+            {
+                "name": "F#7alt",
+                "role": "Normal",
+                "notes": [42, 64, 69, 74, 82]
+            },
+            {
+                "name": "Bm9/F#",
+                "role": "Normal",
+                "notes": [42, 62, 66, 69, 73, 83]
+            },
+            {
+                "name": "Gmaj7/A",
+                "role": "Normal",
+                "notes": [45, 62, 66, 67, 71]
+            },
+            {
+                "name": "C#m11",
+                "role": "Normal",
+                "notes": [37, 54, 64, 68, 71, 75]
+            },
+            {
+                "name": "G#m7b5",
+                "role": "Normal",
+                "notes": [44, 62, 66, 71]
+            },
+            {
+                "name": "Fdim7",
+                "role": "Normal",
+                "notes": [41, 62, 68, 71]
+            },
+            {
+                "name": "B7#9",
+                "role": "Normal",
+                "notes": [47, 63, 66, 69, 74]
+            },
+            {
+                "name": "E7",
+                "role": "Normal",
+                "notes": [40, 62, 68, 71]
+            },
+            {
+                "name": "D7",
+                "role": "Normal",
+                "notes": [38, 60, 66, 69]
+            }
+        ]
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Westbound - Hook",
+        "rootNote": "C",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Abmaj7",
+                "role": "Normal",
+                "notes": [44, 60, 63, 67]
+            },
+            {
+                "name": "Bb13",
+                "role": "Normal",
+                "notes": [46, 56, 60, 67, 74]
+            },
+            {
+                "name": "Cm9",
+                "role": "Normal",
+                "notes": [36, 63, 67, 70, 74]
+            },
+            {
+                "name": "G7#9",
+                "role": "Normal",
+                "notes": [43, 65, 70, 71, 74]
+            }
+        ]
+    }
+}

@@ -1,0 +1,50 @@
+{
+    "progression": {
+        "name": "The Temptations - My Girl - Verse",
+        "rootNote": "C",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "C",
+                "role": "Normal",
+                "notes": [36, 60, 64, 67]
+            },
+            {
+                "name": "F",
+                "role": "Normal",
+                "notes": [41, 60, 65, 69]
+            },
+            {
+                "name": "C",
+                "role": "Normal",
+                "notes": [36, 60, 64, 67]
+            },
+            {
+                "name": "F",
+                "role": "Normal",
+                "notes": [41, 60, 65, 69]
+            },
+            {
+                "name": "C",
+                "role": "Normal",
+                "notes": [36, 60, 64, 67]
+            },
+            {
+                "name": "F",
+                "role": "Normal",
+                "notes": [41, 60, 65, 69]
+            },
+            {
+                "name": "C",
+                "role": "Normal",
+                "notes": [36, 60, 64, 67]
+            },
+            {
+                "name": "F",
+                "role": "Normal",
+                "notes": [41, 60, 65, 69]
+            }
+        ]
+    }
+}

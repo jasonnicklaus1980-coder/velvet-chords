@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Electric Chapel - Verse",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Asus2",
+                "role": "Normal",
+                "notes": [45, 57, 59, 64]
+            },
+            {
+                "name": "Dadd9/A",
+                "role": "Normal",
+                "notes": [45, 50, 54, 57, 64]
+            },
+            {
+                "name": "Asus2",
+                "role": "Normal",
+                "notes": [45, 57, 59, 64]
+            },
+            {
+                "name": "Dadd9/A",
+                "role": "Normal",
+                "notes": [45, 50, 54, 57, 64]
+            }
+        ]
+    }
+}

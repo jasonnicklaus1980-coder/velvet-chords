@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Westside Window - Verse",
+        "rootNote": "C#",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "C#m9",
+                "role": "Normal",
+                "notes": [37, 52, 56, 59, 63]
+            },
+            {
+                "name": "F#9",
+                "role": "Normal",
+                "notes": [42, 52, 56, 58, 61]
+            },
+            {
+                "name": "C#m9",
+                "role": "Normal",
+                "notes": [37, 52, 56, 59, 63]
+            },
+            {
+                "name": "F#9",
+                "role": "Normal",
+                "notes": [42, 52, 56, 58, 61]
+            }
+        ]
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Late Night Freeway - Main loop",
+        "rootNote": "E",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Em9",
+                "role": "Normal",
+                "notes": [40, 55, 59, 62, 66]
+            },
+            {
+                "name": "Cmaj9",
+                "role": "Normal",
+                "notes": [36, 55, 59, 62, 64]
+            },
+            {
+                "name": "Am9",
+                "role": "Normal",
+                "notes": [45, 55, 59, 60, 64]
+            },
+            {
+                "name": "B7#9",
+                "role": "Normal",
+                "notes": [47, 54, 57, 62, 63]
+            }
+        ]
+    }
+}

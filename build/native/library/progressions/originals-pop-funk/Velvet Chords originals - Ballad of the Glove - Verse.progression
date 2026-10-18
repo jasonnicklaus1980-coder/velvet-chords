@@ -1,0 +1,35 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Ballad of the Glove - Verse",
+        "rootNote": "Ab",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Abmaj7",
+                "role": "Normal",
+                "notes": [44, 60, 63, 67]
+            },
+            {
+                "name": "Bbm7",
+                "role": "Normal",
+                "notes": [46, 61, 65, 68]
+            },
+            {
+                "name": "Cm7",
+                "role": "Normal",
+                "notes": [36, 63, 67, 70]
+            },
+            {
+                "name": "Dbmaj7",
+                "role": "Normal",
+                "notes": [37, 65, 68, 72]
+            },
+            {
+                "name": "Eb9sus4",
+                "role": "Normal",
+                "notes": [39, 61, 65, 68, 70]
+            }
+        ]
+    }
+}

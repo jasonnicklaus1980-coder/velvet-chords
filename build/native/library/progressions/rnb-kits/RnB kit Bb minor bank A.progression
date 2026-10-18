@@ -1,0 +1,90 @@
+{
+    "progression": {
+        "name": "RnB kit Bb minor bank A",
+        "rootNote": "Bb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bbm9",
+                "role": "Normal",
+                "notes": [46, 61, 65, 68, 72]
+            },
+            {
+                "name": "Cm7b5",
+                "role": "Normal",
+                "notes": [36, 63, 66, 70]
+            },
+            {
+                "name": "Dbmaj7",
+                "role": "Normal",
+                "notes": [37, 65, 68, 72]
+            },
+            {
+                "name": "Ebm9",
+                "role": "Normal",
+                "notes": [39, 61, 65, 66, 70]
+            },
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 60, 63, 67, 68]
+            },
+            {
+                "name": "Gbmaj7",
+                "role": "Normal",
+                "notes": [42, 61, 65, 70]
+            },
+            {
+                "name": "Ab9",
+                "role": "Normal",
+                "notes": [44, 60, 63, 66, 70]
+            },
+            {
+                "name": "F7#9",
+                "role": "Normal",
+                "notes": [41, 60, 63, 68, 69]
+            },
+            {
+                "name": "Bbm11",
+                "role": "Normal",
+                "notes": [46, 61, 65, 68, 72, 75]
+            },
+            {
+                "name": "Eb9",
+                "role": "Normal",
+                "notes": [39, 61, 65, 67, 70]
+            },
+            {
+                "name": "Bmaj7",
+                "role": "Normal",
+                "notes": [47, 63, 66, 70]
+            },
+            {
+                "name": "Gbmaj7#11",
+                "role": "Normal",
+                "notes": [42, 58, 61, 65, 72]
+            },
+            {
+                "name": "F7b9",
+                "role": "Normal",
+                "notes": [41, 57, 60, 63, 66]
+            },
+            {
+                "name": "Adim7",
+                "role": "Normal",
+                "notes": [45, 60, 63, 66]
+            },
+            {
+                "name": "Ab9sus4",
+                "role": "Normal",
+                "notes": [44, 61, 63, 66, 70]
+            },
+            {
+                "name": "Bbmmaj9",
+                "role": "Normal",
+                "notes": [46, 61, 65, 69, 72]
+            }
+        ]
+    }
+}

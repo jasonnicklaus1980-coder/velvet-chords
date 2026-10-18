@@ -1,0 +1,25 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Minneapolis Mirror - Verse",
+        "rootNote": "E",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "E7#9",
+                "role": "Normal",
+                "notes": [40, 56, 59, 62, 67]
+            },
+            {
+                "name": "A7#9",
+                "role": "Normal",
+                "notes": [45, 55, 60, 61, 64]
+            },
+            {
+                "name": "E7#9",
+                "role": "Normal",
+                "notes": [40, 56, 59, 62, 67]
+            }
+        ]
+    }
+}

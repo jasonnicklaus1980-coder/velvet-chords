@@ -1,0 +1,25 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Spoke Wheel Soul - Verse",
+        "rootNote": "Bb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bbm9",
+                "role": "Normal",
+                "notes": [46, 61, 65, 68, 72]
+            },
+            {
+                "name": "Gbmaj9",
+                "role": "Normal",
+                "notes": [42, 61, 65, 68, 70]
+            },
+            {
+                "name": "F7#9",
+                "role": "Normal",
+                "notes": [41, 60, 63, 68, 69]
+            }
+        ]
+    }
+}

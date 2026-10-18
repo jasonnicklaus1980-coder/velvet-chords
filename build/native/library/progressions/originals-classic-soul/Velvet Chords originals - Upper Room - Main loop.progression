@@ -1,0 +1,35 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Upper Room - Main loop",
+        "rootNote": "F#",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Gbmaj9",
+                "role": "Normal",
+                "notes": [42, 58, 61, 65, 68]
+            },
+            {
+                "name": "Fm7",
+                "role": "Normal",
+                "notes": [41, 60, 63, 68]
+            },
+            {
+                "name": "Bb7b9",
+                "role": "Normal",
+                "notes": [46, 62, 65, 68, 71]
+            },
+            {
+                "name": "Ebm9",
+                "role": "Normal",
+                "notes": [39, 61, 65, 66, 70]
+            },
+            {
+                "name": "Ab13",
+                "role": "Normal",
+                "notes": [44, 53, 60, 66, 70]
+            }
+        ]
+    }
+}

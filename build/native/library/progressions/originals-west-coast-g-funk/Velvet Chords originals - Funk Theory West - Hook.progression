@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Funk Theory West - Hook",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Fmaj7",
+                "role": "Normal",
+                "notes": [41, 57, 60, 64]
+            },
+            {
+                "name": "G9",
+                "role": "Normal",
+                "notes": [43, 53, 57, 59, 62]
+            },
+            {
+                "name": "Em7",
+                "role": "Normal",
+                "notes": [40, 55, 59, 62]
+            },
+            {
+                "name": "Am7",
+                "role": "Normal",
+                "notes": [45, 55, 60, 64]
+            }
+        ]
+    }
+}

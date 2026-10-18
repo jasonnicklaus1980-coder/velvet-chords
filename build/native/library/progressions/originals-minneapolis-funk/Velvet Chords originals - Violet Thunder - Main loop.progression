@@ -1,0 +1,35 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Violet Thunder - Main loop",
+        "rootNote": "Bb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bbadd9",
+                "role": "Normal",
+                "notes": [46, 62, 65, 72]
+            },
+            {
+                "name": "Gm7",
+                "role": "Normal",
+                "notes": [43, 62, 65, 70]
+            },
+            {
+                "name": "Ebmaj7",
+                "role": "Normal",
+                "notes": [39, 62, 67, 70]
+            },
+            {
+                "name": "Fsus4",
+                "role": "Normal",
+                "notes": [41, 60, 65, 70]
+            },
+            {
+                "name": "F",
+                "role": "Normal",
+                "notes": [41, 60, 65, 69]
+            }
+        ]
+    }
+}

@@ -1,0 +1,90 @@
+{
+    "progression": {
+        "name": "RnB kit Ab minor bank A",
+        "rootNote": "Ab",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Abm9",
+                "role": "Normal",
+                "notes": [44, 59, 63, 66, 70]
+            },
+            {
+                "name": "Bbm7b5",
+                "role": "Normal",
+                "notes": [46, 61, 64, 68]
+            },
+            {
+                "name": "Bmaj7",
+                "role": "Normal",
+                "notes": [47, 63, 66, 70]
+            },
+            {
+                "name": "Dbm9",
+                "role": "Normal",
+                "notes": [37, 59, 63, 64, 68]
+            },
+            {
+                "name": "Ebm9",
+                "role": "Normal",
+                "notes": [39, 58, 61, 65, 66]
+            },
+            {
+                "name": "Emaj7",
+                "role": "Normal",
+                "notes": [40, 59, 63, 68]
+            },
+            {
+                "name": "Gb9",
+                "role": "Normal",
+                "notes": [42, 58, 61, 64, 68]
+            },
+            {
+                "name": "Eb7#9",
+                "role": "Normal",
+                "notes": [39, 58, 61, 66, 67]
+            },
+            {
+                "name": "Abm11",
+                "role": "Normal",
+                "notes": [44, 59, 63, 66, 70, 73]
+            },
+            {
+                "name": "Db9",
+                "role": "Normal",
+                "notes": [37, 59, 63, 65, 68]
+            },
+            {
+                "name": "Amaj7",
+                "role": "Normal",
+                "notes": [45, 61, 64, 68]
+            },
+            {
+                "name": "Emaj7#11",
+                "role": "Normal",
+                "notes": [40, 56, 59, 63, 70]
+            },
+            {
+                "name": "Eb7b9",
+                "role": "Normal",
+                "notes": [39, 58, 61, 64, 67]
+            },
+            {
+                "name": "Gdim7",
+                "role": "Normal",
+                "notes": [43, 58, 61, 64]
+            },
+            {
+                "name": "Gb9sus4",
+                "role": "Normal",
+                "notes": [42, 59, 61, 64, 68]
+            },
+            {
+                "name": "Abmmaj9",
+                "role": "Normal",
+                "notes": [44, 59, 63, 67, 70]
+            }
+        ]
+    }
+}

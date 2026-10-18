@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Funk Theory West - Verse",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Am7",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67]
+            },
+            {
+                "name": "D9",
+                "role": "Normal",
+                "notes": [38, 60, 64, 66, 69]
+            },
+            {
+                "name": "Am7",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67]
+            },
+            {
+                "name": "D9",
+                "role": "Normal",
+                "notes": [38, 60, 64, 66, 69]
+            }
+        ]
+    }
+}

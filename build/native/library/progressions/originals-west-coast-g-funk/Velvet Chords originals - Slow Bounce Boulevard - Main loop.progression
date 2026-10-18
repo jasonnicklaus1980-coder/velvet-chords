@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Slow Bounce Boulevard - Main loop",
+        "rootNote": "C",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Cm9",
+                "role": "Normal",
+                "notes": [36, 51, 55, 58, 62]
+            },
+            {
+                "name": "Bb6",
+                "role": "Normal",
+                "notes": [46, 53, 55, 62]
+            },
+            {
+                "name": "Abmaj7",
+                "role": "Normal",
+                "notes": [44, 55, 60, 63]
+            },
+            {
+                "name": "G7#9",
+                "role": "Normal",
+                "notes": [43, 53, 58, 59, 62]
+            }
+        ]
+    }
+}

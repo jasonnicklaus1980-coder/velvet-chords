@@ -1,0 +1,35 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Lullaby for the Block - Main loop",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Amaj9",
+                "role": "Normal",
+                "notes": [45, 61, 64, 68, 71]
+            },
+            {
+                "name": "C#m7",
+                "role": "Normal",
+                "notes": [37, 64, 68, 71]
+            },
+            {
+                "name": "F#m9",
+                "role": "Normal",
+                "notes": [42, 64, 68, 69, 73]
+            },
+            {
+                "name": "Bm9",
+                "role": "Normal",
+                "notes": [47, 66, 69, 73, 74]
+            },
+            {
+                "name": "E13",
+                "role": "Normal",
+                "notes": [40, 62, 66, 73, 80]
+            }
+        ]
+    }
+}

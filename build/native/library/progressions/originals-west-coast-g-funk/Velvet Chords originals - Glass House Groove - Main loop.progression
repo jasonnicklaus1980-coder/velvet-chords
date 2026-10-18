@@ -1,0 +1,40 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Glass House Groove - Main loop",
+        "rootNote": "F#",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "F#m9",
+                "role": "Normal",
+                "notes": [42, 57, 61, 64, 68]
+            },
+            {
+                "name": "G#m7b5",
+                "role": "Normal",
+                "notes": [44, 59, 62, 66]
+            },
+            {
+                "name": "C#7#9",
+                "role": "Normal",
+                "notes": [37, 59, 64, 65, 68]
+            },
+            {
+                "name": "F#m9",
+                "role": "Normal",
+                "notes": [42, 61, 64, 68, 69]
+            },
+            {
+                "name": "Dmaj7",
+                "role": "Normal",
+                "notes": [38, 61, 66, 69]
+            },
+            {
+                "name": "C#7#9",
+                "role": "Normal",
+                "notes": [37, 59, 64, 65, 68]
+            }
+        ]
+    }
+}

@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Chrome and Velvet - Hook",
+        "rootNote": "A",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Fmaj7",
+                "role": "Normal",
+                "notes": [41, 57, 60, 64]
+            },
+            {
+                "name": "G6",
+                "role": "Normal",
+                "notes": [43, 59, 62, 64]
+            },
+            {
+                "name": "Em7",
+                "role": "Normal",
+                "notes": [40, 59, 62, 67]
+            },
+            {
+                "name": "Am9",
+                "role": "Normal",
+                "notes": [45, 60, 64, 67, 71]
+            }
+        ]
+    }
+}

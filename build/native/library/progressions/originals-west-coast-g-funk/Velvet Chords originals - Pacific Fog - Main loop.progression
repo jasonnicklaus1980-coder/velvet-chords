@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Pacific Fog - Main loop",
+        "rootNote": "E",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Em9",
+                "role": "Normal",
+                "notes": [40, 55, 59, 62, 66]
+            },
+            {
+                "name": "Fmaj7",
+                "role": "Normal",
+                "notes": [41, 57, 60, 64]
+            },
+            {
+                "name": "Em9",
+                "role": "Normal",
+                "notes": [40, 55, 59, 62, 66]
+            },
+            {
+                "name": "Fmaj7",
+                "role": "Normal",
+                "notes": [41, 57, 60, 64]
+            }
+        ]
+    }
+}

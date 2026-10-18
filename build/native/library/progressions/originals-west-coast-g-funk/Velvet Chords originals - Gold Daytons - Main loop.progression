@@ -1,0 +1,40 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Gold Daytons - Main loop",
+        "rootNote": "D",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Dm7",
+                "role": "Normal",
+                "notes": [38, 53, 57, 60]
+            },
+            {
+                "name": "Em7b5",
+                "role": "Normal",
+                "notes": [40, 55, 58, 62]
+            },
+            {
+                "name": "A7#9",
+                "role": "Normal",
+                "notes": [45, 55, 60, 61, 64]
+            },
+            {
+                "name": "Dm7",
+                "role": "Normal",
+                "notes": [38, 57, 60, 65]
+            },
+            {
+                "name": "Em7b5",
+                "role": "Normal",
+                "notes": [40, 58, 62, 67]
+            },
+            {
+                "name": "A7#9",
+                "role": "Normal",
+                "notes": [45, 61, 64, 67, 72]
+            }
+        ]
+    }
+}

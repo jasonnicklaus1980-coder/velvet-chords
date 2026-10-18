@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Six-Fo' Glide - Main loop",
+        "rootNote": "F#",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "F#m9",
+                "role": "Normal",
+                "notes": [42, 57, 61, 64, 68]
+            },
+            {
+                "name": "Bm9",
+                "role": "Normal",
+                "notes": [47, 57, 61, 62, 66]
+            },
+            {
+                "name": "F#m9",
+                "role": "Normal",
+                "notes": [42, 57, 61, 64, 68]
+            },
+            {
+                "name": "C#7#9",
+                "role": "Normal",
+                "notes": [37, 59, 64, 65, 68]
+            }
+        ]
+    }
+}

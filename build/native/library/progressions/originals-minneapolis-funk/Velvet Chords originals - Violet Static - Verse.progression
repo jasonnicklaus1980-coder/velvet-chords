@@ -1,0 +1,25 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Violet Static - Verse",
+        "rootNote": "B",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Bm7",
+                "role": "Normal",
+                "notes": [47, 62, 66, 69]
+            },
+            {
+                "name": "Gmaj7",
+                "role": "Normal",
+                "notes": [43, 62, 66, 71]
+            },
+            {
+                "name": "A6",
+                "role": "Normal",
+                "notes": [45, 61, 64, 66]
+            }
+        ]
+    }
+}

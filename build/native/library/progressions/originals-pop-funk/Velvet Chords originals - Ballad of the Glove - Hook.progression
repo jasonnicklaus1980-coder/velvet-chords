@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Ballad of the Glove - Hook",
+        "rootNote": "Ab",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Fm9",
+                "role": "Normal",
+                "notes": [41, 56, 60, 63, 67]
+            },
+            {
+                "name": "Bbm9",
+                "role": "Normal",
+                "notes": [46, 56, 60, 61, 65]
+            },
+            {
+                "name": "Ebsus4",
+                "role": "Normal",
+                "notes": [39, 56, 58, 63]
+            },
+            {
+                "name": "Eb13",
+                "role": "Normal",
+                "notes": [39, 55, 61, 65, 72]
+            }
+        ]
+    }
+}

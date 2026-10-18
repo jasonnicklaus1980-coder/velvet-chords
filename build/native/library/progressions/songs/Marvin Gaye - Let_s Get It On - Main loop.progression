@@ -1,0 +1,30 @@
+{
+    "progression": {
+        "name": "Marvin Gaye - Let's Get It On - Main loop",
+        "rootNote": "Eb",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Eb",
+                "role": "Normal",
+                "notes": [39, 63, 67, 70]
+            },
+            {
+                "name": "Gm7",
+                "role": "Normal",
+                "notes": [43, 62, 65, 70]
+            },
+            {
+                "name": "Ab",
+                "role": "Normal",
+                "notes": [44, 60, 63, 68]
+            },
+            {
+                "name": "Bb",
+                "role": "Normal",
+                "notes": [46, 62, 65, 70]
+            }
+        ]
+    }
+}

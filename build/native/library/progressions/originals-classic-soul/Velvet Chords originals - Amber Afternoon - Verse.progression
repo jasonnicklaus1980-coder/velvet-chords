@@ -1,0 +1,40 @@
+{
+    "progression": {
+        "name": "Velvet Chords originals - Amber Afternoon - Verse",
+        "rootNote": "C",
+        "scale": "Chromatic",
+        "recordingOctave": 2,
+        "chords": [
+            {
+                "name": "Cmaj9",
+                "role": "Normal",
+                "notes": [36, 52, 55, 59, 62]
+            },
+            {
+                "name": "Bm7b5",
+                "role": "Normal",
+                "notes": [47, 53, 57, 62]
+            },
+            {
+                "name": "E7b9",
+                "role": "Normal",
+                "notes": [40, 56, 59, 62, 65]
+            },
+            {
+                "name": "Am9",
+                "role": "Normal",
+                "notes": [45, 55, 59, 60, 64]
+            },
+            {
+                "name": "Gm9",
+                "role": "Normal",
+                "notes": [43, 53, 57, 58, 62]
+            },
+            {
+                "name": "C13",
+                "role": "Normal",
+                "notes": [36, 52, 58, 62, 69]
+            }
+        ]
+    }
+}
