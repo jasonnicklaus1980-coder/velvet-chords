@@ -471,6 +471,7 @@ class Skin:
         c = []
         self.segments(c, bg, "mode", "Mode", ["Scale", "R&B kit", "Types", "Custom"], 456, 12, 104, 32, ids=[1, 2, 3, 4], ntotal=5)
         self.header_banks(c, bg, "bank")
+        self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 12, 428, h=32)  # the factory preset in use, top left
         bg.panel((12, 64, 1268, 144))
         bg.panel((12, 152, 632, 620))
         self.pad_grid(c, 20, 162)

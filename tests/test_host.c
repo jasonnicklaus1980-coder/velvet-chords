@@ -887,13 +887,13 @@ int main(int argc, char **argv) {
         int P_FN = find_param(fx, "Next starred preset"), P_FS = find_param(fx, "Starred preset status");
         CHECK(P_PR > 0 && P_FT > 0 && P_FP > 0 && P_FN > 0 && P_FS > 0, "starred preset parameters exist");
         char n5[64], n20[64], got[96];
-        fx->setParameter(fx, P_PR, 5.f / 230.f); display(fx, P_PR, n5);
+        fx->setParameter(fx, P_PR, 5.f / 530.f); display(fx, P_PR, n5);
         fx->setParameter(fx, P_FT, 1.f);
         display(fx, P_FS, got);
         CHECK(!strcmp(got, "Starred. 1 starred"), "starring shows in the status (%s)", got);
-        fx->setParameter(fx, P_PR, 20.f / 230.f); display(fx, P_PR, n20);
+        fx->setParameter(fx, P_PR, 20.f / 530.f); display(fx, P_PR, n20);
         fx->setParameter(fx, P_FT, 1.f);
-        fx->setParameter(fx, P_PR, 1.f / 230.f);
+        fx->setParameter(fx, P_PR, 1.f / 530.f);
         fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
         CHECK(!strcmp(got, n5), "next starred from preset 1 is preset 5 (%s vs %s)", got, n5);
         fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
@@ -909,7 +909,7 @@ int main(int argc, char **argv) {
         void *cc = malloc((size_t)csize); memcpy(cc, ck, (size_t)csize);
         AEffect *fx5 = open_fx();
         CHECK(fx5->dispatcher(fx5, effSetChunk, 0, csize, cc, 0) == 1, "chunk with stars loads");
-        fx5->setParameter(fx5, find_param(fx5, "Preset"), 5.f / 230.f);
+        fx5->setParameter(fx5, find_param(fx5, "Preset"), 5.f / 530.f);
         display(fx5, find_param(fx5, "Starred preset status"), got);
         CHECK(!strcmp(got, "Starred. 2 starred"), "stars survive a reload (%s)", got);
         free(cc);
@@ -917,8 +917,8 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_FT, 1.f); /* un-star preset 20 */
         display(fx, P_FS, got);
         CHECK(!strcmp(got, "Not starred. 1 starred"), "toggling again un-stars (%s)", got);
-        fx->setParameter(fx, P_PR, 5.f / 230.f); fx->setParameter(fx, P_FT, 1.f); /* un-star preset 5: none left */
-        fx->setParameter(fx, P_PR, 1.f / 230.f); fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
+        fx->setParameter(fx, P_PR, 5.f / 530.f); fx->setParameter(fx, P_FT, 1.f); /* un-star preset 5: none left */
+        fx->setParameter(fx, P_PR, 1.f / 530.f); fx->setParameter(fx, P_FN, 1.f); display(fx, P_PR, got);
         char n1[64]; display(fx, P_PR, n1);
         CHECK(!strcmp(got, n1) && fx->getParameter(fx, P_PR) > 0.f, "with nothing starred, next does nothing");
         fx->setParameter(fx, P_PR, 0.f);
@@ -944,7 +944,7 @@ int main(int argc, char **argv) {
         int P_NSEL = find_param(fx, "Edit note"), P_NIV = find_param(fx, "Edit note interval"), P_KEYI = find_param(fx, "Key");
         CHECK(P_PRE > 0 && P_PNX > 0 && P_RIFF > 0 && P_RSL > 0 && P_RS1 > 0 && P_ARPO > 0 && P_A2 > 0 && P_SH > 0 && P_NSEL > 0 && P_NIV > 0 && P_KEYI > 0,
               "1.1 parameters exist");
-        fx->setParameter(fx, P_PRE, 1.f / 200.f);
+        fx->setParameter(fx, P_PRE, 1.f / 530.f);
         display(fx, P_PRE, buf);
         CHECK(!strcmp(buf, "Neo-Soul Keys Late"), "preset 1 is shown by name (%s)", buf);
         { /* the preset sets the genre's key and scale (Neo-Soul Keys: F Dorian) and leaves the chords alone */
@@ -983,17 +983,30 @@ int main(int argc, char **argv) {
 
         /* a host that re-sends the stored preset must not undo a sound chosen after it */
         int P_SND2 = find_param(fx, "Sound");
-        fx->setParameter(fx, P_PRE, 1.f / 230.f);
+        fx->setParameter(fx, P_PRE, 1.f / 530.f);
         fx->setParameter(fx, P_SND2, 1.f);
-        fx->setParameter(fx, P_PRE, 1.f / 230.f);
+        fx->setParameter(fx, P_PRE, 1.f / 530.f);
         display(fx, P_SND2, buf);
         CHECK(!strcmp(buf, "Silent (MIDI only)"), "re-sent preset keeps the chosen sound (%s)", buf);
+
+        /* the host's preset box: Manual plus all 530 presets, past the first hundred, and picking one sets the Preset knob */
+        CHECK(fx->numPrograms == 531, "host preset box lists 531 programs (%d)", fx->numPrograms);
+        char pn[64], pk[64];
+        CHECK(fx->dispatcher(fx, effGetProgramNameIndexed, 101, 0, pn, 0) == 1, "program 101 has a name");
+        fx->setParameter(fx, P_PRE, 101.f / 530.f); display(fx, P_PRE, pk);
+        CHECK(!strcmp(pn, pk), "program 101 is the 101st preset (%s / %s)", pn, pk);
+        CHECK(fx->dispatcher(fx, effGetProgramNameIndexed, 531, 0, pn, 0) == 0, "no program past the last preset");
+        fx->dispatcher(fx, effSetProgram, 0, 530, 0, 0); display(fx, P_PRE, pk);
+        CHECK(!strcmp(pk, "Cinematic Hit Wide") && fx->dispatcher(fx, effGetProgram, 0, 0, 0, 0) == 530, "host picks program 530 (%s)", pk);
+        fx->dispatcher(fx, effSetProgram, 0, 0, 0, 0); display(fx, P_PRE, pk);
+        CHECK(!strcmp(pk, "Manual"), "program 0 is Manual (%s)", pk);
+        fx->dispatcher(fx, effSetProgram, 0, 530, 0, 0);
 
         /* no preset makes sound or arpeggio you didn't choose: Silent stays, and Arp stays off unless you turned it on */
         int P_ARP_ = find_param(fx, "Arp"), bad_sound = 0, bad_arp = 0;
         fx->setParameter(fx, P_ARP_, 0.f);
-        for (int k = 1; k <= 230; k++) {
-            fx->setParameter(fx, P_PRE, k / 230.f);
+        for (int k = 1; k <= 530; k++) {
+            fx->setParameter(fx, P_PRE, k / 530.f);
             display(fx, P_SND2, buf);
             bad_sound += strcmp(buf, "Silent (MIDI only)") != 0;
             display(fx, P_ARP_, buf);

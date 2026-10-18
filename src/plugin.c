@@ -257,7 +257,6 @@ typedef struct {
     char ana_msg[160];     /* what the last analysis did */
     VstEvents *outEvents;
     VstMidiEvent outMidi[EN_MIDI_OUT];
-    char program_name[32];
     PadChord ui_pads[VC_PADS];   /* layout as seen by the screen (built on the UI thread) */
     volatile int audition_req;   /* pad index requested from the screen, -1 none */
     int audition_note, audition_left;
@@ -583,6 +582,8 @@ static void analyze_sample(Plugin *p, int slot) {
     free(r);
     sync_layout(p);
 }
+
+static const char *preset_label(int x) { return x == 0 ? "Manual" : VC_PRESETS[x - 1].name; }
 
 static void apply_preset(Plugin *p, int x) {
     if (x < 1 || x > VC_NUM_PRESETS) return;
@@ -1133,7 +1134,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_BASS: { static const char *BN[BASS_COUNT] = {"Off", "Root", "Root + fifth", "Octaves", "Walking"}; copy_str(b, BN[x], sizeof(b)); break; }
     case P_PROG_PLAY: copy_str(b, x ? "On: one chord per bar" : "Off", sizeof(b)); break;
     case P_SMART_MAP: { static const char *MN[SMAP_COUNT] = {"Follow mode", "Relative", "Absolute", "Chromatic"}; copy_str(b, MN[x], sizeof(b)); break; }
-    case P_PRESET: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[x - 1].name, sizeof(b)); break;
+    case P_PRESET: copy_str(b, preset_label(x), sizeof(b)); break;
     case P_PRESET_GENRE: copy_str(b, x == 0 ? "Manual" : VC_PRESETS[(x - 1) * VC_PRESET_VARS].genre, sizeof(b)); break;
     case P_PRESET_VAR: {
         int g = idx_of(p, P_PRESET_GENRE);
@@ -1566,10 +1567,15 @@ static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t valu
     case effGetParamLabel: if (ptr) ((char *)ptr)[0] = 0; return 0;
     case effGetParamDisplay: if (index >= 0 && index < NUM_PARAMS && ptr) param_display(p, index, (char *)ptr, 64); return 0;
     case effCanBeAutomated: return (index >= 0 && index < NUM_PARAMS && !PINFO[index].trigger && !is_display_only(index) && index != P_ACTIVE && index != P_VIEW_BANK && !(index >= P_BANK_A && index <= P_BANK_D)) ? 1 : 0;
-    case effGetProgram: return 0;
-    case effSetProgram: return 0;
-    case effGetProgramName: case effGetProgramNameIndexed: if (ptr) copy_str((char *)ptr, p->program_name, 24); return op == effGetProgramNameIndexed ? 1 : 0;
-    case effSetProgramName: if (ptr) copy_str(p->program_name, (const char *)ptr, 24); return 0;
+    /* the host's preset box: program 0 is Manual, programs 1..N are the factory presets (the same list as the Preset knob) */
+    case effGetProgram: return idx_of(p, P_PRESET);
+    case effSetProgram: if (value >= 0 && value <= VC_NUM_PRESETS) set_param(p, P_PRESET, norm_of(P_PRESET, (int)value), 1); return 0;
+    case effGetProgramName: if (ptr) copy_str((char *)ptr, preset_label(idx_of(p, P_PRESET)), 24); return 0;
+    case effGetProgramNameIndexed:
+        if (index < 0 || index > VC_NUM_PRESETS || !ptr) return 0;
+        copy_str((char *)ptr, preset_label(index), 24);
+        return 1;
+    case effSetProgramName: return 0; /* the factory names are fixed */
     case effGetChunk: return ptr ? get_chunk(p, (void **)ptr) : 0;
     case effSetChunk: return set_chunk(p, ptr, (int)value);
     case effProcessEvents: {
@@ -1620,7 +1626,6 @@ VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
     if (!p->scratch_n) { free(p->outEvents); free(p->eng); free(p); return 0; }
     p->host = host;
     en_init(p->eng, 44100.f);
-    copy_str(p->program_name, "Default", 32);
     p->audition_req = -1;
     p->audition_note = -1;
     p->seen_pad = -1;
@@ -1644,7 +1649,7 @@ VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
     fx->processReplacing = processReplacing;
     fx->setParameter = setParameter;
     fx->getParameter = getParameter;
-    fx->numPrograms = 1;
+    fx->numPrograms = VC_NUM_PRESETS + 1;
     fx->numParams = NUM_PARAMS;
     fx->numInputs = 0;
     fx->numOutputs = 2;
