@@ -294,6 +294,7 @@ typedef struct {
     char mlog_path[512];
     FILE *mlog_file;                    /* only the helper thread opens, writes and closes this */
     VcReverb rv;                        /* room reverb on the built-in sound (Reverb parameter) */
+    unsigned char port_defer[128];      /* a note-off held to the next block, because its note-on went out in this block */
 } Plugin;
 
 static int idx_of(const Plugin *p, int i) {
@@ -1491,10 +1492,23 @@ static void send_midi_out(Plugin *p) {
     int routes = p->out_mode | p->flush_routes;
     p->flush_routes = 0;
     if (!(p->out_mode & OUT_PORT) && vc_port_is_open(&p->port) && !e->nout) vc_port_close(&p->port); /* after its flush */
+    if ((routes & OUT_PORT) && vc_port_is_open(&p->port))  /* note-offs held from the last block go out first */
+        for (int n = 0; n < 128; n++)
+            if (p->port_defer[n]) { unsigned char m[3] = {(unsigned char)(0x80 | (e->out_channel & 15)), (unsigned char)n, 0}; vc_port_send(&p->port, m); p->port_defer[n] = 0; }
     if (!e->nout) return;
     for (int i = 0; i < e->nout; i++) mlog_push(p, 'O', e->out[i].d);
-    if ((routes & OUT_PORT) && vc_port_is_open(&p->port))
-        for (int i = 0; i < e->nout; i++) vc_port_send(&p->port, e->out[i].d);
+    if ((routes & OUT_PORT) && vc_port_is_open(&p->port)) {
+        /* the port sends everything at once, with no timing inside the block: a note-off that follows its own
+         * note-on in the same block would cancel it before it sounds, so that note-off waits for the next block */
+        unsigned char started[128] = {0};
+        for (int i = 0; i < e->nout; i++) {
+            const unsigned char *d = e->out[i].d;
+            int note = d[1] & 127;
+            if ((d[0] & 0xF0) == 0x90 && d[2] > 0) { started[note] = 1; vc_port_send(&p->port, d); }
+            else if (started[note]) p->port_defer[note] = 1;
+            else vc_port_send(&p->port, d);
+        }
+    }
     if (!(routes & OUT_HOST) || !p->host) { e->nout = 0; return; }
     int n = e->nout;
     if (!p->outEvents) { e->nout = 0; return; } /* allocated when the plugin is created: nothing is allocated while processing audio */
@@ -1595,11 +1609,12 @@ static float getParameter(AEffect *fx, int32_t i) {
 static void flush_port_now(Plugin *p) {
     Engine *e = p->eng;
     if (!vc_port_is_open(&p->port)) return;
-    for (int n = 0; n < 128; n++)
-        if (e->out_ref[n] > 0) {
-            unsigned char m[3] = {(unsigned char)(0x80 | (e->out_channel & 15)), (unsigned char)n, 0};
-            vc_port_send(&p->port, m);
-        }
+    for (int n = 0; n < 128; n++) {
+        if (!e->out_ref[n] && !p->port_defer[n]) continue;
+        unsigned char m[3] = {(unsigned char)(0x80 | (e->out_channel & 15)), (unsigned char)n, 0};
+        vc_port_send(&p->port, m);
+        p->port_defer[n] = 0;
+    }
 }
 
 static void destroy(Plugin *p) {
