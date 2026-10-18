@@ -560,11 +560,11 @@ class Skin:
         self.value_field(c, bg, "Sound", 360, r1, 464, caption="Built-in sound (Silent = MIDI only)")
         self.value_field(c, bg, "MIDI channel", 844, r1, 120, caption="Out channel")
         self.readout(c, bg, "Now playing", 980, r1, 272, size=13, colour=ACCENT, caption="Now playing")
-        self.segments(c, bg, "mout", "MIDI out", ["Off", "To MPC", "Virtual port", "Both"], 28, r2, 150, caption="Send chords as MIDI")
-        self.segments(c, bg, "plen", "Pattern length", ["4", "8", "12", "16"], 190, r2, 40, caption="Pattern length (steps)")
-        self.segments(c, bg, "pchance", "Pattern chance", ["25%", "50%", "75%", "100%"], 366, r2, 50, caption="Pattern chance")
-        self.segments(c, bg, "pseed", "Pattern seed", ["1", "2", "3", "4"], 582, r2, 40, caption="Pattern seed")
-        self.readout(c, bg, "MIDI port", 830, r2, 422, size=14, caption="Virtual port: Velvet Chords Out")
+        self.segments(c, bg, "mout", "MIDI out", ["Off", "To MPC", "Virtual port", "Both"], 28, r2, 84, caption="Send chords as MIDI")
+        self.segments(c, bg, "plen", "Pattern length", ["4", "8", "12", "16"], 380, r2, 40, caption="Pattern length (steps)")
+        self.segments(c, bg, "pchance", "Pattern chance", ["25%", "50%", "75%", "100%"], 556, r2, 50, caption="Pattern chance")
+        self.segments(c, bg, "pseed", "Pattern seed", ["1", "2", "3", "4"], 772, r2, 40, caption="Pattern seed")
+        self.readout(c, bg, "MIDI port", 948, r2, 304, size=14, caption="Virtual port: Velvet Chords Out")
         self.page("Pattern", 3, c, "vc_bg_pattern.png", bg)
 
         # ---------- Tools: hold, repeat, melody, key sync, MIDI import
