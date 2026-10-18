@@ -606,6 +606,8 @@ class Skin:
         self.action_button(c, bg, "upre_import", "Import file", "Import user preset", R + 148, 580, w=140)
         self.action_button(c, bg, "upre_clear", "Clear", "Clear user preset", R + 296, 580, w=110)
         self.readout(c, bg, "User preset status", R + 414, 580, 180, size=12)
+        self.switch(c, bg, "MIDI log", L + 340, 448, "MIDI log (diagnostic)")
+        bg.a.text(L + 400, 460, "WRITES MIDI TO MIDI LOG.TXT", 9.5, "#4d5159", "Medium", anchor="lm", tracking=1.0)
         self.action_button(c, bg, "fav_star", "Star preset", "Star preset", L, 580, w=120)
         self.action_button(c, bg, "fav_prev", "Prev star", "Previous starred preset", L + 128, 580, w=120)
         self.action_button(c, bg, "fav_next", "Next star", "Next starred preset", L + 256, 580, w=120)

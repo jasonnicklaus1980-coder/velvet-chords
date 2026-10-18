@@ -267,6 +267,34 @@ int main(int argc, char **argv) {
     display(fx2, P_EXPORT, buf);
     CHECK(strstr(buf, "Saved") != 0, "kit export (%s)", buf);
 
+    /* MIDI log: while it is on, Velvet writes what it receives and sends to MIDI log.txt */
+    {
+        static EvBuf lb; static float LL[256], RR[256];
+        char lpath[512], text[8192] = "";
+        snprintf(lpath, sizeof(lpath), "%s/MIDI log.txt", getenv("VC_EXPORT_DIR"));
+        remove(lpath);
+        AEffect *m = open_fx();
+        int P_LOG = find_param(m, "MIDI log"), P_MO = find_param(m, "MIDI out");
+        CHECK(P_LOG > 0, "MIDI log parameter exists");
+        m->setParameter(m, P_MO, 1.f);
+        m->setParameter(m, P_LOG, 1.f);
+        midi(&lb.ev[0], 0, 0x90, 36, 100); send(m, &lb, 1); block(m, LL, RR, 256);
+        midi(&lb.ev[0], 0, 0x80, 36, 0); send(m, &lb, 1); block(m, LL, RR, 256);
+        struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0); /* the helper thread writes every 40 ms */
+        m->setParameter(m, P_LOG, 0.f);
+        block(m, LL, RR, 256);
+        nanosleep(&ts, 0);
+        FILE *f = fopen(lpath, "r");
+        size_t nread = f ? fread(text, 1, sizeof(text) - 1, f) : 0;
+        if (f) fclose(f);
+        text[nread] = 0;
+        CHECK(strstr(text, "I 90 24 64") != 0, "the incoming note on is logged");
+        CHECK(strstr(text, "I 80 24 00") != 0, "the incoming note off is logged");
+        CHECK(strstr(text, " O 9F 24 64") != 0 && strstr(text, " O 8F 24 00") != 0, "the chord notes Velvet sends are logged on channel 16");
+        CHECK(strstr(text, "log started") != 0, "the log file starts with a header");
+        m->dispatcher(m, effClose, 0, 0, 0, 0);
+    }
+
     /* screen helpers used by the MPC skin */
     {
         AEffect *s = open_fx();

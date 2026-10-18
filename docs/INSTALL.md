@@ -216,6 +216,13 @@ drum or synth sound that is still ringing, so it can seem to mute that track.
 - Set drum and synth tracks to a specific input or channel, not **all inputs**, if you use MIDI out.
 - Or use *Virtual port* and send Velvet Chords to a track that you choose on purpose.
 
+### MIDI log (for diagnosis)
+
+On the Tools page, **MIDI log** writes every MIDI event Velvet Chords receives (`I`), sends (`O`) and gets from the host on
+start or stop (`M`) to `Velvet Chords/MIDI log.txt`. Each line is the time in seconds, the direction, and the three bytes in hex.
+Channel 16 on the port shows as `9F` (note on) and `8F` (note off). Turn it on, reproduce the problem, turn it off, and send the
+file. The file keeps growing while the log is on, so turn it off when you are done.
+
 Velvet Chords only sends note messages on its own channel, and every note-on has its note-off. The routing inside MPC
 decides which tracks hear them.
 

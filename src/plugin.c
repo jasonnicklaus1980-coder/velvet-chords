@@ -57,6 +57,7 @@ enum {
     P_PRESET_GENRE, P_PRESET_VAR,
     P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS, P_ANALYZE, P_ANA_STATUS, P_UPROG_CLEAR,
     P_BANK_A, P_BANK_B, P_BANK_C, P_BANK_D, /* one button per screen bank, in place of the bank segments */
+    P_MIDI_LOG,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -225,6 +226,7 @@ static void init_param_info(void) {
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
     P(P_BANK_D, "Bank D", 2, 0.f, 0)
+    P(P_MIDI_LOG, "MIDI log", 2, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -235,6 +237,11 @@ static void init_param_info(void) {
 #undef P
     done = 1;
 }
+
+/* MIDI log (diagnostic, Tools page): the audio thread queues each MIDI event with a ring of these,
+ * and the helper thread writes them to MIDI log.txt, so the audio thread never touches a file */
+#define MLOG_N 1024
+typedef struct { double t; char dir; unsigned char d[3]; } MidiLogRec; /* dir: I in, O out, M main/off */
 
 typedef struct {
     AEffect fx;
@@ -278,6 +285,11 @@ typedef struct {
     int nfiles;
     char imp_status[96];
     unsigned key_seen;
+    MidiLogRec mlog[MLOG_N];
+    volatile unsigned mlog_w, mlog_r;   /* audio thread writes mlog_w, helper thread writes mlog_r */
+    volatile int mlog_drop, midi_log_on;
+    char mlog_path[512];
+    FILE *mlog_file;                    /* only the helper thread opens, writes and closes this */
 } Plugin;
 
 static int idx_of(const Plugin *p, int i) {
@@ -363,6 +375,34 @@ static double mono_seconds(void) {
     return (double)ts.tv_sec + ts.tv_nsec * 1e-9;
 }
 
+static void mlog_push(Plugin *p, char dir, const unsigned char *d) {
+    if (!p->midi_log_on) return;
+    unsigned w = p->mlog_w;
+    if (w - p->mlog_r >= MLOG_N) { p->mlog_drop++; return; }
+    MidiLogRec *r = &p->mlog[w % MLOG_N];
+    r->t = mono_seconds(); r->dir = dir; r->d[0] = d[0]; r->d[1] = d[1]; r->d[2] = d[2];
+    __sync_synchronize();
+    p->mlog_w = w + 1;
+}
+
+static void mlog_service(Plugin *p) {
+    if (p->midi_log_on && !p->mlog_file) {
+        p->mlog_file = fopen(p->mlog_path, "a");
+        if (p->mlog_file) fprintf(p->mlog_file, "--- log started ---\n");
+    }
+    FILE *f = p->mlog_file;
+    if (!f) { p->mlog_r = p->mlog_w; return; }   /* not logging: drop what was queued */
+    while (p->mlog_r != p->mlog_w) {
+        const MidiLogRec *r = &p->mlog[p->mlog_r % MLOG_N];
+        fprintf(f, "%.6f %c %02X %02X %02X\n", r->t, r->dir, r->d[0], r->d[1], r->d[2]);
+        __sync_synchronize();
+        p->mlog_r = p->mlog_r + 1;
+    }
+    if (p->mlog_drop) { fprintf(f, "--- %d events dropped: the log could not keep up ---\n", p->mlog_drop); p->mlog_drop = 0; }
+    fflush(f);
+    if (!p->midi_log_on) { fclose(f); p->mlog_file = 0; }
+}
+
 typedef int (*pthread_create_fn)(pthread_t *, const pthread_attr_t *, void *(*)(void *), void *);
 typedef int (*pthread_join_fn)(pthread_t, void **);
 
@@ -371,11 +411,13 @@ static void *refresh_loop(void *arg) {
     while (!p->refresh_quit) {
         struct timespec ts = {0, 40 * 1000000L};
         nanosleep(&ts, 0);
+        mlog_service(p);
         if (p->refresh_req && !p->refresh_quit) {
             p->refresh_req = 0;
             if (p->host) p->host(&p->fx, audioMasterUpdateDisplay, 0, 0, 0, 0.f);
         }
     }
+    if (p->mlog_file) { fclose(p->mlog_file); p->mlog_file = 0; }
     return 0;
 }
 
@@ -930,6 +972,10 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     if ((i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR || i == P_PROG) && p->val[i] == v) return;
     p->val[i] = v;
     switch (i) {
+    case P_MIDI_LOG:
+        p->midi_log_on = idx_of(p, i);
+        if (p->midi_log_on) snprintf(p->mlog_path, sizeof(p->mlog_path), "%s/MIDI log.txt", export_dir());
+        break;
     case P_MODE: case P_SONG: case P_SECTION: case P_KEY: case P_SCALE: case P_TRANSPOSE:
     case P_VOICING: case P_INVERSION: case P_OCTAVE: case P_VL:
         /* picking a mode, song, section, key or scale shows that layout again (not the imported chords) */
@@ -1436,6 +1482,7 @@ static void send_midi_out(Plugin *p) {
     p->flush_routes = 0;
     if (!(p->out_mode & OUT_PORT) && vc_port_is_open(&p->port) && !e->nout) vc_port_close(&p->port); /* after its flush */
     if (!e->nout) return;
+    for (int i = 0; i < e->nout; i++) mlog_push(p, 'O', e->out[i].d);
     if ((routes & OUT_PORT) && vc_port_is_open(&p->port))
         for (int i = 0; i < e->nout; i++) vc_port_send(&p->port, e->out[i].d);
     if (!(routes & OUT_HOST) || !p->host) { e->nout = 0; return; }
@@ -1558,7 +1605,12 @@ static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t valu
     case effClose: destroy(p); return 0;
     case effSetSampleRate: en_set_sr(p->eng, opt); return 0;
     case effSetBlockSize: ensure_scratch(p, (int)value); return 0;
-    case effMainsChanged: if (!value) { flush_port_now(p); en_reset(p->eng); p->eng->nout = 0; } return 0;
+    case effMainsChanged: {
+        unsigned char mv[3] = {(unsigned char)(value != 0), 0, 0};
+        mlog_push(p, 'M', mv);
+        if (!value) { flush_port_now(p); en_reset(p->eng); p->eng->nout = 0; }
+        return 0;
+    }
     case effGetParamName: if (index >= 0 && index < NUM_PARAMS && ptr) copy_str((char *)ptr, PINFO[index].name, 32); return 0;
     case effGetParamLabel: if (ptr) ((char *)ptr)[0] = 0; return 0;
     case effGetParamDisplay: if (index >= 0 && index < NUM_PARAMS && ptr) param_display(p, index, (char *)ptr, 64); return 0;
@@ -1582,6 +1634,7 @@ static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t valu
             if (!e || e->type != kVstMidiType) continue;
             VstMidiEvent *m = (VstMidiEvent *)e;
             int st = (unsigned char)m->midiData[0];
+            mlog_push(p, 'I', (const unsigned char *)m->midiData);
             /* feedback guard: with the virtual port on, notes arriving on our own output channel are our chords
              * coming back (a track listening to all inputs), not pad hits */
             if ((p->out_mode & OUT_PORT) && ((st & 0xE0) == 0x80) && (st & 0x0F) == p->eng->out_channel) continue;
