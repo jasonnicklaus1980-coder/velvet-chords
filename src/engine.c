@@ -749,9 +749,8 @@ static void handle_midi(Engine *e, const MidiMsg *m, int frame) {
             }
             e->sustain = on;
         } else if (cc == 120 || cc == 123) {
-            for (int i = 0; i < EN_OWNERS; i++) if (e->owners[i].owner) release_owner(e, &e->owners[i], frame);
-            e->sustain = 0;
-            if (cc == 120) sy_kill_all(&e->synth);
+            /* All sound off / all notes off: the MPC sends these when a recording starts, and acting on them cut the
+             * chord that was ringing. Each pad still releases its own chord on note-off, and a stop or reload resets all. */
         } else if (cc == 121) {
             if (e->sustain) {
                 e->sustain = 0;

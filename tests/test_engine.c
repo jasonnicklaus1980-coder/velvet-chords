@@ -522,6 +522,17 @@ static void test_tools(void) {
     run(&e, 400, 512, L, R);
     CHECK(en_owner_count(&e) == 0 && sy_active(&e.synth) == 0, "switching hold off releases the latched chord");
 
+    /* the MPC's all notes off / all sound off (sent when a recording starts) don't cut a chord that is still held */
+    {
+        en_init(&e, 48000.f);
+        e.lp.mode = VC_MODE_RNB; e.dirty = 1;
+        en_push_midi(&e, 0, 0x90, 36, 100); run(&e, 2, 512, L, R);
+        en_push_midi(&e, 0, 0xB0, 123, 0); en_push_midi(&e, 0, 0xB0, 120, 0); run(&e, 2, 512, L, R);
+        CHECK(en_owner_count(&e) == 1 && sy_active(&e.synth) > 0, "all notes off / all sound off keep a held chord sounding");
+        en_push_midi(&e, 0, 0x80, 36, 0); run(&e, 20, 512, L, R);
+        CHECK(en_owner_count(&e) == 0, "the chord still ends when its pad is let go");
+    }
+
     /* pressing one pad again while learning doesn't use up the next slot */
     {
         static const int SENDS[16] = {48, 49, 50, 51, 44, 45, 46, 47, 40, 41, 42, 43, 36, 37, 38, 39};
