@@ -473,6 +473,7 @@ class Skin:
         self.header_banks(c, bg, "bank")
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 12, 428, h=32)  # the factory preset in use, top left
         bg.panel((12, 64, 1268, 144))
+        self.readout(c, bg, "Info", 28, 88, 1224, 36, size=16, colour=TEXT_2)  # the scale's notes in the key, across the top
         bg.panel((12, 152, 632, 620))
         self.pad_grid(c, 20, 162)
         bg.panel((640, 152, 1268, 620))
