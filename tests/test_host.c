@@ -46,6 +46,13 @@ static AEffect *open_fx(void) {
     fx->dispatcher(fx, effSetSampleRate, 0, 0, 0, 48000.f);
     fx->dispatcher(fx, effSetBlockSize, 0, 256, 0, 0);
     fx->dispatcher(fx, effMainsChanged, 0, 1, 0, 0);
+    /* the reverb keeps ringing after the notes end; the note tests look at the notes, so they run dry (see the reverb test) */
+    for (int i = 0; ; i++) {  /* parameter lookup by name, as the helpers below do */
+        char nm[40] = "";
+        fx->dispatcher(fx, effGetParamName, i, 0, nm, 0);
+        if (!strcmp(nm, "Reverb")) { fx->setParameter(fx, i, 0.f); break; }
+        if (i > 400) break;
+    }
     return fx;
 }
 
@@ -1016,6 +1023,26 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_PRE, 1.f / 530.f);
         display(fx, P_SND2, buf);
         CHECK(!strcmp(buf, "Silent (MIDI only)"), "re-sent preset keeps the chosen sound (%s)", buf);
+
+        /* the reverb: at 0 it adds nothing, and a note's tail dies away */
+        {
+            static float RL[256], RR[256];
+            int P_RV = find_param(fx, "Reverb");
+            fx->setParameter(fx, P_RV, 0.f);
+            midi(&eb.ev[0], 0, 0x90, 60, 100); send(fx, &eb, 1); block(fx, RL, RR, 256);
+            midi(&eb.ev[0], 0, 0x80, 60, 0); send(fx, &eb, 1);
+            fx->setParameter(fx, P_RV, 0.6f);
+            double tail0 = 0, tail1 = 0;
+            for (int b = 0; b < 200; b++) { block(fx, RL, RR, 256); }
+            for (int b = 0; b < 40; b++) { block(fx, RL, RR, 256); }
+            for (int b = 0; b < 40; b++) { double e = block(fx, RL, RR, 256); tail0 += e; }
+            for (int b = 0; b < 40; b++) { double e = block(fx, RL, RR, 256); tail1 += e; }
+            CHECK(tail0 > 0.0 && tail1 < tail0, "reverb tail after a note falls away (%g then %g)", tail0, tail1);
+            fx->setParameter(fx, P_RV, 0.f);
+            for (int b = 0; b < 1500; b++) block(fx, RL, RR, 256);   /* let the note's own release finish */
+            double after = block(fx, RL, RR, 256);
+            CHECK(after == 0.0, "reverb at 0 leaves silence silent");
+        }
 
         /* a preset leaves the pattern you chose alone */
         {

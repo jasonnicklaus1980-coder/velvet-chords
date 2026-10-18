@@ -426,6 +426,8 @@ port Velvet Chords Out 33 1114114
 open default 1 1
 client Velvet Chords
 port Velvet Chords Out 33 1114114
+ev 6 15 44 121 253 254 253 0 28
+ev 7 15 44 0 253 254 253 0 28
 open default 1 1
 client Velvet Chords
 port Velvet Chords Out 33 1114114

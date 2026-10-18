@@ -499,6 +499,8 @@ class Skin:
         for r in range(4):  # 4 rows x 5: one 20-way choice
             self.segments(c, bg, "sound%d" % r, "Sound", snd[r * 5:r * 5 + 5], L, 96 + r * 32, 117, h=30,
                           caption="Instrument" if r == 0 else None, ids=list(range(r * 5, r * 5 + 5)), ntotal=20)
+        self.segments(c, bg, "soundx", "Sound extra", ["FM bell", "Synth bass", "Glass", "Saw lead"], L, 586, 147,
+                      h=30, caption="Sound extra (picks a sound from the grid's line-up above)", ids=[1, 2, 3, 4], ntotal=5)
         self.value_field(c, bg, "Tone", L, 252, 188, caption="Tone")
         self.value_field(c, bg, "Release", L + 200, 252, 188, caption="Release")
         self.value_field(c, bg, "Volume", L + 400, 252, 188, caption="Volume")
@@ -519,6 +521,7 @@ class Skin:
         self.action_button(c, bg, "learnall", "Learn all 16 pads", "Learn all pads", R + 396, rows[4], w=192)
         self.readout(c, bg, "Now playing", R, rows[4] + 44, 588, 30, size=14, colour=ACCENT)
         self.action_button(c, bg, "export", "Export MIDI", "Export MIDI", R, rows[5])
+        self.value_field(c, bg, "Reverb", R + 204, rows[5] + 60, 188, h=30, caption="Reverb")
         self.readout(c, bg, "Export MIDI", R + 204, rows[5], 180, size=14)
         self.action_button(c, bg, "uprog_save", "Save progression", "Save progression", R + 396, rows[5], w=192)
         self.page("Perform", 1, c, "vc_bg_perform.png", bg)

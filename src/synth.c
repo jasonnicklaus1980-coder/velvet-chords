@@ -4,13 +4,14 @@
 
 const char *SY_SOUND_NAMES[SY_SOUND_COUNT] = {"Electric piano", "Rhodes", "Wurlitzer", "Bright Rhodes", "Clavinet", "Piano",
     "Soft pad", "Poly synth", "Strings", "Supersaw", "Choir", "Brass", "Harp", "Organ", "Marimba", "Vibraphone",
-    "Nylon guitar", "Pluck", "Music box", "Silent (MIDI only)"};
+    "Nylon guitar", "Pluck", "Music box", "Silent (MIDI only)", "FM bell", "Synth bass", "Glass pad", "Saw lead"};
 const char *SY_SOUND_SHORT[SY_SOUND_COUNT] = {"E. piano", "Rhodes", "Wurli", "Bright Rh", "Clav", "Piano", "Pad", "Poly",
-    "Strings", "Supersaw", "Choir", "Brass", "Harp", "Organ", "Marimba", "Vibes", "Nylon gtr", "Pluck", "Music box", "Silent"};
+    "Strings", "Supersaw", "Choir", "Brass", "Harp", "Organ", "Marimba", "Vibes", "Nylon gtr", "Pluck", "Music box", "Silent",
+    "FM bell", "Synth bass", "Glass", "Saw lead"};
 
 int sy_sound_decays(int s) {
     return s == SY_EPIANO || s == SY_RHODES || s == SY_WURLI || s == SY_DYNO || s == SY_CLAV || s == SY_PIANO || s == SY_HARP ||
-           s == SY_MARIMBA || s == SY_VIBES || s == SY_NYLON || s == SY_PLUCK || s == SY_MUSICBOX;
+           s == SY_MARIMBA || s == SY_VIBES || s == SY_NYLON || s == SY_PLUCK || s == SY_MUSICBOX || s == SY_FMBELL;
 }
 
 /* plucked string (Karplus-Strong): noise burst through a damped delay line */
@@ -234,6 +235,43 @@ void sy_note_on(Synth *s, int note, float vel, int owner) {
         v->modDepth = (0.5f + 1.0f * s->tone) * vel;
         break;
     }
+    case SY_FMBELL: { /* two-operator FM with an inharmonic ratio: a bell that starts bright and settles to a pure tone */
+        v->attK = 1.f - vc_decay_mul(0.0008, sr);
+        double tau = 1.2 + 2.8 * low; if (tau > 5.0) tau = 5.0;
+        v->decMul = vc_decay_mul(tau, sr);
+        v->relMul = vc_decay_mul(0.05 + rel * 0.3, sr);
+        v->modEnv = 1.f; v->modMul = vc_decay_mul(0.4 + 0.8 * low, sr);
+        v->modDepth = (1.5f + 3.0f * s->tone) * (0.4f + 0.6f * vel);
+        break;
+    }
+    case SY_SYNBASS: { /* two saws and a sub, through a low-pass that opens on each note */
+        v->attK = 1.f - vc_decay_mul(0.004, sr);
+        v->decMul = 1.f;
+        v->relMul = vc_decay_mul(0.03 + rel * 0.15, sr);
+        v->fenv = 1.f; v->fenvMul = vc_decay_mul(0.18 + 0.2 * (1.f - s->tone), sr);
+        v->ph[1] = 0.5f;
+        break;
+    }
+    case SY_GLASS: { /* slow attack, a detuned sine pair and a slow FM shimmer */
+        v->attK = 1.f - vc_decay_mul(0.45, sr);
+        v->decMul = 1.f;
+        v->relMul = vc_decay_mul(0.3 + rel * 0.4, sr);
+        v->ph[1] = 0.31f; v->ph[2] = 0.67f;
+        v->modEnv = 1.f; v->modMul = vc_decay_mul(1.5, sr);
+        v->modDepth = 0.6f + 1.4f * s->tone;
+        v->lfoInc = (4.2f + 0.8f * rnd(s)) / sr;
+        v->lfo = 0.5f + 0.5f * rnd(s);
+        break;
+    }
+    case SY_SAWLEAD: { /* three detuned saws with vibrato; the filter opens on each note */
+        v->attK = 1.f - vc_decay_mul(0.012, sr);
+        v->decMul = 1.f;
+        v->relMul = vc_decay_mul(0.1 + rel * 0.35, sr);
+        v->fenv = 1.f; v->fenvMul = vc_decay_mul(0.35, sr);
+        v->ph[1] = 0.33f; v->ph[2] = 0.66f;
+        v->lfoInc = 5.5f / sr;
+        break;
+    }
     default: { /* organ */
         v->attK = 1.f - vc_decay_mul(0.003, sr);
         v->decMul = 1.f;
@@ -423,6 +461,48 @@ void sy_render(Synth *s, float *L, float *R, int n) {
                 v->modEnv *= v->modMul;
                 v->ph[0] = vc_wrap1(v->ph[0] + v->inc);
                 if (v->inc * 3.5f < 0.45f) v->ph[1] = vc_wrap1(v->ph[1] + v->inc * 3.5f);
+                break;
+            }
+            case SY_FMBELL: {
+                float m = vc_sinc(v->ph[1]) * v->modDepth * v->modEnv;
+                y = vc_sinc(v->ph[0] + m * 0.159155f);
+                v->modEnv *= v->modMul;
+                v->ph[0] = vc_wrap1(v->ph[0] + v->inc); v->ph[1] = vc_wrap1(v->ph[1] + v->inc * 3.5f);
+                break;
+            }
+            case SY_SYNBASS: {
+                float x = 0.5f * (blep_saw(v->ph[0], v->inc) + blep_saw(v->ph[1], v->inc * 1.006f));
+                float sub = vc_sinc(v->ph[2]);
+                float fc = (180.f + 2200.f * s->tone * v->vel) * (0.25f + 0.75f * v->fenv) + 120.f;
+                float a = 6.2831853f * fc / sr; if (a > 0.9f) a = 0.9f;
+                v->lp1 += (x - v->lp1) * a; v->lp2 += (v->lp1 - v->lp2) * a;
+                y = (v->lp2 * 0.8f + 0.35f * sub) * 0.8f;
+                if (v->fenv > 0.f) v->fenv *= v->fenvMul;
+                v->ph[0] = vc_wrap1(v->ph[0] + v->inc); v->ph[1] = vc_wrap1(v->ph[1] + v->inc * 1.006f); v->ph[2] = vc_wrap1(v->ph[2] + v->inc * 0.5f);
+                break;
+            }
+            case SY_GLASS: {
+                float vib = 1.f + 0.002f * vc_sinc(v->lfo);
+                float shimmer = v->inc * 3.011f < 0.45f ? vc_sinc(v->ph[2]) * v->modDepth * v->modEnv : 0.f;
+                float x = vc_sinc(v->ph[0] + shimmer * 0.159155f);
+                if (v->inc * 2.003f < 0.45f) x += 0.45f * vc_sinc(v->ph[1]);
+                y = x * 0.6f;
+                v->modEnv *= v->modMul;
+                v->ph[0] = vc_wrap1(v->ph[0] + v->inc * vib); v->ph[1] = vc_wrap1(v->ph[1] + v->inc * 2.003f);
+                v->ph[2] = vc_wrap1(v->ph[2] + v->inc * 3.011f); v->lfo = vc_wrap1(v->lfo + v->lfoInc);
+                break;
+            }
+            case SY_SAWLEAD: {
+                float vib = 1.f + 0.003f * vc_sinc(v->lfo) * (v->stage == 1 ? 1.f : 0.4f);
+                float i0 = v->inc * vib;
+                float x = blep_saw(v->ph[0], i0 * 1.005f) + blep_saw(v->ph[1], i0 * 0.995f) + blep_saw(v->ph[2], i0);
+                float fc = (300.f + 3800.f * s->tone * v->vel) * (0.2f + 0.8f * v->fenv) + 250.f;
+                float a = 6.2831853f * fc / sr; if (a > 0.9f) a = 0.9f;
+                v->lp1 += (x - v->lp1) * a; v->lp2 += (v->lp1 - v->lp2) * a;
+                y = v->lp2 * 0.3f;
+                if (v->fenv > 0.f) v->fenv *= v->fenvMul;
+                v->ph[0] = vc_wrap1(v->ph[0] + i0 * 1.005f); v->ph[1] = vc_wrap1(v->ph[1] + i0 * 0.995f); v->ph[2] = vc_wrap1(v->ph[2] + i0);
+                v->lfo = vc_wrap1(v->lfo + v->lfoInc);
                 break;
             }
             default: {

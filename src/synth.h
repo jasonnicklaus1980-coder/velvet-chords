@@ -6,7 +6,10 @@
 /* ORDER IS PART OF SAVED PROJECTS: E. piano, Pad, Organ and Silent keep the positions the old 4-sound list mapped to */
 /* positions chosen so projects saved with the 4- and 10-sound lists still pick the same instrument */
 enum { SY_EPIANO, SY_RHODES, SY_WURLI, SY_DYNO, SY_CLAV, SY_PIANO, SY_PAD, SY_POLY, SY_STRINGS, SY_SUPERSAW,
-       SY_CHOIR, SY_BRASS, SY_HARP, SY_ORGAN, SY_MARIMBA, SY_VIBES, SY_NYLON, SY_PLUCK, SY_MUSICBOX, SY_SILENT, SY_SOUND_COUNT };
+       SY_CHOIR, SY_BRASS, SY_HARP, SY_ORGAN, SY_MARIMBA, SY_VIBES, SY_NYLON, SY_PLUCK, SY_MUSICBOX, SY_SILENT,
+       SY_FMBELL, SY_SYNBASS, SY_GLASS, SY_SAWLEAD, SY_SOUND_COUNT };
+/* the Sound parameter has the first SY_BASE_COUNT of these; the four after Silent are chosen with Sound extra */
+#define SY_BASE_COUNT (SY_SILENT + 1)
 extern const char *SY_SOUND_NAMES[SY_SOUND_COUNT];
 extern const char *SY_SOUND_SHORT[SY_SOUND_COUNT];
 

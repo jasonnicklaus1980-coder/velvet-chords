@@ -6,6 +6,7 @@
 #include "presets.h"
 #include "progression.h"
 #include "audioanalysis.h"
+#include "fx.h"
 #include "midiimport.h"
 #include <dirent.h>
 #include <strings.h>
@@ -57,7 +58,7 @@ enum {
     P_PRESET_GENRE, P_PRESET_VAR,
     P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS, P_ANALYZE, P_ANA_STATUS, P_UPROG_CLEAR,
     P_BANK_A, P_BANK_B, P_BANK_C, P_BANK_D, /* one button per screen bank, in place of the bank segments */
-    P_MIDI_LOG,
+    P_MIDI_LOG, P_REVERB, P_SOUND_X,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -99,7 +100,7 @@ static void init_param_info(void) {
     P(P_ARP, "Arp", ARP_COUNT, 0.f, 0)
     P(P_ARP_RATE, "Arp rate", RATE_COUNT, 3.f / 5.f, 0)
     P(P_VEL, "Velocity", VEL_COUNT, 0.f, 0)
-    P(P_SOUND, "Sound", SY_SOUND_COUNT, 0.f, 0)
+    P(P_SOUND, "Sound", SY_BASE_COUNT, 0.f, 0)
     P(P_TONE, "Tone", 0, 0.5f, 0)
     P(P_RELEASE, "Release", 0, 0.3f, 0)
     P(P_VOLUME, "Volume", 0, 0.75f, 0)
@@ -227,6 +228,8 @@ static void init_param_info(void) {
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
     P(P_BANK_D, "Bank D", 2, 0.f, 0)
     P(P_MIDI_LOG, "MIDI log", 2, 0.f, 0)
+    P(P_REVERB, "Reverb", 0, 0.25f, 0)
+    P(P_SOUND_X, "Sound extra", 5, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -290,6 +293,7 @@ typedef struct {
     volatile int mlog_drop, midi_log_on;
     char mlog_path[512];
     FILE *mlog_file;                    /* only the helper thread opens, writes and closes this */
+    VcReverb rv;                        /* room reverb on the built-in sound (Reverb parameter) */
 } Plugin;
 
 static int idx_of(const Plugin *p, int i) {
@@ -297,6 +301,11 @@ static int idx_of(const Plugin *p, int i) {
     if (s <= 1) return 0;
     int v = (int)(p->val[i] * (s - 1) + 0.5f);
     return v < 0 ? 0 : v >= s ? s - 1 : v;
+}
+/* the synth sound: the Sound list, or one of the four extra sounds when Sound extra is set */
+static int sound_index(const Plugin *p) {
+    int x = idx_of(p, P_SOUND_X);
+    return x > 0 ? SY_SILENT + x : idx_of(p, P_SOUND);
 }
 static float norm_of(int i, int idx) { int s = PINFO[i].steps; return s <= 1 ? 0.f : (float)idx / (float)(s - 1); }
 /* the four bank buttons show which screen bank is up; they follow P_VIEW_BANK whoever changed it */
@@ -634,7 +643,7 @@ static void apply_preset(Plugin *p, int x) {
     set_param(p, P_SCALE, norm_of(P_SCALE, s->scale), 0);
     /* a preset never makes sound or arpeggio you didn't choose: Silent stays silent, and the arpeggio stays as it is
      * unless you already have one running (then the preset sets its order, rate and octaves) */
-    if (idx_of(p, P_SOUND) != SY_SILENT) set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0);
+    if (idx_of(p, P_SOUND) != SY_SILENT) { set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0); set_param(p, P_SOUND_X, 0.f, 0); }
     set_param(p, P_TONE, s->tone, 0);
     set_param(p, P_RELEASE, s->release, 0);
     set_param(p, P_VOLUME, s->volume, 0);
@@ -990,7 +999,10 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_ARP_OCT: case P_ARP2_OCT: case P_ARP3_OCT: case P_ARP4_OCT: e->lanes[lane_of(i, ARP_OCT_IDS)].oct = idx_of(p, i) + 1; break;
     case P_ARP_TR: case P_ARP2_TR: case P_ARP3_TR: case P_ARP4_TR: e->lanes[lane_of(i, ARP_TR_IDS)].transpose = idx_of(p, i) - 12; break;
     case P_VEL: e->vel_curve = idx_of(p, i); break;
-    case P_SOUND: e->synth.sound = idx_of(p, i); break;
+    case P_SOUND:  /* a base sound picked on the screen replaces an extra one */
+        if (from_host && idx_of(p, P_SOUND_X)) set_param(p, P_SOUND_X, 0.f, 0);
+        e->synth.sound = sound_index(p); break;
+    case P_SOUND_X: e->synth.sound = sound_index(p); break;
     case P_TONE: e->synth.tone = v; break;
     case P_RELEASE: e->synth.release = v; break;
     case P_VOLUME: e->synth.volume = v; break;
@@ -1208,7 +1220,8 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_ARP_RATE: copy_str(b, RATES[x], sizeof(b)); break;
     case P_VEL: copy_str(b, VELS[x], sizeof(b)); break;
     case P_SOUND: copy_str(b, SY_SOUND_NAMES[x], sizeof(b)); break;
-    case P_TONE: case P_RELEASE: case P_VOLUME: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
+    case P_SOUND_X: copy_str(b, x == 0 ? "-" : SY_SOUND_NAMES[SY_SILENT + x], sizeof(b)); break;
+    case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
     case P_PAD_BASE:
         if (e->map_set) { copy_str(b, "Learned layout", sizeof(b)); break; }
         { char nn[8]; x = e->pad_base; vc_note_name(x, 0, nn, sizeof(nn)); snprintf(b, sizeof(b), "%s (%d)", nn, x); }
@@ -1539,6 +1552,7 @@ static void render(Plugin *p, float **out, int n, int accumulate) {
         if (p->audition_left <= 0) { en_push_midi(e, 0, 0x80, (unsigned char)p->audition_note, 0); p->audition_note = -1; }
     }
     en_process(e, p->scratchL, p->scratchR, n);
+    fx_reverb(&p->rv, p->scratchL, p->scratchR, n, p->val[P_REVERB]);
     apply_shift(p);
     if (e->events_changed && e->last_pad >= 0) { /* screen follows the played pad */
         p->seen_pad = e->last_pad;
@@ -1600,7 +1614,7 @@ static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t valu
     switch (op) {
     case effOpen: p->opened = 1; if (!p->refresh_running) start_refresh_thread(p); scan_import_files(p); return 0; /* host knows us now */
     case effClose: destroy(p); return 0;
-    case effSetSampleRate: en_set_sr(p->eng, opt); return 0;
+    case effSetSampleRate: en_set_sr(p->eng, opt); fx_reverb_init(&p->rv, p->eng->sr); return 0;
     case effSetBlockSize: ensure_scratch(p, (int)value); return 0;
     case effMainsChanged: {
         unsigned char mv[3] = {(unsigned char)(value != 0), 0, 0};
@@ -1672,6 +1686,7 @@ VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
     if (!p->scratch_n) { free(p->outEvents); free(p->eng); free(p); return 0; }
     p->host = host;
     en_init(p->eng, 44100.f);
+    fx_reverb_init(&p->rv, 44100.f);
     p->audition_req = -1;
     p->audition_note = -1;
     p->seen_pad = -1;
