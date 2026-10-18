@@ -56,6 +56,7 @@ enum {
     /* preset genre and variation: two knobs that pick one of the presets (Manual is genre 0) */
     P_PRESET_GENRE, P_PRESET_VAR,
     P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS, P_ANALYZE, P_ANA_STATUS, P_UPROG_CLEAR,
+    P_BANK_A, P_BANK_B, P_BANK_C, P_BANK_D, /* one button per screen bank, in place of the bank segments */
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -220,6 +221,10 @@ static void init_param_info(void) {
     P(P_ANALYZE, "Analyze sample", 2, 0.f, 1)
     P(P_ANA_STATUS, "Analysis status", 1, 0.f, 0)
     P(P_UPROG_CLEAR, "Clear progression", 2, 0.f, 1)
+    P(P_BANK_A, "Bank A", 2, 1.f, 0)
+    P(P_BANK_B, "Bank B", 2, 0.f, 0)
+    P(P_BANK_C, "Bank C", 2, 0.f, 0)
+    P(P_BANK_D, "Bank D", 2, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -283,6 +288,11 @@ static int idx_of(const Plugin *p, int i) {
     return v < 0 ? 0 : v >= s ? s - 1 : v;
 }
 static float norm_of(int i, int idx) { int s = PINFO[i].steps; return s <= 1 ? 0.f : (float)idx / (float)(s - 1); }
+/* the four bank buttons show which screen bank is up; they follow P_VIEW_BANK whoever changed it */
+static void sync_banks(Plugin *p) {
+    int cur = idx_of(p, P_VIEW_BANK);
+    for (int j = 0; j < 4; j++) p->val[P_BANK_A + j] = j == cur ? 1.f : 0.f;
+}
 
 static void copy_str(char *dst, const char *src, int max) {
     int k = 0;
@@ -890,6 +900,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             if (i == P_EPAD_PREV || i == P_EPAD_NEXT) {
                 step_param(p, P_EDIT_PAD, i == P_EPAD_NEXT ? 1 : -1, VC_PADS);
                 p->val[P_VIEW_BANK] = norm_of(P_VIEW_BANK, p->edit_pad / 16);
+                sync_banks(p);
             }
             if (i == P_TYPE_PREV || i == P_TYPE_NEXT) { p->val[P_MODE] = norm_of(P_MODE, VC_MODE_CUSTOM); sync_layout(p); }
             if (i == P_PRESET_PREV || i == P_PRESET_NEXT) step_param(p, P_PRESET, i == P_PRESET_NEXT ? 1 : -1, VC_NUM_PRESETS + 1);
@@ -900,13 +911,19 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
         return;
     }
     if (is_display_only(i)) return;
+    if (i >= P_BANK_A && i <= P_BANK_D) { /* pressing a bank shows it; pressing the one already up does nothing */
+        if (from_host && v >= 0.5f) set_param(p, P_VIEW_BANK, norm_of(P_VIEW_BANK, i - P_BANK_A), 1);
+        sync_banks(p);
+        refresh_host(p);
+        return;
+    }
     if (i == P_ACTIVE) { /* tapping a pad on the screen auditions it */
         p->val[i] = v;
         int k = idx_of(p, i);
         if (from_host && k > 0) p->audition_req = idx_of(p, P_VIEW_BANK) * 16 + k - 1;
         return;
     }
-    if (i == P_VIEW_BANK) { p->val[i] = v; p->val[P_ACTIVE] = 0.f; refresh_host(p); return; }
+    if (i == P_VIEW_BANK) { p->val[i] = v; p->val[P_ACTIVE] = 0.f; sync_banks(p); refresh_host(p); return; }
     /* a preset overwrites the sound and everything else, so only a change of the knob applies it:
      * a host that re-sends its stored values (on a mode or song change, say) must not undo your edits */
     if ((i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR || i == P_PROG) && p->val[i] == v) return;
@@ -1485,6 +1502,7 @@ static void render(Plugin *p, float **out, int n, int accumulate) {
     if (e->events_changed && e->last_pad >= 0) { /* screen follows the played pad */
         p->seen_pad = e->last_pad;
         p->val[P_VIEW_BANK] = norm_of(P_VIEW_BANK, e->last_pad / 16);
+        sync_banks(p);
         p->val[P_ACTIVE] = norm_of(P_ACTIVE, e->last_pad % 16 + 1);
         e->events_changed = 0;
         refresh_host(p);
@@ -1547,7 +1565,7 @@ static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t valu
     case effGetParamName: if (index >= 0 && index < NUM_PARAMS && ptr) copy_str((char *)ptr, PINFO[index].name, 32); return 0;
     case effGetParamLabel: if (ptr) ((char *)ptr)[0] = 0; return 0;
     case effGetParamDisplay: if (index >= 0 && index < NUM_PARAMS && ptr) param_display(p, index, (char *)ptr, 64); return 0;
-    case effCanBeAutomated: return (index >= 0 && index < NUM_PARAMS && !PINFO[index].trigger && !is_display_only(index) && index != P_ACTIVE && index != P_VIEW_BANK) ? 1 : 0;
+    case effCanBeAutomated: return (index >= 0 && index < NUM_PARAMS && !PINFO[index].trigger && !is_display_only(index) && index != P_ACTIVE && index != P_VIEW_BANK && !(index >= P_BANK_A && index <= P_BANK_D)) ? 1 : 0;
     case effGetProgram: return 0;
     case effSetProgram: return 0;
     case effGetProgramName: case effGetProgramNameIndexed: if (ptr) copy_str((char *)ptr, p->program_name, 24); return op == effGetProgramNameIndexed ? 1 : 0;

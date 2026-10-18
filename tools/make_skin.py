@@ -454,8 +454,13 @@ class Skin:
                            "componentName": key, "initialSize": "0 0 %d %d" % (W, H), "scale": 1.0})
 
     def header_banks(self, c, bg, group):
+        """four independent buttons, each on its own parameter: a segmented group put A and D out of reach on the MPC"""
         bg.a.text(1066, 28, "BANK", 10.5, LABEL, "Medium", anchor="rm", tracking=1.3)
-        self.segments(c, bg, group, "Screen bank", ["A", "B", "C", "D"], 1076, 12, 45, 32)
+        for i, t in enumerate(["A", "B", "C", "D"]):
+            on, off = self.img.seg(group, i, 4, t, 45, 32, True), self.img.seg(group, i, 4, t, 45, 32, False)
+            key = self.define("vcBank_%s_%s" % (group, t), definition([A_QLINK, A_TOGGLE_ENTER], [button_sub(on, off, 1, 1, 45, 32)]))
+            c.append(self.place(key, "Bank %s" % t, 1076 + i * 45, 12, 45, 32, [("Data", self.p("Bank %s" % t))],
+                                focus="Yes" if i == 0 else "No"))
 
     def build(self):
         voicings = ["Bass+upper", "Close", "Drop 2", "Spread", "Upper"]

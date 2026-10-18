@@ -281,7 +281,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank_0",
+                    "key": "vcBank_bank_A",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -289,6 +289,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -325,8 +336,8 @@
                                         "version": 2,
                                         "onImage": "vc_seg_bank_0_on.png",
                                         "offImage": "vc_seg_bank_0_off.png",
-                                        "buttonId": 0,
-                                        "numButtonsInGroup": 4,
+                                        "buttonId": 1,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -349,7 +360,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank_1",
+                    "key": "vcBank_bank_B",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -357,6 +368,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -394,7 +416,7 @@
                                         "onImage": "vc_seg_bank_1_on.png",
                                         "offImage": "vc_seg_bank_1_off.png",
                                         "buttonId": 1,
-                                        "numButtonsInGroup": 4,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -417,7 +439,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank_2",
+                    "key": "vcBank_bank_C",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -425,6 +447,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -461,8 +494,8 @@
                                         "version": 2,
                                         "onImage": "vc_seg_bank_2_on.png",
                                         "offImage": "vc_seg_bank_2_off.png",
-                                        "buttonId": 2,
-                                        "numButtonsInGroup": 4,
+                                        "buttonId": 1,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -485,7 +518,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank_3",
+                    "key": "vcBank_bank_D",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -493,6 +526,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -529,8 +573,8 @@
                                         "version": 2,
                                         "onImage": "vc_seg_bank_3_on.png",
                                         "offImage": "vc_seg_bank_3_off.png",
-                                        "buttonId": 3,
-                                        "numButtonsInGroup": 4,
+                                        "buttonId": 1,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -5032,8 +5076,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank A",
-                                    "type": "vcSeg_bank_0",
+                                    "name": "Bank A",
+                                    "type": "vcBank_bank_A",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -5044,7 +5088,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 193"
                                         }
                                     ]
                                 },
@@ -5062,8 +5106,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank B",
-                                    "type": "vcSeg_bank_1",
+                                    "name": "Bank B",
+                                    "type": "vcBank_bank_B",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -5074,7 +5118,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 194"
                                         }
                                     ]
                                 },
@@ -5092,8 +5136,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank C",
-                                    "type": "vcSeg_bank_2",
+                                    "name": "Bank C",
+                                    "type": "vcBank_bank_C",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -5104,7 +5148,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 195"
                                         }
                                     ]
                                 },
@@ -5122,8 +5166,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank D",
-                                    "type": "vcSeg_bank_3",
+                                    "name": "Bank D",
+                                    "type": "vcBank_bank_D",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -5134,7 +5178,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 196"
                                         }
                                     ]
                                 },
@@ -13474,7 +13518,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank3_0",
+                    "key": "vcBank_bank3_A",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -13482,6 +13526,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -13518,8 +13573,8 @@
                                         "version": 2,
                                         "onImage": "vc_seg_bank3_0_on.png",
                                         "offImage": "vc_seg_bank3_0_off.png",
-                                        "buttonId": 0,
-                                        "numButtonsInGroup": 4,
+                                        "buttonId": 1,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -13542,7 +13597,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank3_1",
+                    "key": "vcBank_bank3_B",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -13550,6 +13605,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -13587,7 +13653,7 @@
                                         "onImage": "vc_seg_bank3_1_on.png",
                                         "offImage": "vc_seg_bank3_1_off.png",
                                         "buttonId": 1,
-                                        "numButtonsInGroup": 4,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -13610,7 +13676,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank3_2",
+                    "key": "vcBank_bank3_C",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -13618,6 +13684,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -13654,8 +13731,8 @@
                                         "version": 2,
                                         "onImage": "vc_seg_bank3_2_on.png",
                                         "offImage": "vc_seg_bank3_2_off.png",
-                                        "buttonId": 2,
-                                        "numButtonsInGroup": 4,
+                                        "buttonId": 1,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -13678,7 +13755,7 @@
                     }
                 },
                 {
-                    "key": "vcSeg_bank3_3",
+                    "key": "vcBank_bank3_D",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -13686,6 +13763,17 @@
                                 "version": 2,
                                 "onAction": "Mouse Down",
                                 "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Toggle Switch",
                                 "handleName": "Data",
                                 "additionalData": "",
                                 "handle remapping": {
@@ -13722,8 +13810,8 @@
                                         "version": 2,
                                         "onImage": "vc_seg_bank3_3_on.png",
                                         "offImage": "vc_seg_bank3_3_off.png",
-                                        "buttonId": 3,
-                                        "numButtonsInGroup": 4,
+                                        "buttonId": 1,
+                                        "numButtonsInGroup": 1,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -16563,8 +16651,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank3 A",
-                                    "type": "vcSeg_bank3_0",
+                                    "name": "Bank A",
+                                    "type": "vcBank_bank3_A",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -16575,7 +16663,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 193"
                                         }
                                     ]
                                 },
@@ -16593,8 +16681,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank3 B",
-                                    "type": "vcSeg_bank3_1",
+                                    "name": "Bank B",
+                                    "type": "vcBank_bank3_B",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -16605,7 +16693,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 194"
                                         }
                                     ]
                                 },
@@ -16623,8 +16711,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank3 C",
-                                    "type": "vcSeg_bank3_2",
+                                    "name": "Bank C",
+                                    "type": "vcBank_bank3_C",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -16635,7 +16723,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 195"
                                         }
                                     ]
                                 },
@@ -16653,8 +16741,8 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "bank3 D",
-                                    "type": "vcSeg_bank3_3",
+                                    "name": "Bank D",
+                                    "type": "vcBank_bank3_D",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -16665,7 +16753,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 33"
+                                            "value": "Parameter 196"
                                         }
                                     ]
                                 },

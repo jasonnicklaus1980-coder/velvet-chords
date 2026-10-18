@@ -290,6 +290,23 @@ int main(int argc, char **argv) {
         s->setParameter(s, P_SBANK, 1.f / 3.f); /* bank B: triads */
         display(s, P_PN1, a);
         CHECK(!strcmp(a, "D"), "screen bank B shows triads (%s)", a);
+        /* the four bank buttons: pressing one shows its bank, the others follow, and a press on the bank already up changes nothing */
+        int P_BA = find_param(s, "Bank A"), P_BB = find_param(s, "Bank B"), P_BC = find_param(s, "Bank C"), P_BD = find_param(s, "Bank D");
+        CHECK(P_BA > 0 && P_BB > 0 && P_BC > 0 && P_BD > 0, "bank button params exist");
+        s->setParameter(s, P_BC, 1.f);
+        display(s, P_SBANK, a);
+        CHECK(!strcmp(a, "C") && s->getParameter(s, P_BC) == 1.f && s->getParameter(s, P_BA) == 0.f, "bank C button shows C and clears A (%s)", a);
+        s->setParameter(s, P_BC, 0.f); /* releasing the lit bank */
+        CHECK(!strcmp(a, "C") && s->getParameter(s, P_BC) == 1.f, "a press on the lit bank keeps it (%s)", a);
+        s->setParameter(s, P_BA, 1.f);
+        display(s, P_SBANK, a);
+        CHECK(!strcmp(a, "A") && s->getParameter(s, P_BA) == 1.f && s->getParameter(s, P_BC) == 0.f, "bank A button shows A (%s)", a);
+        s->setParameter(s, P_BD, 1.f);
+        display(s, P_SBANK, a);
+        CHECK(!strcmp(a, "D") && s->getParameter(s, P_BD) == 1.f && s->getParameter(s, P_BA) == 0.f, "bank D button shows D (%s)", a);
+        s->setParameter(s, P_SBANK, 0.f); /* the screen-bank knob moves the buttons too */
+        CHECK(s->getParameter(s, P_BA) == 1.f && s->getParameter(s, P_BD) == 0.f, "bank knob lights bank A");
+        (void)P_BB;
         (void)P_SCALE;
         /* tap pad 3 on screen: it sounds, then stops by itself */
         s->setParameter(s, P_SBANK, 0.f);
