@@ -531,11 +531,17 @@ static void fav_step(Plugin *p, int dir) { /* the next starred preset after the 
 static void analyze_sample(Plugin *p, int slot) {
     if (slot < 0 || slot >= VC_USER_PROGS) return;
     if (p->lp_pending.un[slot]) { snprintf(p->ana_msg, sizeof(p->ana_msg), "Progression %d holds chords: Clear progression first", slot + 1); return; }
-    char path[512], msg[96];
-    snprintf(path, sizeof(path), "%s/Analyze/sample.wav", export_dir());
+    char dir[512], path[512], msg[96];
+    snprintf(dir, sizeof(dir), "%s/Analyze", export_dir());
+    mkdir(dir, 0775); /* made on first use, so the folder is there to copy a sample into */
+    snprintf(path, sizeof(path), "%s/sample.wav", dir);
     float *mono = 0;
     int n = 0, rate = 0;
-    if (va_read_wav(path, &mono, &n, &rate, msg, sizeof(msg)) != 0) { snprintf(p->ana_msg, sizeof(p->ana_msg), "Read failed: %s", msg); return; }
+    if (va_read_wav(path, &mono, &n, &rate, msg, sizeof(msg)) != 0) {
+        if (!strcmp(msg, "Could not open the file")) snprintf(p->ana_msg, sizeof(p->ana_msg), "No sample yet: put sample.wav in Velvet Chords/Analyze");
+        else snprintf(p->ana_msg, sizeof(p->ana_msg), "Read failed: %s", msg);
+        return;
+    }
     VaResult *r = (VaResult *)malloc(sizeof(VaResult));
     if (!r) { free(mono); snprintf(p->ana_msg, sizeof(p->ana_msg), "Out of memory"); return; }
     int rc = va_analyze(mono, n, rate, r, msg, sizeof(msg));

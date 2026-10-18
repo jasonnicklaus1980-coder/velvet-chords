@@ -32,7 +32,7 @@ trap 'systemctl start acvs' EXIT
 i=0; while pidof MPC >/dev/null && [ $i -lt 30 ]; do sleep 1; i=$((i + 1)); done
 pidof MPC >/dev/null && die "MPC did not stop"
 
-mkdir -p "$SO_DIR" "$DATA" /sdcard/Synths
+mkdir -p "$SO_DIR" "$DATA" "$DATA/Analyze" /sdcard/Synths
 cp payload/vst/"$SO" "$SO_DIR/$SO.new" && mv "$SO_DIR/$SO.new" "$SO_DIR/$SO"
 rm -rf "/sdcard/Synths/$SKIN"; cp -a "payload/Synths/$SKIN" "/sdcard/Synths/$SKIN"
 cp -a payload/data/. "$DATA/"

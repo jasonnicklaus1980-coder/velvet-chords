@@ -122,7 +122,7 @@ velocity, the pattern and its 16 steps, rate, swing, gate, length, chance and se
 the bassline, harmony, and the progression with Progression play. Unlike a factory preset it restores all of that, including Silent or an
 arpeggio, because you saved it. Slots are stored with the project. It does not hold your custom pads, saved progressions or imported chords.
 
-**Analyze a sample** (Edit page, bottom): put a WAV file at `Velvet Chords/Analyze/sample.wav` (16-bit PCM or 32-bit float, mono or
+**Analyze a sample** (Edit page, bottom): put a WAV file at `Velvet Chords/Analyze/sample.wav` (the installer and the first press of **Analyze sample** create the `Analyze` folder) (16-bit PCM or 32-bit float, mono or
 stereo, up to 120 seconds is read). Pick the progression slot with the **Progression slot** Q-Link on the Tools page, then press
 **Analyze sample**. Velvet estimates the chords, the key and how sure it is, and writes the chords into that slot in time order, one
 per pad from pad 1. Choose the slot's progression on the Play page (**Progression**) to play them. The status line says what it found,

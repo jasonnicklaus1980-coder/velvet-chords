@@ -850,6 +850,9 @@ int main(int argc, char **argv) {
             fx->setParameter(fx, P_UCL, 1.f);
             display(fx, P_ANS, st);
             CHECK(strstr(st, "Cleared progression 1") != 0, "clearing empties the slot (%s)", st);
+            fx->setParameter(fx, P_AN, 1.f);
+            display(fx, P_ANS, st);
+            CHECK(strstr(st, "No sample yet") != 0 || strstr(st, "Read failed") != 0 || strstr(st, "chords in progression") != 0, "analysis says what to do without a sample (%s)", st);
         }
     }
 
