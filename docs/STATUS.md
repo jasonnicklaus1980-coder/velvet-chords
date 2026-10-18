@@ -4,6 +4,8 @@ This is the feature-completion matrix, the known limitations, and the verificati
 pick it up without the conversation that produced it. "Tested" means an automated test in `make test` passes. "Not verified" means
 no test or device run covers it. Nothing here has been run on an MPC.
 
+**Scope decision:** every item marked *Not built* below has been dropped. It is not planned, and nothing in the repository depends on it.
+
 ## How it is built and tested
 
 - `make test` builds natively and runs: the engine tests (`tests/test_engine.c`, about 2.8 million checks), the plugin host tests
@@ -66,10 +68,14 @@ Install with the steps in `docs/INSTALL.md`, then:
 7. **Save progression** (Perform page), then **Save** a user preset (Tools page); change things, **Load** it back; **Export file** and check `user-preset-N.vcpreset` appears in the Velvet Chords folder.
 8. The muting check: put drums on one track and Velvet Chords on another, record or play drums while holding chords. Note the MIDI out setting, the MIDI channel, whether the track input is "all inputs", and the MPC OS version, and report whether the drums stop.
 
-## What is left, in the order I would do it
+## Dropped (decided not to build)
 
-1. Whatever step 1-8 above turns up on the device. This is the most valuable next step.
-2. Phase 8: pattern chaining, then per-step probability and velocity.
-3. Phase 11: search for the factory list, and a way to name user presets.
-4. Phase 10: MIDI recording and drag-and-drop, only after checking what the MPC host supports.
-5. Phase 12: the full UI pass, with the device in hand.
+- Drag-and-drop reordering and a step-by-step progression editor.
+- User-defined scales.
+- Humanization, step-density controls and a piano-roll view.
+- Pattern chaining, per-step probability and velocity, and genre sequencer templates.
+- Preset search, and naming user presets.
+- MIDI recording and drag-and-drop export.
+- A full UI pass beyond the pages that exist.
+
+What remains useful is the device check above: run the checklist on an MPC and report what it shows.
