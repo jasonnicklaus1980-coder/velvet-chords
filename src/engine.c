@@ -617,6 +617,7 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
         memset(e->pad_map, -1, sizeof(e->pad_map));
     }
     if (e->learn_all > 0) {       /* Learn all 16 pads: whatever note each physical pad sends */
+        if (e->pad_map[note] >= 0) return; /* a pad already learned in this round: the next slot needs a different pad */
         int k = e->learn_all - 1;
         for (int n = 0; n < 128; n++) if (e->pad_map[n] == k) e->pad_map[n] = -1;
         e->pad_map[note] = (signed char)k;

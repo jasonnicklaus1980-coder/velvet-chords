@@ -522,6 +522,20 @@ static void test_tools(void) {
     run(&e, 400, 512, L, R);
     CHECK(en_owner_count(&e) == 0 && sy_active(&e.synth) == 0, "switching hold off releases the latched chord");
 
+    /* pressing one pad again while learning doesn't use up the next slot */
+    {
+        static const int SENDS[16] = {48, 49, 50, 51, 44, 45, 46, 47, 40, 41, 42, 43, 36, 37, 38, 39};
+        en_init(&e, 48000.f);
+        e.lp.mode = VC_MODE_RNB; e.dirty = 1;
+        e.learn_all = 1;
+        for (int r = 0; r < 5; r++) { en_push_midi(&e, 0, 0x90, 48, 100); run(&e, 1, 512, L, R); en_push_midi(&e, 0, 0x80, 48, 0); run(&e, 1, 512, L, R); }
+        CHECK(e.learn_all == 2 && e.pad_map[48] == 0, "five hits on pad 1 learn only pad 1 (slot %d)", e.learn_all);
+        for (int k = 1; k < 16; k++) { en_push_midi(&e, 0, 0x90, (unsigned char)SENDS[k], 100); run(&e, 1, 512, L, R); en_push_midi(&e, 0, 0x80, (unsigned char)SENDS[k], 0); run(&e, 1, 512, L, R); }
+        int ok = e.map_set && e.learn_all == 0;
+        for (int k = 0; k < 16; k++) if (en_pad_index(&e, SENDS[k]) != k) ok = 0;
+        CHECK(ok, "learning still completes when each pad is hit once after the repeats");
+    }
+
     /* Learn all 16 pads: an MPC whose pads send rows top-down (pad 1 = note 48 ... pad 13 = note 36) */
     {
         static const int SENDS[16] = {48, 49, 50, 51, 44, 45, 46, 47, 40, 41, 42, 43, 36, 37, 38, 39};
