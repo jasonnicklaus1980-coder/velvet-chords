@@ -522,6 +522,29 @@ static void test_tools(void) {
     run(&e, 400, 512, L, R);
     CHECK(en_owner_count(&e) == 0 && sy_active(&e.synth) == 0, "switching hold off releases the latched chord");
 
+    /* Humanize: the same pad hit wanders in velocity when it is on, and repeats exactly when it is off */
+    {
+        en_init(&e, 48000.f);
+        e.lp.mode = VC_MODE_RNB; e.dirty = 1; e.midi_out = 1;
+        int vmin = 127, vmax = 0, vmin0 = 127, vmax0 = 0;
+        e.humanize = 1.f;
+        for (int k = 0; k < 8; k++) {
+            en_push_midi(&e, 0, 0x90, 36, 100); run(&e, 1, 512, L, R);
+            for (int i = 0; i < e.nout; i++) if ((e.out[i].d[0] & 0xF0) == 0x90) { int v = e.out[i].d[2]; if (v < vmin) vmin = v; if (v > vmax) vmax = v; }
+            e.nout = 0;
+            en_push_midi(&e, 0, 0x80, 36, 0); run(&e, 1, 512, L, R); e.nout = 0;
+        }
+        e.humanize = 0.f;
+        for (int k = 0; k < 8; k++) {
+            en_push_midi(&e, 0, 0x90, 36, 100); run(&e, 1, 512, L, R);
+            for (int i = 0; i < e.nout; i++) if ((e.out[i].d[0] & 0xF0) == 0x90) { int v = e.out[i].d[2]; if (v < vmin0) vmin0 = v; if (v > vmax0) vmax0 = v; }
+            e.nout = 0;
+            en_push_midi(&e, 0, 0x80, 36, 0); run(&e, 1, 512, L, R); e.nout = 0;
+        }
+        CHECK(vmax > vmin, "humanize spreads hit velocities (%d..%d)", vmin, vmax);
+        CHECK(vmax0 == vmin0, "humanize off repeats the velocity (%d..%d)", vmin0, vmax0);
+    }
+
     /* the MPC's all notes off / all sound off (sent when a recording starts) don't cut a chord that is still held */
     {
         en_init(&e, 48000.f);

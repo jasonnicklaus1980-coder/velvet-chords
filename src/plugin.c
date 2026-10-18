@@ -58,7 +58,7 @@ enum {
     P_PRESET_GENRE, P_PRESET_VAR,
     P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS, P_ANALYZE, P_ANA_STATUS, P_UPROG_CLEAR,
     P_BANK_A, P_BANK_B, P_BANK_C, P_BANK_D, /* one button per screen bank, in place of the bank segments */
-    P_MIDI_LOG, P_REVERB, P_SOUND_X,
+    P_MIDI_LOG, P_REVERB, P_SOUND_X, P_HUMAN,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -230,6 +230,7 @@ static void init_param_info(void) {
     P(P_MIDI_LOG, "MIDI log", 2, 0.f, 0)
     P(P_REVERB, "Reverb", 0, 0.25f, 0)
     P(P_SOUND_X, "Sound extra", 5, 0.f, 0)
+    P(P_HUMAN, "Humanize", 0, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -1004,6 +1005,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
         if (from_host && idx_of(p, P_SOUND_X)) set_param(p, P_SOUND_X, 0.f, 0);
         e->synth.sound = sound_index(p); break;
     case P_SOUND_X: e->synth.sound = sound_index(p); break;
+    case P_HUMAN: e->humanize = v; break;
     case P_TONE: e->synth.tone = v; break;
     case P_RELEASE: e->synth.release = v; break;
     case P_VOLUME: e->synth.volume = v; break;
@@ -1222,7 +1224,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_VEL: copy_str(b, VELS[x], sizeof(b)); break;
     case P_SOUND: copy_str(b, SY_SOUND_NAMES[x], sizeof(b)); break;
     case P_SOUND_X: copy_str(b, x == 0 ? "-" : SY_SOUND_NAMES[SY_SILENT + x], sizeof(b)); break;
-    case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
+    case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
     case P_PAD_BASE:
         if (e->map_set) { copy_str(b, "Learned layout", sizeof(b)); break; }
         { char nn[8]; x = e->pad_base; vc_note_name(x, 0, nn, sizeof(nn)); snprintf(b, sizeof(b), "%s (%d)", nn, x); }

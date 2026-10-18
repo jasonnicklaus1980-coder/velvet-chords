@@ -158,6 +158,8 @@ typedef struct Engine {
     int shift_keys;
     unsigned char shift_pending[SHIFT_COUNT];   /* presses waiting for the host thread */
     unsigned rng;
+    float humanize;          /* 0..1: how much each pad hit's velocity wanders (Humanize parameter) */
+    unsigned hum_rng;
     int out_ref[128];
 
     MidiMsg in[EN_MIDI_IN];

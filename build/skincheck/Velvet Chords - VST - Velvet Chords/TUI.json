@@ -14190,6 +14190,36 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
+                                    "name": "Humanize (velocity)",
+                                    "type": "vcField_188x30_18_ececf3_e",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 200"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "Yes",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "664 580 188 30",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
                                     "name": "Export MIDI",
                                     "type": "vcField_180x36_14_a7a7b8_r",
                                     "data": {

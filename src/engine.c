@@ -190,6 +190,7 @@ void en_init(Engine *e, float sr) {
     e->edit_pad_request = -1;
     e->edit_follow = 1;
     e->rng = 0x12345u;
+    e->hum_rng = 0x2F6B3u;
     e->gate = 0.9f;
     for (int k = 0; k < EN_ARP_LANES; k++) {
         e->lanes[k].order = ARP_OFF;
@@ -607,6 +608,15 @@ int en_pad_index(const Engine *e, int note) {
     return (idx >= 0 && idx < VC_PADS) ? idx : -1;
 }
 
+/* Humanize: each hit's velocity wanders by up to 20% at full setting, from a seeded generator so a take can be repeated */
+static float humanize_vel(Engine *e, float v) {
+    if (e->humanize <= 0.f) return v;
+    e->hum_rng = e->hum_rng * 1664525u + 1013904223u;
+    float r = (float)(e->hum_rng >> 8) / 8388608.f - 1.f;   /* -1..1 */
+    v *= 1.f + e->humanize * 0.2f * r;
+    return v < 0.05f ? 0.05f : v > 1.f ? 1.f : v;
+}
+
 static void pad_on(Engine *e, int note, int vel, int frame) {
     e->last_note_in = note;
     e->events_changed = 1;
@@ -653,7 +663,7 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
         int hn = harmony_note(e, r->notes[0]);
         if (hn >= 0 && hn != r->notes[0]) { r->notes[1] = (unsigned char)hn; r->n = 2; } /* the harmony voice shares the owner, so it is released with it */
         memset(r->sounding, 0, sizeof(r->sounding));
-        r->vel = r->vel_base = en_vel_curve(e->vel_curve, vel);
+        r->vel = r->vel_base = humanize_vel(e, en_vel_curve(e->vel_curve, vel));
         e->pad_owner[note] = r->owner;
         for (int s = 0; s < r->n; s++) note_on_slot(e, r, s, frame);
         return;
@@ -687,7 +697,7 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
     r->n = v->n;
     memcpy(r->notes, v->notes, (size_t)v->n);
     memset(r->sounding, 0, sizeof(r->sounding));
-    r->vel = en_vel_curve(e->vel_curve, vel);
+    r->vel = humanize_vel(e, en_vel_curve(e->vel_curve, vel));
     e->pad_owner[note] = r->owner;
 
     r->vel_base = r->vel;

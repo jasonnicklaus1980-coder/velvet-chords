@@ -522,6 +522,7 @@ class Skin:
         self.readout(c, bg, "Now playing", R, rows[4] + 44, 588, 30, size=14, colour=ACCENT)
         self.action_button(c, bg, "export", "Export MIDI", "Export MIDI", R, rows[5])
         self.value_field(c, bg, "Reverb", R + 204, rows[5] + 60, 188, h=30, caption="Reverb")
+        self.value_field(c, bg, "Humanize", R, rows[5] + 60, 188, h=30, caption="Humanize (velocity)")
         self.readout(c, bg, "Export MIDI", R + 204, rows[5], 180, size=14)
         self.action_button(c, bg, "uprog_save", "Save progression", "Save progression", R + 396, rows[5], w=192)
         self.page("Perform", 1, c, "vc_bg_perform.png", bg)

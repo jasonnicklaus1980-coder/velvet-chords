@@ -195,6 +195,7 @@ The grid shows the 16 steps. Tap a cell to set what a step does: **Accent** or *
 | Sound, Tone, Release, Volume | Built-in sound: Electric piano, Rhodes, Wurlitzer, Bright Rhodes, Clavinet, Piano, Soft pad, Poly synth, Strings, Supersaw, Choir, Brass, Harp, Organ, Marimba, Vibraphone, Nylon guitar, Pluck, Music box, or *Silent* (MIDI out only). *Tone* brightens or darkens every sound |
 | Sound extra | Four more sounds: FM bell, Synth bass, Glass pad, Saw lead. Picking a sound from the Instrument grid turns it off again |
 | Reverb | Room reverb on the built-in sound. 25% by default; 0% is dry, the sound as it was before reverb |
+| Humanize | How much each pad hit's velocity wanders, up to 20% at 100%. 0% plays every hit at the same velocity |
 | Pad 1 note, Learn pad 1 | Which incoming note is pad A01 (pads 2-64 follow in order) |
 | Learn all 16 pads | If the pads come out in the wrong order: press it, then hit MPC pads 1 to 16 in order, one hit each. Hitting a pad that is already learned does nothing, so press the next pad. Velvet Chords remembers each pad's note (banks B-D follow) and saves it with the project. Make sure the MPC's own PAD PERFORM is off on this track first, because it changes which notes the pads send |
 | MIDI out | Off, To MPC (plugin MIDI output, routing untested), Virtual port (*Velvet Chords Out*), or both |
