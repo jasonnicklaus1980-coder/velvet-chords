@@ -43,7 +43,7 @@ no test or device run covers it. Nothing here has been run on an MPC.
 | 12 UI | Six pages, Roman numerals on chord tiles, Progression, Bassline, Harmony, pattern and preset controls | Skin checked and previewed (`docs/skin-preview/`). **Not seen on an MPC** |
 | 13 real time | No heap allocation on the audio path | Tested with an allocation probe: 0 calls in about 12,000 blocks |
 | 13 real time | No stuck notes under random play | Tested (random pads, sustain, patterns, arpeggio, progression, bass, transport) |
-| 14 testing | Sanitizers on the engine tests | Clean when last run (AddressSanitizer, UBSan) |
+| 14 testing | Sanitizers (AddressSanitizer, UBSan) on the engine and host suites | Clean on the final code (commit `b2424f1`). Leak checking was off for the host suite, because the test never closes its plugin instances |
 
 ## Known limitations
 
