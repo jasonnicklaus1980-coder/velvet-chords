@@ -103,7 +103,9 @@ static void chord_from_pad(SmartChord *sc, const PadChord *pc) {
     sc->root = pc->spec.root;
     sc->bass = pc->spec.bass >= 0 ? pc->spec.bass : pc->spec.root;
     for (int i = 0; i < 12; i++) if (mask & (1 << ((sc->root + i) % 12))) sc->pcs[sc->npcs++] = (sc->root + i) % 12;
-    strncpy(sc->name, pc->name, sizeof(sc->name) - 1);
+    int k = 0;
+    while (k < (int)sizeof(sc->name) - 1 && pc->name[k]) { sc->name[k] = pc->name[k]; k++; }
+    sc->name[k] = 0;
 }
 
 /* rebuild the 16 smart notes from the followed chord */

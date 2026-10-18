@@ -980,7 +980,6 @@ static void test_note_by_note(void) {
 static unsigned st_rnd(unsigned *s) { *s = *s * 1103515245u + 12345u; return (*s >> 16) & 0x7fff; }
 
 static void test_stuck_notes(void) {
-    static Hit h[4000];
     static const char STEPS[] = ".xXbuU-";
     int trials = 40, bad_range = 0, unbalanced = 0;
     for (int t = 0; t < trials; t++) {

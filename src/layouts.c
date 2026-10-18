@@ -212,7 +212,7 @@ static void build_layout(const LayoutParams *p, const CustomPad *custom, PadChor
             char tr[16];
             vc_roman(key, &tc, tr, sizeof(tr));
             strcpy(pc->roman, "V7/");
-            strncat(pc->roman, tr, sizeof(pc->roman) - 5);
+            strncat(pc->roman, tr, sizeof(pc->roman) - strlen(pc->roman) - 1);
         }
         /* bank C: borrowed chords and common substitutions */
         static const KitEntry BORROW_FROM_MINOR[8] = {{0, "m7", -1}, {2, "m7b5", -1}, {3, "maj7", -1}, {5, "m7", -1}, {7, "m7", -1}, {8, "maj7", -1}, {10, "7", -1}, {1, "maj7", -1}};

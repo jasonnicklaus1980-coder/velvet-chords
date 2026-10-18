@@ -1031,11 +1031,6 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
 
 /* ---------- display text ---------- */
 
-static int ui_flats(const Plugin *p) {
-    const LayoutParams *lp = &p->lp_pending;
-    return lp->mode == VC_MODE_SONG ? vc_song_flats(&VC_SONGS[lp->song], lp->transpose) : vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
-}
-
 /* what a smart note is, relative to the chord it follows */
 static const char *smart_degree(const Engine *e, int note) {
     static const char *DEG[12] = {"root", "b9", "9th", "b3", "3rd", "11th", "#11", "5th", "b13", "6th", "b7", "7th"};
@@ -1407,6 +1402,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
     load_riff_fields(p);
     load_note_field(p);
     load_edit_fields(p);
+    sync_banks(p); /* a project saved before the bank buttons existed has none of their values */
     sync_layout(p);
     return 1;
 }
