@@ -643,9 +643,8 @@ static void apply_preset(Plugin *p, int x) {
     const VcPreset *s = &VC_PRESETS[x - 1];
     set_param(p, P_KEY, norm_of(P_KEY, s->key), 0); /* the genre's key and scale; the layout follows, custom pads stay */
     set_param(p, P_SCALE, norm_of(P_SCALE, s->scale), 0);
-    /* a preset never makes sound or arpeggio you didn't choose: Silent stays silent, and the arpeggio stays as it is
-     * unless you already have one running (then the preset sets its order, rate and octaves) */
-    if (idx_of(p, P_SOUND) != SY_SILENT) { set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0); set_param(p, P_SOUND_X, 0.f, 0); }
+    /* a preset never changes the instrument: the Sound and Sound extra you chose stay as they are. The arpeggio stays
+     * as it is unless you already have one running (then the preset sets its order, rate and octaves) */
     set_param(p, P_TONE, s->tone, 0);
     set_param(p, P_RELEASE, s->release, 0);
     set_param(p, P_VOLUME, s->volume, 0);

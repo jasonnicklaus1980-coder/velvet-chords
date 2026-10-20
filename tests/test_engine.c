@@ -883,7 +883,7 @@ static void test_midi_out_channel(void) {
 /* ---------- riffs, shift keys, presets, note-by-note chords (ported from Velvet Chords 1.1) ---------- */
 
 static void test_presets(void) {
-    CHECK(VC_NUM_PRESETS == 530, "530 factory presets (%d)", VC_NUM_PRESETS);
+    CHECK(VC_NUM_PRESETS == 600, "600 factory presets (%d)", VC_NUM_PRESETS);
     CHECK(VC_NUM_PRESETS % VC_PRESET_VARS == 0, "presets split evenly into genres of %d", VC_PRESET_VARS);
     for (int i = 0; i < VC_NUM_PRESETS; i++) {
         const VcPreset *p = &VC_PRESETS[i];
