@@ -954,7 +954,7 @@ int main(int argc, char **argv) {
             size_t nread = pf ? fread(text, 1, sizeof(text) - 1, pf) : 0;
             if (pf) fclose(pf);
             text[nread] = 0;
-            CHECK(!strncmp(text, "VELVET-PRESET 2\n", 16) && strstr(text, "Tone=0.9") && strstr(text, "Sound=1.0"), "the file has the header and the settings");
+            CHECK(!strncmp(text, "VELVET-PRESET 3\n", 16) && strstr(text, "Tone=0.9") && strstr(text, "Sound=1.0"), "the file has the header and the settings");
 
             fx->setParameter(fx, P_T, 0.2f);
             fx->setParameter(fx, P_UPSV, 1.f); /* the slot now holds Tone 20% */
@@ -1154,7 +1154,7 @@ int main(int argc, char **argv) {
             CHECK(!strcmp(buf, "Dorian"), "preset sets the scale (%s)", buf);
         }
         display(fx, P_TN, buf);
-        CHECK(!strcmp(buf, "45%"), "preset sets Tone (%s)", buf);
+        CHECK(!strcmp(buf, "40%"), "preset sets Tone (%s)", buf);
         fx->setParameter(fx, P_PNX, 1.f);
         display(fx, P_PRE, buf);
         CHECK(!strcmp(buf, "Neo-Soul Keys: Warm"), "Preset next steps to preset 2 (%s)", buf);
@@ -1208,28 +1208,24 @@ int main(int argc, char **argv) {
             CHECK(after == 0.0, "reverb at 0 leaves silence silent");
         }
 
-        /* a preset leaves the instrument alone: the Sound you chose stays after loading any preset */
+        /* a preset plays its genre's sound: the Sound you chose is replaced, and Sound extra goes off */
         {
             char buf2[256];
             int P_SN = find_param(fx, "Sound"), P_SXN = find_param(fx, "Sound extra");
-            fx->setParameter(fx, P_SXN, 0.f);
+            fx->setParameter(fx, P_SXN, 2.f / 4.f);
             fx->setParameter(fx, P_SN, 17.f / 19.f); display(fx, P_SN, buf);      /* Pluck */
             fx->setParameter(fx, P_PRE, 150.f / 900.f);                          /* a preset from another genre */
             display(fx, P_SN, buf2);
-            CHECK(!strcmp(buf2, "Pluck"), "a preset keeps the Sound you chose (%s)", buf2);
-            fx->setParameter(fx, P_SXN, 2.f / 4.f); fx->setParameter(fx, P_PRE, 151.f / 900.f);
-            CHECK(fx->getParameter(fx, P_SXN) == 2.f / 4.f, "a preset keeps Sound extra too");
-            fx->setParameter(fx, P_SXN, 0.f);
+            CHECK(!strcmp(buf2, "Nylon guitar"), "a preset plays its own sound (%s)", buf2); /* Bossa Nova: Wide */
+            CHECK(fx->getParameter(fx, P_SXN) == 0.f, "a preset turns Sound extra off");
             fx->setParameter(fx, P_SN, 1.f);   /* back to Silent, as the note tests below expect */
         }
-        /* a preset leaves the pattern you chose alone */
+        /* a preset sets its genre's rhythm: the pattern its data names, or Off */
         {
-            int P_PATT = find_param(fx, "Pattern"), P_PN = find_param(fx, "Pattern next");
-            fx->setParameter(fx, P_PATT, 0.f);
-            for (int k = 0; k < 3; k++) fx->setParameter(fx, P_PN, 1.f);
+            int P_PATT = find_param(fx, "Pattern");
             fx->setParameter(fx, P_PRE, 40.f / 900.f);
             display(fx, P_PATT, buf);
-            CHECK(!strcmp(buf, "Quarters"), "a preset keeps the pattern you chose (%s)", buf);
+            CHECK(!strcmp(buf, "Gospel drive"), "a preset sets its rhythm (%s)", buf); /* Gospel Chords: Wide */
         }
         /* the host's preset box: Manual plus all 900 presets, past the first hundred, and picking one sets the Preset knob */
         CHECK(fx->numPrograms == 901, "host preset box lists 901 programs (%d)", fx->numPrograms);
@@ -1244,17 +1240,17 @@ int main(int argc, char **argv) {
         CHECK(!strcmp(pk, "Manual"), "program 0 is Manual (%s)", pk);
         fx->dispatcher(fx, effSetProgram, 0, 600, 0, 0);
 
-        /* no preset makes sound or arpeggio you didn't choose: Silent stays, and Arp stays off unless you turned it on */
+        /* every preset sets a playable sound (never Silent), and no preset turns the arpeggio on */
         int P_ARP_ = find_param(fx, "Arp"), bad_sound = 0, bad_arp = 0;
         fx->setParameter(fx, P_ARP_, 0.f);
         for (int k = 1; k <= 900; k++) {
             fx->setParameter(fx, P_PRE, k / 900.f);
             display(fx, P_SND2, buf);
-            bad_sound += strcmp(buf, "Silent (MIDI only)") != 0;
+            bad_sound += strstr(buf, "Silent") != 0;
             display(fx, P_ARP_, buf);
             bad_arp += strcmp(buf, "Off") != 0;
         }
-        CHECK(bad_sound == 0, "no preset replaces Silent (%d presets did)", bad_sound);
+        CHECK(bad_sound == 0, "no preset is Silent (%d were)", bad_sound);
         CHECK(bad_arp == 0, "no preset turns the arpeggio on (%d presets did)", bad_arp);
         fx->setParameter(fx, P_SND2, 0.f);
         fx->setParameter(fx, P_PRE, 0.f);

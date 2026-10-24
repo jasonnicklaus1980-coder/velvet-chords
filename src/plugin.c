@@ -23,7 +23,7 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
-#define CHUNK_VERSION 10 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords */
+#define CHUNK_VERSION 11 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 
@@ -605,6 +605,18 @@ static void load_user_preset(Plugin *p, int slot) {
  * it doesn't know and keeps the default for any setting the file doesn't mention. Out-of-range or non-numeric values are skipped. */
 static const char *export_dir(void);
 
+/* a saved Pattern: before version 11 it counted the fifteen original rhythms (Custom was the sixteenth value); the genre
+ * rhythms come after them, and Custom moves to the end */
+static float pattern_from_saved(float v) {
+    int old = (int)(v * 16.f + 0.5f);
+    if (old < 0) old = 0;
+    if (old > 16) old = 16;
+    return norm_of(P_PATTERN, old == 16 ? EN_NUM_PATTERNS + 1 : old);
+}
+
+/* where Pattern sits in a user preset (its index in the saved settings) */
+static int upre_pattern_slot(void) { for (int k = 0; k < UPRE_NIDS; k++) if (UPRE_IDS[k] == P_PATTERN) return k; return -1; }
+
 /* where Scale sits in a user preset (its index in the saved settings) */
 static int upre_scale_slot(void) { for (int k = 0; k < UPRE_NIDS; k++) if (UPRE_IDS[k] == P_SCALE) return k; return -1; }
 static const char *upre_name(int k) { return k < UPRE_NIDS ? PINFO[UPRE_IDS[k]].name : PINFO[P_STEP0 + (k - UPRE_NIDS)].name; }
@@ -619,7 +631,7 @@ static void export_user_preset(Plugin *p, int slot) {
     upre_path(path, sizeof(path), slot);
     FILE *f = fopen(path, "w");
     if (!f) { snprintf(p->upre_msg, sizeof(p->upre_msg), "Could not write the file"); return; }
-    fprintf(f, "VELVET-PRESET 2\n# Velvet Chords user preset. One setting per line: name=value, with value 0 to 1 (the plugin's own parameter values).\n");
+    fprintf(f, "VELVET-PRESET 3\n# Velvet Chords user preset. One setting per line: name=value, with value 0 to 1 (the plugin's own parameter values).\n");
     for (int k = 0; k < UPRE_NIDS + EN_STEPS; k++) fprintf(f, "%s=%.6f\n", upre_name(k), (double)p->upre[slot][k]);
     int ok = fclose(f) == 0;
     if (ok) snprintf(p->upre_msg, sizeof(p->upre_msg), "Exported slot %d", slot + 1);
@@ -636,7 +648,7 @@ static void import_user_preset(Plugin *p, int slot) {
         fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Not a Velvet preset file"); return;
     }
     int file_ver = atoi(line + 14);
-    if (file_ver < 1 || file_ver > 2) { fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Made by a newer version"); return; }
+    if (file_ver < 1 || file_ver > 3) { fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Made by a newer version"); return; }
     float tmp[UPRE_MAX];
     for (int k = 0; k < UPRE_NIDS; k++) tmp[k] = PINFO[UPRE_IDS[k]].def;
     for (int j = 0; j < EN_STEPS; j++) tmp[UPRE_NIDS + j] = norm_of(P_STEP0 + j, en_step_index('.'));
@@ -652,6 +664,7 @@ static void import_user_preset(Plugin *p, int slot) {
         if (k < 0) continue; /* a setting this version doesn't have */
         if (end == eq + 1 || !(v >= 0.0 && v <= 1.0)) { skipped++; continue; } /* also rejects NaN */
         if (file_ver < 2 && k == upre_scale_slot()) v = scale_from_old((float)v);   /* version 1 files: Scale is out of 16 */
+        if (file_ver < 3 && k == upre_pattern_slot()) v = pattern_from_saved((float)v); /* before version 3: the old rhythm list */
         tmp[k] = (float)v;
         applied++;
     }
@@ -739,8 +752,10 @@ static void apply_preset(Plugin *p, int x) {
     const VcPreset *s = &VC_PRESETS[x - 1];
     set_param(p, P_KEY, norm_of(P_KEY, s->key), 0); /* the genre's key and scale; the layout follows, custom pads stay */
     set_param(p, P_SCALE, norm_of(P_SCALE, s->scale), 0);
-    /* a preset never changes the instrument: the Sound and Sound extra you chose stay as they are. The arpeggio stays
-     * as it is unless you already have one running (then the preset sets its order, rate and octaves) */
+    /* the genre's instrument: a preset plays its own Sound, not an extra one */
+    set_param(p, P_SOUND_X, 0.f, 0);
+    set_param(p, P_SOUND, norm_of(P_SOUND, s->sound), 0);
+    /* the arpeggio stays as it is unless you already have one running (then the preset sets its order, rate and octaves) */
     set_param(p, P_TONE, s->tone, 0);
     set_param(p, P_RELEASE, s->release, 0);
     set_param(p, P_VOLUME, s->volume, 0);
@@ -759,7 +774,11 @@ static void apply_preset(Plugin *p, int x) {
         set_param(p, P_ARP4, 0.f, 0);
     }
     set_param(p, P_VEL, norm_of(P_VEL, s->vel), 0);
-    /* the pattern and its timing are yours: a preset leaves them as they are (its pattern, rate, swing and gate are in the data for reference) */
+    /* the genre's feel: its rhythm, rate, swing and gate (a preset replaces the pattern you were using) */
+    set_param(p, P_PATTERN, norm_of(P_PATTERN, s->pattern), 0);
+    set_param(p, P_PAT_RATE, norm_of(P_PAT_RATE, s->pat_rate), 0);
+    set_param(p, P_SWING, s->swing, 0);
+    set_param(p, P_GATE, (s->gate - 0.1f) / 0.9f, 0);
     set_param(p, P_SMART, norm_of(P_SMART, s->smart), 0);
     set_param(p, P_SMART_MODE, norm_of(P_SMART_MODE, s->smart_mode), 0);
     set_param(p, P_SMART_OCT, norm_of(P_SMART_OCT, s->smart_oct + 2), 0);
@@ -1517,6 +1536,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
         u.u = r32(b, &k);
         if (ver < 8 && i == P_SCALE) u.f = scale_from_old(u.f);
         if (ver < 10 && i == P_MODE) u.f = mode_from_saved(u.f, ver);
+        if (ver < 11 && i == P_PATTERN) u.f = pattern_from_saved(u.f);
         if (i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR) p->val[i] = u.f; /* shown only: the parameters saved with it already hold the preset's values */
         else if (i >= P_RIFF0 && i <= P_RIFF_END) p->val[i] = u.f; /* riff steps are stored as data below */
         else if (i == P_NOTE_IV) p->val[i] = u.f;                  /* the note list is stored as data below */
@@ -1594,6 +1614,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
                 if (j < UPRE_MAX) {
                     float v = (u.f >= 0.f && u.f <= 1.f) ? u.f : 0.f; /* also rejects NaN */
                     if (ver < 8 && j == upre_scale_slot()) v = scale_from_old(v);
+                    if (ver < 11 && j == upre_pattern_slot()) v = pattern_from_saved(v);
                     p->upre[s][j] = v;
                 }
             }

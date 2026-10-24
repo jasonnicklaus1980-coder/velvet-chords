@@ -2,7 +2,8 @@
 #include "progression.h"
 #include <string.h>
 
-/* Original rhythm presets in the spirit of common R&B, soul and Caribbean comping figures (16 steps). */
+/* Rhythm presets, 16 steps each. The first fifteen are in the spirit of R&B, soul and Caribbean comping; the rest follow the
+ * feel of the genres in the factory presets (house, disco, boom bap, trap, drill, amapiano, gqom, breakbeat, bossa, shuffle). */
 const PatternPreset EN_PATTERNS[] = {
     {"Sustain", "X---------------"},
     {"Half notes", "X-------x-------"},
@@ -19,6 +20,18 @@ const PatternPreset EN_PATTERNS[] = {
     {"Dancehall", "b..U..U.b..U..u."},
     {"Afrobeats", "X..x..x...x.x..."},
     {"Half-time", "X-------.....x--"},
+    {"House stabs", "..x...x...x...x."},
+    {"Four on the floor", "X...X...X...X..."},
+    {"Disco drive", "X.x.X.x.X.x.X.x."},
+    {"Boom bap lazy", "X...x..x..x.x..."},
+    {"Trap sparse", "X.......x......."},
+    {"Trap triplet", "X.x..x..X.x..x.."},
+    {"Drill", "X..x.x....x.x..."},
+    {"Amapiano log", "X..x..x..x.x..x."},
+    {"Gqom stab", "X...x.......X..."},
+    {"Breakbeat", "X..x...X..x..x.."},
+    {"Bossa 3-2", "X..x..x...x..x.."},
+    {"Shuffle", "X.xX.xX.xX.xX.x."},
 };
 const int EN_NUM_PATTERNS = (int)(sizeof(EN_PATTERNS) / sizeof(EN_PATTERNS[0]));
 const char EN_STEP_CHARS[] = ".xXbuU-";
