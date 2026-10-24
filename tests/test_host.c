@@ -775,6 +775,49 @@ int main(int argc, char **argv) {
         b->dispatcher(b, effClose, 0, 0, 0, 0);
     }
 
+    /* MIDI import reads the Import folder and its subfolders, and loads a file from a subfolder by its path */
+    {
+        const char *edir = getenv("VC_EXPORT_DIR");
+        char dir[700], p1[800];
+        static const unsigned char SMF[] = { /* format 0, one chord (C E G) held for a bar, 480 ticks a quarter */
+            'M','T','h','d', 0,0,0,6, 0,0, 0,1, 1,0xE0,
+            'M','T','r','k', 0,0,0,29,
+            0,0xFF,0x51,3,0x07,0xA1,0x20,
+            0,0x90,60,100, 0,0x90,64,100, 0,0x90,67,100,
+            0x83,0x60,0x80,60,0, 0,0x80,64,0, 0,0x80,67,0,
+            0,0xFF,0x2F,0 };
+        CHECK(edir != NULL, "the test has an export folder");
+        if (edir) {
+            snprintf(dir, sizeof(dir), "%s/Import", edir);
+            snprintf(p1, sizeof(p1), "rm -rf '%s' && mkdir -p '%s/Songs' '%s/x1/x2/x3/x4/x5' '%s/.hidden'", dir, dir, dir, dir);
+            system(p1);
+            const char *files[] = {"top.mid", "Songs/one.mid", "x1/x2/x3/x4/ok.mid", "x1/x2/x3/x4/x5/too-deep.mid", ".hidden/h.mid", "notes.txt"};
+            for (unsigned k = 0; k < sizeof(files) / sizeof(files[0]); k++) {
+                snprintf(p1, sizeof(p1), "%s/%s", dir, files[k]);
+                FILE *fp = fopen(p1, "wb");
+                if (fp) { fwrite(SMF, 1, sizeof(SMF), fp); fclose(fp); }
+            }
+            AEffect *im = open_fx();
+            int PF = find_param(im, "Import file"), PL = find_param(im, "Import load"), PS = find_param(im, "Import status");
+            int PN = find_param(im, "Import next");
+            char name[160], st[160];
+            const char *want[] = {"Songs/one.mid", "top.mid", "x1/x2/x3/x4/ok.mid"};
+            int listed_ok = 1;
+            for (int k = 0; k < 3; k++) {
+                display(im, PF, name);
+                if (strcmp(name, want[k])) listed_ok = 0;
+                im->setParameter(im, PN, 1.f);
+            }
+            CHECK(listed_ok, "Import lists the subfolder files by path, in order, and skips hidden and deep ones");
+            display(im, PF, name);
+            CHECK(!strcmp(name, want[0]), "the picker starts at the first file (%s)", name);
+            im->setParameter(im, PL, 1.f);
+            display(im, PS, st);
+            CHECK(!strcmp(st, "Loaded 1 chord from Songs/one.mid"), "a file in a subfolder loads (%s)", st);
+            im->dispatcher(im, effClose, 0, 0, 0, 0);
+        }
+    }
+
     /* loading a project redraws the pads: the screen shows the loaded key and scale straight away */
     {
         AEffect *a = open_fx(), *b = open_fx();

@@ -23,6 +23,8 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
+#define IMP_NAME 96     /* longest path kept for an import file */
+#define IMP_MAX_DEPTH 4 /* folder levels below Import that are searched */
 #define CHUNK_VERSION 12 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts) */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
@@ -303,7 +305,7 @@ typedef struct {
     /* MIDI import */
     ImportChord imp[VC_PADS], imp_engine[VC_PADS];
     int nimp;
-    char imp_files[64][64];
+    char imp_files[64][IMP_NAME];   /* the .mid files in the Import folder and its subfolders, as paths from it */
     int nfiles;
     char imp_status[96];
     unsigned key_seen;
@@ -917,23 +919,40 @@ static int ends_with_mid(const char *n) {
     return (!strcmp(e, ".mid") || !strcmp(e, ".MID") || !strcmp(e, ".Mid") || !strcmp(e5, ".midi") || !strcmp(e5, ".MIDI"));
 }
 
+/* walks the Import folder and its subfolders (up to IMP_MAX_DEPTH levels) and lists every .mid file by its path from
+ * Import, such as "Songs/blues.mid". Links and hidden entries are skipped. */
+static void scan_import_dir(Plugin *p, const char *rel, int depth) {
+    char path[600];
+    if (rel[0]) snprintf(path, sizeof(path), "%s/%s", import_dir(), rel); else copy_str(path, import_dir(), sizeof(path));
+    DIR *d = opendir(path);
+    if (!d) return;
+    struct dirent *de;
+    while ((de = readdir(d)) && p->nfiles < 64) {
+        if (de->d_name[0] == '.') continue;
+        char child_rel[IMP_NAME], child[600];
+        if (rel[0]) snprintf(child_rel, sizeof(child_rel), "%s/%s", rel, de->d_name);
+        else copy_str(child_rel, de->d_name, sizeof(child_rel));
+        if (strlen(child_rel) >= IMP_NAME - 1) continue;
+        snprintf(child, sizeof(child), "%s/%s", import_dir(), child_rel);
+        struct stat st;
+        if (lstat(child, &st)) continue;
+        if (S_ISDIR(st.st_mode)) { if (depth < IMP_MAX_DEPTH) scan_import_dir(p, child_rel, depth + 1); }
+        else if (S_ISREG(st.st_mode) && ends_with_mid(de->d_name)) copy_str(p->imp_files[p->nfiles++], child_rel, IMP_NAME);
+    }
+    closedir(d);
+}
+
 static void scan_import_files(Plugin *p) {
     mkdir(export_dir(), 0775);
     mkdir(import_dir(), 0775);
     p->nfiles = 0;
-    DIR *d = opendir(import_dir());
-    if (!d) return;
-    struct dirent *de;
-    while ((de = readdir(d)) && p->nfiles < 64) {
-        if (de->d_name[0] == '.' || !ends_with_mid(de->d_name) || strlen(de->d_name) >= 64) continue;
-        copy_str(p->imp_files[p->nfiles++], de->d_name, 64);
-    }
-    closedir(d);
-    for (int i = 1; i < p->nfiles; i++) { /* alphabetical */
-        char t[64]; copy_str(t, p->imp_files[i], 64);
+    scan_import_dir(p, "", 0);
+    for (int i = 1; i < p->nfiles; i++) { /* alphabetical, so a folder's files sit together */
+        char t[IMP_NAME];
+        copy_str(t, p->imp_files[i], IMP_NAME);
         int j = i - 1;
-        while (j >= 0 && strcmp(p->imp_files[j], t) > 0) { copy_str(p->imp_files[j + 1], p->imp_files[j], 64); j--; }
-        copy_str(p->imp_files[j + 1], t, 64);
+        while (j >= 0 && strcmp(p->imp_files[j], t) > 0) { copy_str(p->imp_files[j + 1], p->imp_files[j], IMP_NAME); j--; }
+        copy_str(p->imp_files[j + 1], t, IMP_NAME);
     }
 }
 
