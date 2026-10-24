@@ -3159,7 +3159,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_0_34x64",
+                    "key": "vcKey_0_56x100",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3201,8 +3201,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_0_34x64_on.png",
-                                        "offImage": "vc_key_0_34x64_off.png",
+                                        "onImage": "vc_key_0_56x100_on.png",
+                                        "offImage": "vc_key_0_56x100_off.png",
                                         "buttonId": 0,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3219,7 +3219,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 34 64",
+                                    "bounds": "0 0 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3227,7 +3227,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_2_34x64",
+                    "key": "vcKey_2_56x100",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3269,8 +3269,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_2_34x64_on.png",
-                                        "offImage": "vc_key_2_34x64_off.png",
+                                        "onImage": "vc_key_2_56x100_on.png",
+                                        "offImage": "vc_key_2_56x100_off.png",
                                         "buttonId": 2,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3287,7 +3287,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 34 64",
+                                    "bounds": "0 0 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3295,7 +3295,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_4_34x64",
+                    "key": "vcKey_4_56x100",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3337,8 +3337,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_4_34x64_on.png",
-                                        "offImage": "vc_key_4_34x64_off.png",
+                                        "onImage": "vc_key_4_56x100_on.png",
+                                        "offImage": "vc_key_4_56x100_off.png",
                                         "buttonId": 4,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3355,7 +3355,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 34 64",
+                                    "bounds": "0 0 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3363,7 +3363,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_5_34x64",
+                    "key": "vcKey_5_56x100",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3405,8 +3405,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_5_34x64_on.png",
-                                        "offImage": "vc_key_5_34x64_off.png",
+                                        "onImage": "vc_key_5_56x100_on.png",
+                                        "offImage": "vc_key_5_56x100_off.png",
                                         "buttonId": 5,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3423,7 +3423,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 34 64",
+                                    "bounds": "0 0 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3431,7 +3431,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_7_34x64",
+                    "key": "vcKey_7_56x100",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3473,8 +3473,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_7_34x64_on.png",
-                                        "offImage": "vc_key_7_34x64_off.png",
+                                        "onImage": "vc_key_7_56x100_on.png",
+                                        "offImage": "vc_key_7_56x100_off.png",
                                         "buttonId": 7,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3491,7 +3491,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 34 64",
+                                    "bounds": "0 0 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3499,7 +3499,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_9_34x64",
+                    "key": "vcKey_9_56x100",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3541,8 +3541,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_9_34x64_on.png",
-                                        "offImage": "vc_key_9_34x64_off.png",
+                                        "onImage": "vc_key_9_56x100_on.png",
+                                        "offImage": "vc_key_9_56x100_off.png",
                                         "buttonId": 9,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3559,7 +3559,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 34 64",
+                                    "bounds": "0 0 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3567,7 +3567,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_11_34x64",
+                    "key": "vcKey_11_56x100",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3609,8 +3609,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_11_34x64_on.png",
-                                        "offImage": "vc_key_11_34x64_off.png",
+                                        "onImage": "vc_key_11_56x100_on.png",
+                                        "offImage": "vc_key_11_56x100_off.png",
                                         "buttonId": 11,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3627,7 +3627,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 34 64",
+                                    "bounds": "0 0 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3635,7 +3635,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_1_30x54",
+                    "key": "vcKey_1_34x60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3677,8 +3677,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_1_30x54_on.png",
-                                        "offImage": "vc_key_1_30x54_off.png",
+                                        "onImage": "vc_key_1_34x60_on.png",
+                                        "offImage": "vc_key_1_34x60_off.png",
                                         "buttonId": 1,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3695,7 +3695,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 54",
+                                    "bounds": "0 0 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3703,7 +3703,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_3_30x54",
+                    "key": "vcKey_3_34x60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3745,8 +3745,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_3_30x54_on.png",
-                                        "offImage": "vc_key_3_30x54_off.png",
+                                        "onImage": "vc_key_3_34x60_on.png",
+                                        "offImage": "vc_key_3_34x60_off.png",
                                         "buttonId": 3,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3763,7 +3763,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 54",
+                                    "bounds": "0 0 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3771,7 +3771,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_6_30x54",
+                    "key": "vcKey_6_34x60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3813,8 +3813,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_6_30x54_on.png",
-                                        "offImage": "vc_key_6_30x54_off.png",
+                                        "onImage": "vc_key_6_34x60_on.png",
+                                        "offImage": "vc_key_6_34x60_off.png",
                                         "buttonId": 6,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3831,7 +3831,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 54",
+                                    "bounds": "0 0 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3839,7 +3839,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_8_30x54",
+                    "key": "vcKey_8_34x60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3881,8 +3881,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_8_30x54_on.png",
-                                        "offImage": "vc_key_8_30x54_off.png",
+                                        "onImage": "vc_key_8_34x60_on.png",
+                                        "offImage": "vc_key_8_34x60_off.png",
                                         "buttonId": 8,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3899,7 +3899,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 54",
+                                    "bounds": "0 0 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3907,7 +3907,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_10_30x54",
+                    "key": "vcKey_10_34x60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3949,8 +3949,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_10_30x54_on.png",
-                                        "offImage": "vc_key_10_30x54_off.png",
+                                        "onImage": "vc_key_10_34x60_on.png",
+                                        "offImage": "vc_key_10_34x60_off.png",
                                         "buttonId": 10,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3967,7 +3967,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 54",
+                                    "bounds": "0 0 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -6425,7 +6425,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 0",
-                                    "type": "vcKey_0_34x64",
+                                    "type": "vcKey_0_56x100",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6446,7 +6446,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "656 186 34 64",
+                                    "bounds": "656 186 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6455,7 +6455,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 2",
-                                    "type": "vcKey_2_34x64",
+                                    "type": "vcKey_2_56x100",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6476,7 +6476,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "690 186 34 64",
+                                    "bounds": "712 186 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6485,7 +6485,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 4",
-                                    "type": "vcKey_4_34x64",
+                                    "type": "vcKey_4_56x100",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6506,7 +6506,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "724 186 34 64",
+                                    "bounds": "768 186 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6515,7 +6515,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 5",
-                                    "type": "vcKey_5_34x64",
+                                    "type": "vcKey_5_56x100",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6536,7 +6536,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "758 186 34 64",
+                                    "bounds": "824 186 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6545,7 +6545,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 7",
-                                    "type": "vcKey_7_34x64",
+                                    "type": "vcKey_7_56x100",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6566,7 +6566,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "792 186 34 64",
+                                    "bounds": "880 186 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6575,7 +6575,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 9",
-                                    "type": "vcKey_9_34x64",
+                                    "type": "vcKey_9_56x100",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6596,7 +6596,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "826 186 34 64",
+                                    "bounds": "936 186 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6605,7 +6605,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 11",
-                                    "type": "vcKey_11_34x64",
+                                    "type": "vcKey_11_56x100",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6626,7 +6626,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "860 186 34 64",
+                                    "bounds": "992 186 56 100",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6635,7 +6635,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 1",
-                                    "type": "vcKey_1_30x54",
+                                    "type": "vcKey_1_34x60",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6656,7 +6656,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "675 186 30 54",
+                                    "bounds": "695 186 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6665,7 +6665,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 3",
-                                    "type": "vcKey_3_30x54",
+                                    "type": "vcKey_3_34x60",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6686,7 +6686,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "709 186 30 54",
+                                    "bounds": "751 186 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6695,7 +6695,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 6",
-                                    "type": "vcKey_6_30x54",
+                                    "type": "vcKey_6_34x60",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6716,7 +6716,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "777 186 30 54",
+                                    "bounds": "863 186 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6725,7 +6725,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 8",
-                                    "type": "vcKey_8_30x54",
+                                    "type": "vcKey_8_34x60",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6746,7 +6746,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "811 186 30 54",
+                                    "bounds": "919 186 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6755,7 +6755,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 10",
-                                    "type": "vcKey_10_30x54",
+                                    "type": "vcKey_10_34x60",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6776,7 +6776,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "845 186 30 54",
+                                    "bounds": "975 186 34 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6806,7 +6806,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "666 230 14 14",
+                                    "bounds": "677 266 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6836,7 +6836,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "700 230 14 14",
+                                    "bounds": "733 266 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6866,7 +6866,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "734 230 14 14",
+                                    "bounds": "789 266 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6896,7 +6896,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "768 230 14 14",
+                                    "bounds": "845 266 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6926,7 +6926,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "802 230 14 14",
+                                    "bounds": "901 266 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6956,7 +6956,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "836 230 14 14",
+                                    "bounds": "957 266 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6986,7 +6986,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "870 230 14 14",
+                                    "bounds": "1013 266 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -7016,7 +7016,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "683 220 14 14",
+                                    "bounds": "705 226 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -7046,7 +7046,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "717 220 14 14",
+                                    "bounds": "761 226 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -7076,7 +7076,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "785 220 14 14",
+                                    "bounds": "873 226 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -7106,7 +7106,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "819 220 14 14",
+                                    "bounds": "929 226 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -7136,7 +7136,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "853 220 14 14",
+                                    "bounds": "985 226 14 14",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -15306,7 +15306,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_0_30x56",
+                    "key": "vcKey_0_48x86",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15348,8 +15348,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_0_30x56_on.png",
-                                        "offImage": "vc_key_0_30x56_off.png",
+                                        "onImage": "vc_key_0_48x86_on.png",
+                                        "offImage": "vc_key_0_48x86_off.png",
                                         "buttonId": 0,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15366,7 +15366,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 56",
+                                    "bounds": "0 0 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15374,7 +15374,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_2_30x56",
+                    "key": "vcKey_2_48x86",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15416,8 +15416,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_2_30x56_on.png",
-                                        "offImage": "vc_key_2_30x56_off.png",
+                                        "onImage": "vc_key_2_48x86_on.png",
+                                        "offImage": "vc_key_2_48x86_off.png",
                                         "buttonId": 2,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15434,7 +15434,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 56",
+                                    "bounds": "0 0 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15442,7 +15442,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_4_30x56",
+                    "key": "vcKey_4_48x86",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15484,8 +15484,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_4_30x56_on.png",
-                                        "offImage": "vc_key_4_30x56_off.png",
+                                        "onImage": "vc_key_4_48x86_on.png",
+                                        "offImage": "vc_key_4_48x86_off.png",
                                         "buttonId": 4,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15502,7 +15502,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 56",
+                                    "bounds": "0 0 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15510,7 +15510,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_5_30x56",
+                    "key": "vcKey_5_48x86",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15552,8 +15552,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_5_30x56_on.png",
-                                        "offImage": "vc_key_5_30x56_off.png",
+                                        "onImage": "vc_key_5_48x86_on.png",
+                                        "offImage": "vc_key_5_48x86_off.png",
                                         "buttonId": 5,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15570,7 +15570,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 56",
+                                    "bounds": "0 0 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15578,7 +15578,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_7_30x56",
+                    "key": "vcKey_7_48x86",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15620,8 +15620,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_7_30x56_on.png",
-                                        "offImage": "vc_key_7_30x56_off.png",
+                                        "onImage": "vc_key_7_48x86_on.png",
+                                        "offImage": "vc_key_7_48x86_off.png",
                                         "buttonId": 7,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15638,7 +15638,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 56",
+                                    "bounds": "0 0 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15646,7 +15646,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_9_30x56",
+                    "key": "vcKey_9_48x86",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15688,8 +15688,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_9_30x56_on.png",
-                                        "offImage": "vc_key_9_30x56_off.png",
+                                        "onImage": "vc_key_9_48x86_on.png",
+                                        "offImage": "vc_key_9_48x86_off.png",
                                         "buttonId": 9,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15706,7 +15706,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 56",
+                                    "bounds": "0 0 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15714,7 +15714,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_11_30x56",
+                    "key": "vcKey_11_48x86",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15756,8 +15756,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_11_30x56_on.png",
-                                        "offImage": "vc_key_11_30x56_off.png",
+                                        "onImage": "vc_key_11_48x86_on.png",
+                                        "offImage": "vc_key_11_48x86_off.png",
                                         "buttonId": 11,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15774,7 +15774,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 30 56",
+                                    "bounds": "0 0 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15782,7 +15782,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_1_26x44",
+                    "key": "vcKey_1_30x52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15824,8 +15824,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_1_26x44_on.png",
-                                        "offImage": "vc_key_1_26x44_off.png",
+                                        "onImage": "vc_key_1_30x52_on.png",
+                                        "offImage": "vc_key_1_30x52_off.png",
                                         "buttonId": 1,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15842,7 +15842,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 26 44",
+                                    "bounds": "0 0 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15850,7 +15850,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_3_26x44",
+                    "key": "vcKey_3_30x52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15892,8 +15892,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_3_26x44_on.png",
-                                        "offImage": "vc_key_3_26x44_off.png",
+                                        "onImage": "vc_key_3_30x52_on.png",
+                                        "offImage": "vc_key_3_30x52_off.png",
                                         "buttonId": 3,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15910,7 +15910,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 26 44",
+                                    "bounds": "0 0 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15918,7 +15918,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_6_26x44",
+                    "key": "vcKey_6_30x52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15960,8 +15960,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_6_26x44_on.png",
-                                        "offImage": "vc_key_6_26x44_off.png",
+                                        "onImage": "vc_key_6_30x52_on.png",
+                                        "offImage": "vc_key_6_30x52_off.png",
                                         "buttonId": 6,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15978,7 +15978,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 26 44",
+                                    "bounds": "0 0 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15986,7 +15986,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_8_26x44",
+                    "key": "vcKey_8_30x52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -16028,8 +16028,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_8_26x44_on.png",
-                                        "offImage": "vc_key_8_26x44_off.png",
+                                        "onImage": "vc_key_8_30x52_on.png",
+                                        "offImage": "vc_key_8_30x52_off.png",
                                         "buttonId": 8,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -16046,7 +16046,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 26 44",
+                                    "bounds": "0 0 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -16054,7 +16054,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_10_26x44",
+                    "key": "vcKey_10_30x52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -16096,8 +16096,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_10_26x44_on.png",
-                                        "offImage": "vc_key_10_26x44_off.png",
+                                        "onImage": "vc_key_10_30x52_on.png",
+                                        "offImage": "vc_key_10_30x52_off.png",
                                         "buttonId": 10,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -16114,7 +16114,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 26 44",
+                                    "bounds": "0 0 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -18920,7 +18920,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 0",
-                                    "type": "vcKey_0_30x56",
+                                    "type": "vcKey_0_48x86",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18941,7 +18941,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "656 98 30 56",
+                                    "bounds": "656 98 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -18950,7 +18950,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 2",
-                                    "type": "vcKey_2_30x56",
+                                    "type": "vcKey_2_48x86",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18971,7 +18971,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "686 98 30 56",
+                                    "bounds": "704 98 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -18980,7 +18980,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 4",
-                                    "type": "vcKey_4_30x56",
+                                    "type": "vcKey_4_48x86",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19001,7 +19001,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "716 98 30 56",
+                                    "bounds": "752 98 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19010,7 +19010,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 5",
-                                    "type": "vcKey_5_30x56",
+                                    "type": "vcKey_5_48x86",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19031,7 +19031,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "746 98 30 56",
+                                    "bounds": "800 98 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19040,7 +19040,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 7",
-                                    "type": "vcKey_7_30x56",
+                                    "type": "vcKey_7_48x86",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19061,7 +19061,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "776 98 30 56",
+                                    "bounds": "848 98 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19070,7 +19070,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 9",
-                                    "type": "vcKey_9_30x56",
+                                    "type": "vcKey_9_48x86",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19091,7 +19091,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "806 98 30 56",
+                                    "bounds": "896 98 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19100,7 +19100,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 11",
-                                    "type": "vcKey_11_30x56",
+                                    "type": "vcKey_11_48x86",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19121,7 +19121,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "836 98 30 56",
+                                    "bounds": "944 98 48 86",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19130,7 +19130,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 1",
-                                    "type": "vcKey_1_26x44",
+                                    "type": "vcKey_1_30x52",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19151,7 +19151,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "673 98 26 44",
+                                    "bounds": "689 98 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19160,7 +19160,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 3",
-                                    "type": "vcKey_3_26x44",
+                                    "type": "vcKey_3_30x52",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19181,7 +19181,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "703 98 26 44",
+                                    "bounds": "737 98 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19190,7 +19190,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 6",
-                                    "type": "vcKey_6_26x44",
+                                    "type": "vcKey_6_30x52",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19211,7 +19211,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "763 98 26 44",
+                                    "bounds": "833 98 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19220,7 +19220,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 8",
-                                    "type": "vcKey_8_26x44",
+                                    "type": "vcKey_8_30x52",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19241,7 +19241,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "793 98 26 44",
+                                    "bounds": "881 98 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19250,7 +19250,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 10",
-                                    "type": "vcKey_10_26x44",
+                                    "type": "vcKey_10_30x52",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19271,7 +19271,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "823 98 26 44",
+                                    "bounds": "929 98 30 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
