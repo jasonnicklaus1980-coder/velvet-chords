@@ -1749,6 +1749,183 @@ static void test_detect(void) {
     CHECK(vc_detect(white, 1, h, 1) == 1, "a list of one returns one hit");
 }
 
+/* a separate engine for each comparison: v11_engine() hands back one shared instance */
+static Engine *live_engine(void) {
+    Engine *e = (Engine *)calloc(1, sizeof(Engine));
+    en_init(e, 48000.f);
+    e->lp.mode = VC_MODE_CUSTOM;
+    e->midi_out = 1;
+    e->tempo = 90.0;
+    e->dirty = 1;
+    custom_chord(e, 0, "C", 0);
+    return e;
+}
+
+/* ---------- live Pad Perform: a key, scale, mode or voicing change remaps the pads at once, while playing ---------- */
+
+/* the note-ons and note-offs of the next block, per MIDI note; a note-on while its note still sounds is a duplicate */
+static int live_block(Engine *e, int *ons, int *offs, int *dup, int *active) {
+    static float L[256], R[256];
+    en_process(e, L, R, 256);
+    int energy = 0;
+    for (int i = 0; i < e->nout; i++) {
+        int st = e->out[i].d[0] & 0xF0, note = e->out[i].d[1] & 127;
+        if (st == 0x90 && e->out[i].d[2] > 0) { if (active[note]) (*dup)++; active[note] = 1; ons[note]++; }
+        else if (st == 0x80 || st == 0x90) { active[note] = 0; offs[note]++; }
+    }
+    e->nout = 0;
+    for (int i = 0; i < 256; i++) if (L[i] != 0.f || R[i] != 0.f) { energy = 1; break; }
+    return energy;
+}
+
+/* the pitch classes a pad's voiced notes use, and whether they stay inside its chord and keep its root */
+static int voiced_inside_chord(const Engine *e, int k) {
+    if (!e->pads[k].valid) return 1;
+    int chord = vc_chord_pcmask(&e->pads[k].spec), root = 1 << e->pads[k].spec.root, mask = 0;
+    for (int j = 0; j < e->voicings[k].n; j++) mask |= 1 << (e->voicings[k].notes[j] % 12);
+    return (mask & ~chord) == 0 && (mask & root) != 0;
+}
+
+static void test_live_remap(void) {
+    /* C major to D minor: the scale pads of bank A become D minor's chords, and the pads play them */
+    {
+        Engine *e = live_engine();
+        e->lp.mode = VC_MODE_KEY; e->lp.key = 0; e->lp.scale = 0; e->dirty = 1;
+        en_rebuild(e);
+        e->lp.key = 2; e->lp.scale = 1;
+        en_rebuild(e);
+        static const int DM[7] = {0, 2, 3, 5, 7, 8, 10}; /* natural minor */
+        int roots_ok = 1, voiced_ok = 1;
+        for (int d = 0; d < 7; d++) {
+            if (e->pads[d].spec.root != pcm(2 + DM[d])) roots_ok = 0;
+            if (!voiced_inside_chord(e, d)) voiced_ok = 0;
+        }
+        CHECK(roots_ok, "C major to D minor: the seven scale pads become D minor's chords");
+        CHECK(voiced_ok, "C major to D minor: the pads play notes of their own chords");
+    }
+
+    /* changing the root transposes every chromatic chord, and the key moves all of them by the same steps */
+    {
+        Engine *base = live_engine(), *moved = live_engine();
+        base->lp.mode = VC_MODE_TYPES; base->lp.key = 0; base->dirty = 1; en_rebuild(base);
+        int bad = 0, notes_bad = 0;
+        for (int k = 0; k < 12; k++) {
+            moved->lp.mode = VC_MODE_TYPES; moved->lp.key = k; moved->dirty = 1; en_rebuild(moved);
+            for (int i = 0; i < 64; i++) {
+                if (!base->pads[i].valid) continue;
+                if (moved->pads[i].spec.root != pcm(base->pads[i].spec.root + k)) bad++;
+                if (!voiced_inside_chord(moved, i)) notes_bad++;
+            }
+        }
+        CHECK(bad == 0, "changing the key transposes every chromatic chord (%d wrong roots)", bad);
+        CHECK(notes_bad == 0, "every chromatic chord plays its own notes in every key (%d pads off)", notes_bad);
+    }
+
+    /* changing the scale recalculates the diatonic chords: degree 3 of C major is Em7, of C Dorian it is Ebmaj7 */
+    {
+        Engine *e = live_engine();
+        e->lp.mode = VC_MODE_KEY; e->lp.key = 0; e->lp.scale = 0; e->dirty = 1; en_rebuild(e);
+        int major_q = e->pads[2].spec.quality;
+        e->lp.scale = 4; en_rebuild(e); /* Dorian */
+        int dorian_q = e->pads[2].spec.quality;
+        CHECK(major_q != dorian_q, "changing the scale to Dorian changes the chord on degree 3");
+        CHECK(e->pads[2].spec.root == 3 && voiced_inside_chord(e, 2), "Dorian degree 3 is Eb (root %d)", e->pads[2].spec.root);
+    }
+
+    /* a chord quality change moves the actual MIDI notes, not only the name */
+    {
+        Engine *e = live_engine();
+        custom_chord(e, 0, "Dm7", 2);
+        int m7 = vc_chord_pcmask(&e->pads[0].spec);
+        custom_chord(e, 0, "Dm", 2);
+        int m = vc_chord_pcmask(&e->pads[0].spec);
+        int voiced_m = 0;
+        for (int j = 0; j < e->voicings[0].n; j++) voiced_m |= 1 << (e->voicings[0].notes[j] % 12);
+        CHECK(m != m7 && !(voiced_m & (1 << 0)), "Dm7 to Dm drops the 7th from the notes played");
+        CHECK(voiced_inside_chord(e, 0), "Dm plays only D F A");
+    }
+
+    /* a progression keeps its harmonic structure when the key moves: every step keeps its interval from the first */
+    {
+        Engine *a = live_engine(), *b = live_engine();
+        a->lp.mode = VC_MODE_KEY; a->lp.key = 0; a->lp.scale = 0; a->lp.prog = 1; a->dirty = 1; en_rebuild(a);
+        b->lp.mode = VC_MODE_KEY; b->lp.key = 7; b->lp.scale = 0; b->lp.prog = 1; b->dirty = 1; en_rebuild(b);
+        int n = vc_prog_length(&a->lp), same = n > 0;
+        for (int k = 0; k < n && k < VC_PADS; k++) {
+            ChordSpec ca, cb;
+            if (!vc_prog_step(&a->lp, k, &ca) || !vc_prog_step(&b->lp, k, &cb)) { same = 0; break; }
+            if (cb.quality != ca.quality || pcm(cb.root - 7) != pcm(ca.root)) same = 0;
+        }
+        CHECK(same, "a progression transposed from C to G keeps every chord and its interval (%d steps)", n);
+    }
+
+    /* pad labels match the MIDI notes: every voiced note sits in its chord, in every key and scale tried */
+    {
+        int bad = 0, total = 0;
+        static const int SCALES[] = {0, 1, 4, 9, 10};
+        for (int k = 0; k < 12; k++) for (unsigned s = 0; s < sizeof(SCALES) / sizeof(SCALES[0]); s++) {
+            Engine *e = live_engine();
+            e->lp.mode = VC_MODE_KEY; e->lp.key = k; e->lp.scale = SCALES[s]; e->dirty = 1; en_rebuild(e);
+            for (int i = 0; i < 64; i++) if (e->pads[i].valid) { total++; if (!voiced_inside_chord(e, i)) bad++; }
+        }
+        CHECK(bad == 0, "every pad's notes match its label in every key (%d of %d off)", bad, total);
+    }
+
+    /* a pad that is sounding when its mapping changes is released on the notes it started with: no hanging note */
+    {
+        Engine *e = live_engine();
+        int ons[128] = {0}, offs[128] = {0}, dup = 0, active[128] = {0};
+        e->lp.mode = VC_MODE_KEY; e->lp.key = 0; e->lp.scale = 0; e->dirty = 1; en_rebuild(e);
+        en_push_midi(e, 0, 0x90, (unsigned char)e->pad_base, 100);
+        live_block(e, ons, offs, &dup, active);
+        int energy_before = live_block(e, ons, offs, &dup, active);
+        e->lp.key = 2; e->lp.scale = 1; en_rebuild(e); /* the change happens while the pad is held */
+        int energy_after = live_block(e, ons, offs, &dup, active);
+        en_push_midi(e, 0, 0x80, (unsigned char)e->pad_base, 0);
+        for (int i = 0; i < 4; i++) live_block(e, ons, offs, &dup, active);
+        int hanging = 0;
+        for (int n = 0; n < 128; n++) if (ons[n] != offs[n]) hanging++;
+        CHECK(energy_before || energy_after, "the held pad keeps sounding through the change");
+        CHECK(hanging == 0, "a pad sounding during a remap leaves no hanging or unmatched note (%d notes)", hanging);
+        CHECK(dup == 0, "a remap does not start a duplicate note (%d)", dup);
+    }
+
+    /* repeated switching: after many key, scale and mode changes the engine matches a fresh one with the same settings */
+    {
+        Engine *e = live_engine();
+        static const int MODES[] = {VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM};
+        for (int r = 0; r < 200; r++) {
+            e->lp.mode = MODES[r % 3]; e->lp.key = (r * 5) % 12; e->lp.scale = (r * 3) % 9; e->lp.voicing = r % 4;
+            e->dirty = 1; en_rebuild(e);
+        }
+        Engine *f = live_engine();
+        f->lp.mode = e->lp.mode; f->lp.key = e->lp.key; f->lp.scale = e->lp.scale; f->lp.voicing = e->lp.voicing;
+        f->dirty = 1; en_rebuild(f);
+        int diff = 0;
+        for (int i = 0; i < 64; i++) {
+            if (e->pads[i].valid != f->pads[i].valid || e->pads[i].spec.root != f->pads[i].spec.root) diff++;
+            if (e->voicings[i].n != f->voicings[i].n || memcmp(e->voicings[i].notes, f->voicings[i].notes, sizeof(e->voicings[i].notes))) diff++;
+        }
+        CHECK(diff == 0, "after 200 switches the pads match a fresh engine with the same settings (%d differ)", diff);
+    }
+
+    /* playback goes on through a key change: the same engine keeps producing sound and no note is cut off */
+    {
+        Engine *e = live_engine();
+        int ons[128] = {0}, offs[128] = {0}, dup = 0, active[128] = {0}, silent = 0;
+        e->lp.mode = VC_MODE_KEY; e->lp.key = 0; e->lp.scale = 0; e->dirty = 1; en_rebuild(e);
+        en_push_midi(e, 0, 0x90, (unsigned char)e->pad_base, 100);
+        for (int b = 0; b < 40; b++) {
+            if (b == 20) { e->lp.key = 9; e->lp.scale = 1; e->dirty = 1; } /* the change lands in the audio thread, as in a host */
+            if (!live_block(e, ons, offs, &dup, active)) silent++;
+        }
+        en_push_midi(e, 0, 0x80, (unsigned char)e->pad_base, 0);
+        for (int i = 0; i < 4; i++) live_block(e, ons, offs, &dup, active);
+        CHECK(silent < 40, "audio keeps flowing through a key change (%d silent of 40 blocks)", silent);
+        CHECK(dup == 0, "playback through a key change starts no duplicate note (%d)", dup);
+    }
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1783,6 +1960,7 @@ int main(void) {
     printf("scale table...\n"); test_scale_table();
     printf("relative chords...\n"); test_relative();
     printf("smart pads wait for a chord...\n"); test_smart_ready();
+    printf("live pad remapping...\n"); test_live_remap();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

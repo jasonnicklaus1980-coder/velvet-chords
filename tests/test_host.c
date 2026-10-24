@@ -630,6 +630,33 @@ int main(int argc, char **argv) {
         n->dispatcher(n, effClose, 0, 0, 0, 0);
     }
 
+    /* live Pad Perform through the plugin: C major to D minor, from the host, remaps the pads on screen at once */
+    {
+        AEffect *d = open_fx();
+        int PK = find_param(d, "Key"), PSC = find_param(d, "Scale"), PN = find_param(d, "Pad 1 notes"), PM = find_param(d, "Mode");
+        float L[256], R[256];
+        EvBuf eb;
+        char before[96], after[96];
+        CHECK(PK >= 0 && PSC >= 0 && PN >= 0 && PM >= 0, "key, scale, mode and Pad 1 notes params exist");
+        d->setParameter(d, PK, 0.f); d->setParameter(d, PSC, 0.f);
+        display(d, PN, before);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(d, &eb, 1); /* pad 1 sounds through the change */
+        block(d, L, R, 256);
+        { struct timespec ts = {0, 150 * 1000000L}; nanosleep(&ts, 0); } /* let the last redraw finish */
+        int refresh0 = g_refresh_calls;
+        d->setParameter(d, PK, 2.f / 11.f); d->setParameter(d, PSC, 1.f / 16.f); /* D, natural minor */
+        { struct timespec ts = {0, 150 * 1000000L}; nanosleep(&ts, 0); } /* the host's redraw comes from the screen thread */
+        int refresh1 = g_refresh_calls;
+        block(d, L, R, 256);
+        display(d, PN, after);
+        CHECK(refresh1 > refresh0, "a key change from the host refreshes the pads on screen (%d calls)", refresh1 - refresh0);
+        CHECK(strcmp(before, after) != 0 && strstr(after, "D") && strstr(after, "F") && strstr(after, "A"),
+              "C major to D minor changes Pad 1 to a D minor chord (%s -> %s)", before, after);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(d, &eb, 1);
+        block(d, L, R, 256);
+        d->dispatcher(d, effClose, 0, 0, 0, 0);
+    }
+
     /* key sync, MIDI import through the plugin, imports saved with the project */
     {
         AEffect *a = open_fx(), *b = open_fx();

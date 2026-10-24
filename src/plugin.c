@@ -1087,6 +1087,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             g_vc_key.key = idx_of(p, P_KEY); g_vc_key.scale = idx_of(p, P_SCALE);
             g_vc_key.source = e->instance_id; g_vc_key.version++;
         }
+        /* the host redraws the pads: the new key, scale or mode is on the screen at once, like the MPC's Pad Perform */
+        if (from_host) refresh_host(p);
         break;
     case P_STRUM: e->strum_ms = v * 150.f; break;
     case P_STRUM_DIR: e->strum_dir = idx_of(p, i); break;
