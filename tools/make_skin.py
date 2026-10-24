@@ -213,7 +213,7 @@ class Images:
 class Background:
     """Full-page art: header, panels, field frames and labels; live text sits on top."""
 
-    def __init__(self, page_title):
+    def __init__(self, page_title, info=True):
         self.a = Art(W, H, bg=BG)
         a = self.a
         a.rect(0, 0, W, 56, 0, fill=HEADER)
@@ -223,6 +223,8 @@ class Background:
         a.text(52, 28, "VELVET CHORDS", 14, TEXT, "Medium", anchor="lm", tracking=2.2)
         a.line(212, 18, 212, 38, HAIRLINE)
         a.text(226, 28, page_title.upper(), 11, ACCENT, "Medium", anchor="lm", tracking=1.6)
+        if info:
+            self.field(452, 14, 596, 28)   # live headline: the key and scale in use (see header_info)
 
     @property
     def d(self):
@@ -462,12 +464,16 @@ class Skin:
             c.append(self.place(key, "Bank %s" % t, 1076 + i * 45, 12, 45, 32, [("Data", self.p("Bank %s" % t))],
                                 focus="Yes" if i == 0 else "No"))
 
+    def header_info(self, c, bg):
+        """the headline in the header: the key, scale and notes in use, on every page"""
+        self.value_field(c, bg, "Info", 452, 14, 596, 28, size=14, colour=TEXT, editable=False, box=False)
+
     def build(self):
         voicings = ["Bass+upper", "Close", "Drop 2", "Spread", "Upper"]
         notes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
 
         # ---------- Play
-        bg = Background("Play")
+        bg = Background("Play", info=False)   # the mode buttons take the header; the Info bar below shows the scale
         c = []
         self.segments(c, bg, "mode", "Mode", ["Scale", "R&B kit", "Types", "Custom"], 456, 12, 104, 32, ids=[1, 2, 3, 4], ntotal=5)
         self.header_banks(c, bg, "bank")
@@ -492,6 +498,7 @@ class Skin:
         # ---------- Perform
         bg = Background("Perform")
         c = []
+        self.header_info(c, bg)
         L, R = 28, 664
         rows = [100, 184, 268, 352, 436, 520]
         bg.panel((12, 64, 632, 620))
@@ -529,7 +536,7 @@ class Skin:
         self.page("Perform", 1, c, "vc_bg_perform.png", bg)
 
         # ---------- Edit
-        bg = Background("Edit pads")
+        bg = Background("Edit pads", info=False)   # the header holds the pad picker and shift keys
         c = []
         bg.a.text(466, 28, "PAD", 10.5, LABEL, "Medium", anchor="rm", tracking=1.3)
         self.stepper(c, bg, "Edit pad", "Edit pad prev", "Edit pad next", 476, 10, 180)
@@ -556,6 +563,7 @@ class Skin:
         # ---------- Pattern
         bg = Background("Pattern")
         c = []
+        self.header_info(c, bg)
         bg.panel((12, 64, 1268, 144))
         self.stepper(c, bg, "Pattern", "Pattern prev", "Pattern next", 28, 96, 420, "Pattern")
         self.segments(c, bg, "prate", "Pattern rate", ["1/8", "1/8T", "1/16", "1/16T", "1/32"], 492, 96, 78, caption="Step length")
@@ -568,17 +576,18 @@ class Skin:
         self.value_field(c, bg, "Gate", 190, r1, 150, caption="Note length")
         self.value_field(c, bg, "Sound", 360, r1, 464, caption="Built-in sound (Silent = MIDI only)")
         self.value_field(c, bg, "MIDI channel", 844, r1, 120, caption="Out channel")
-        self.readout(c, bg, "Now playing", 980, r1, 272, size=13, colour=ACCENT, caption="Now playing")
-        self.segments(c, bg, "mout", "MIDI out", ["Off", "To MPC", "Virtual port", "Both"], 28, r2, 84, caption="Send chords as MIDI")
-        self.segments(c, bg, "plen", "Pattern length", ["4", "8", "12", "16"], 380, r2, 40, caption="Pattern length (steps)")
-        self.segments(c, bg, "pchance", "Pattern chance", ["25%", "50%", "75%", "100%"], 556, r2, 50, caption="Pattern chance")
-        self.segments(c, bg, "pseed", "Pattern seed", ["1", "2", "3", "4"], 772, r2, 40, caption="Pattern seed")
+        self.readout(c, bg, "Now playing", 980, r1, 272, size=14, colour=ACCENT, caption="Now playing")
+        self.segments(c, bg, "mout", "MIDI out", ["Off", "MPC", "Port", "Both"], 28, r2, 84, caption="Send chords as MIDI")
+        self.segments(c, bg, "plen", "Pattern length", ["4", "8", "12", "16"], 380, r2, 40, caption="Length")
+        self.segments(c, bg, "pchance", "Pattern chance", ["25%", "50%", "75%", "100%"], 556, r2, 50, caption="Chance")
+        self.segments(c, bg, "pseed", "Pattern seed", ["1", "2", "3", "4"], 772, r2, 40, caption="Seed")
         self.readout(c, bg, "MIDI port", 948, r2, 304, size=14, caption="Virtual port: Velvet Chords Out")
         self.page("Pattern", 3, c, "vc_bg_pattern.png", bg)
 
         # ---------- Tools: hold, repeat, melody, key sync, MIDI import
         bg = Background("Tools")
         c = []
+        self.header_info(c, bg)
         L, R = 28, 664
         bg.panel((12, 64, 632, 620))
         bg.a.label(L, 76, "Playing")
@@ -626,6 +635,7 @@ class Skin:
         # ---------- Lanes: presets, multi arp, melody riffs, note editor
         bg = Background("Lanes")
         c = []
+        self.header_info(c, bg)
         bg.panel((12, 64, 1268, 144))
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 28, 96, 560, "Preset")
         self.switch(c, bg, "Shift keys", 620, 96, "Shift keys")
