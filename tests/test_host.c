@@ -1321,6 +1321,20 @@ int main(int argc, char **argv) {
             CHECK(after == 0.0, "reverb at 0 leaves silence silent");
         }
 
+        /* a preset never turns the riff on or off: the riff you chose stays after loading any preset */
+        {
+            int P_RF = find_param(fx, "Riff"), bad_riff = 0;
+            fx->setParameter(fx, P_RF, 0.f);
+            for (int k = 1; k <= 900; k++) {
+                fx->setParameter(fx, P_PRE, k / 900.f);
+                bad_riff += fx->getParameter(fx, P_RF) != 0.f;
+            }
+            CHECK(bad_riff == 0, "no preset turns the riff on (%d did)", bad_riff);
+            fx->setParameter(fx, P_RF, 1.f / 4.f);
+            fx->setParameter(fx, P_PRE, 40.f / 900.f);
+            CHECK(fx->getParameter(fx, P_RF) == 1.f / 4.f, "a preset keeps the riff you chose");
+            fx->setParameter(fx, P_RF, 0.f);
+        }
         /* a preset never picks the instrument: the Sound you chose and Sound extra stay after loading any preset */
         {
             char buf2[256];

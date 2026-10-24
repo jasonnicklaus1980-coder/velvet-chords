@@ -780,7 +780,7 @@ static void apply_preset(Plugin *p, int x) {
     set_param(p, P_SMART, norm_of(P_SMART, s->smart), 0);
     set_param(p, P_SMART_MODE, norm_of(P_SMART_MODE, s->smart_mode), 0);
     set_param(p, P_SMART_OCT, norm_of(P_SMART_OCT, s->smart_oct + 2), 0);
-    set_param(p, P_RIFF, norm_of(P_RIFF, s->melody), 0);
+    /* the riff is yours: a preset never turns it on or off (s->melody is kept in the data for reference only) */
 }
 
 /* the preset list is genre by variation: the genre knob sets the group, the variation knob the preset in it */
