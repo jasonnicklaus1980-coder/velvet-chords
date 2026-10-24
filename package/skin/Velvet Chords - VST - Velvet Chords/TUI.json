@@ -8597,7 +8597,7 @@
                     }
                 },
                 {
-                    "key": "vcField_596x28_14_ececf3_r",
+                    "key": "vcField_596x28_14_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -8635,7 +8635,7 @@
                                                 "style": "SemiBold",
                                                 "height": 14.0
                                             },
-                                            "colour": "ffececf3",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -12989,7 +12989,7 @@
                     }
                 },
                 {
-                    "key": "vcField_180x36_14_a7a7b8_r",
+                    "key": "vcField_180x36_14_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -13027,7 +13027,7 @@
                                                 "style": "SemiBold",
                                                 "height": 14.0
                                             },
-                                            "colour": "ffa7a7b8",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -13175,7 +13175,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Info",
-                                    "type": "vcField_596x28_14_ececf3_r",
+                                    "type": "vcField_596x28_14_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -15305,7 +15305,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Export MIDI",
-                                    "type": "vcField_180x36_14_a7a7b8_r",
+                                    "type": "vcField_180x36_14_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18930,7 +18930,7 @@
                     }
                 },
                 {
-                    "key": "vcField_596x24_12_a7a7b8_r",
+                    "key": "vcField_596x24_12_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -18968,7 +18968,7 @@
                                                 "style": "SemiBold",
                                                 "height": 12.0
                                             },
-                                            "colour": "ffa7a7b8",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -21366,7 +21366,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Analysis status",
-                                    "type": "vcField_596x24_12_a7a7b8_r",
+                                    "type": "vcField_596x24_12_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -24003,7 +24003,7 @@
                     }
                 },
                 {
-                    "key": "vcField_304x36_14_a7a7b8_r",
+                    "key": "vcField_304x36_14_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -24041,7 +24041,7 @@
                                                 "style": "SemiBold",
                                                 "height": 14.0
                                             },
-                                            "colour": "ffa7a7b8",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -24121,7 +24121,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Info",
-                                    "type": "vcField_596x28_14_ececf3_r",
+                                    "type": "vcField_596x28_14_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -28441,7 +28441,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Virtual port: Velvet Chords Out",
-                                    "type": "vcField_304x36_14_a7a7b8_r",
+                                    "type": "vcField_304x36_14_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -29418,7 +29418,7 @@
                     }
                 },
                 {
-                    "key": "vcField_276x40_13_a7a7b8_r",
+                    "key": "vcField_276x40_13_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -29456,7 +29456,7 @@
                                                 "style": "SemiBold",
                                                 "height": 13.0
                                             },
-                                            "colour": "ffa7a7b8",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -29948,7 +29948,7 @@
                     }
                 },
                 {
-                    "key": "vcField_588x44_15_a7a7b8_r",
+                    "key": "vcField_588x44_15_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -29986,7 +29986,7 @@
                                                 "style": "SemiBold",
                                                 "height": 15.0
                                             },
-                                            "colour": "ffa7a7b8",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -30624,7 +30624,7 @@
                     }
                 },
                 {
-                    "key": "vcField_180x36_12_a7a7b8_r",
+                    "key": "vcField_180x36_12_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -30662,7 +30662,7 @@
                                                 "style": "SemiBold",
                                                 "height": 12.0
                                             },
-                                            "colour": "ffa7a7b8",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -31018,7 +31018,7 @@
                     }
                 },
                 {
-                    "key": "vcField_200x36_12_a7a7b8_r",
+                    "key": "vcField_200x36_12_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -31056,7 +31056,7 @@
                                                 "style": "SemiBold",
                                                 "height": 12.0
                                             },
-                                            "colour": "ffa7a7b8",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -31136,7 +31136,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Info",
-                                    "type": "vcField_596x28_14_ececf3_r",
+                                    "type": "vcField_596x28_14_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -31646,7 +31646,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Detected",
-                                    "type": "vcField_276x40_13_a7a7b8_r",
+                                    "type": "vcField_276x40_13_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -31916,7 +31916,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Status",
-                                    "type": "vcField_588x44_15_a7a7b8_r",
+                                    "type": "vcField_588x44_15_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -32216,7 +32216,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "User preset status",
-                                    "type": "vcField_180x36_12_a7a7b8_r",
+                                    "type": "vcField_180x36_12_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -32456,7 +32456,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Starred preset status",
-                                    "type": "vcField_200x36_12_a7a7b8_r",
+                                    "type": "vcField_200x36_12_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -40329,7 +40329,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Info",
-                                    "type": "vcField_596x28_14_ececf3_r",
+                                    "type": "vcField_596x28_14_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"

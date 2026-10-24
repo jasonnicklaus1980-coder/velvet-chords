@@ -45,6 +45,9 @@ INK_ON_ACCENT = "#120e1f"
 TEXT = "#ececf3"
 TEXT_2 = "#a7a7b8"
 LABEL = "#70707f"
+LCD_BG = "#07110f"        # read-only displays: dark glass
+LCD_EDGE = "#1d3a35"
+LCD_TEXT = "#8fe6d8"      # teal-green display text
 KEY_WHITE = "#e4e3ec"; KEY_WHITE_EDGE = "#a6a4b6"; KEY_BLACK = "#0b0b10"; KEY_BLACK_EDGE = "#3a3a48"
 GOLD = ACCENT  # names used by older helpers
 ROSE = ACCENT
@@ -227,7 +230,7 @@ class Background:
         a.line(212, 18, 212, 38, HAIRLINE)
         a.text(226, 28, page_title.upper(), 11, ACCENT, "Medium", anchor="lm", tracking=1.6)
         if info:
-            self.field(452, 14, 596, 28)   # live headline: the key and scale in use (see header_info)
+            self.lcd(452, 14, 596, 28)   # live headline: the key and scale in use (see header_info)
 
     @property
     def d(self):
@@ -241,6 +244,9 @@ class Background:
 
     def field(self, x, y, w, h):
         self.a.rect(x, y, x + w, y + h, 5, fill=FIELD, edge=FIELD_EDGE)
+
+    def lcd(self, x, y, w, h):
+        self.a.rect(x, y, x + w, y + h, 5, fill=LCD_BG, edge=LCD_EDGE)
 
     def caption(self, x, y, txt):
         self.a.label(x, y, txt)
@@ -340,9 +346,9 @@ class Skin:
                 "handle remapping": remap(pairs), "bounds": bounds(x, y, w, h, focus=focus, invalid="Hide", inval=inval)}
 
     # ---- widgets
-    def value_field(self, comps, bg, param, x, y, w, h=CH, size=18, colour=TEXT, editable=True, caption=None, box=True):
+    def value_field(self, comps, bg, param, x, y, w, h=CH, size=18, colour=TEXT, editable=True, caption=None, box=True, lcd=False):
         if box:
-            bg.field(x, y, w, h)
+            bg.lcd(x, y, w, h) if lcd else bg.field(x, y, w, h)
         if caption:
             bg.caption(x + 1, y - 17, caption)
         key = "vcField_%dx%d_%d_%s_%s" % (w, h, size, colour.lstrip("#"), "e" if editable else "r")
@@ -350,8 +356,9 @@ class Skin:
         self.define(key, definition([A_QLINK, A_OVERLAY_DBL, A_OVERLAY_ENTER] if editable else [], comps_def, ignore=not editable))
         comps.append(self.place(key, caption or param, x, y, w, h, [("Data", self.p(param))], focus="Yes" if editable else "No"))
 
-    def readout(self, comps, bg, param, x, y, w, h=CH, size=16, colour=TEXT_2, caption=None):
-        self.value_field(comps, bg, param, x, y, w, h, size=size, colour=colour, editable=False, caption=caption)
+    def readout(self, comps, bg, param, x, y, w, h=CH, size=16, colour=LCD_TEXT, caption=None):
+        """a read-only display: dark glass with teal text, as on a hardware screen"""
+        self.value_field(comps, bg, param, x, y, w, h, size=size, colour=colour, editable=False, caption=caption, lcd=True)
 
     def stepper(self, comps, bg, param, prev, nxt, x, y, w, caption=None, h=CH):
         """one framed field with chevrons at both ends"""
@@ -495,7 +502,7 @@ class Skin:
 
     def header_info(self, c, bg):
         """the headline in the header: the key, scale and notes in use, on every page"""
-        self.value_field(c, bg, "Info", 452, 14, 596, 28, size=14, colour=TEXT, editable=False, box=False)
+        self.value_field(c, bg, "Info", 452, 14, 596, 28, size=14, colour=LCD_TEXT, editable=False, box=False)
 
     def build(self):
         voicings = ["Bass+upper", "Close", "Drop 2", "Spread", "Upper"]
