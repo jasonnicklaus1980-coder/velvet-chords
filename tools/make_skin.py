@@ -513,7 +513,7 @@ class Skin:
         # ---------- Play
         bg = Background("Play", info=False)   # the mode buttons take the header; the Info bar below shows the scale
         c = []
-        self.segments(c, bg, "mode", "Mode", ["Chords", "Types", "Custom", "Chrom notes", "Scale notes", "Chrom chords"], 456, 12, 96, 32, ids=[1, 2, 3, 4, 5, 6], ntotal=7)
+        self.segments(c, bg, "mode", "Mode", ["Chords", "Custom", "Chrom notes", "Scale notes", "Chrom chords"], 456, 12, 96, 32, ids=[1, 2, 3, 4, 5], ntotal=6)
         self.header_banks(c, bg, "bank")
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 10, 428, h=36)  # the factory preset in use, top left
         bg.panel((12, 64, 1268, 144))

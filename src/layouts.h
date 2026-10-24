@@ -11,7 +11,7 @@
 
 /* the Pad Perform modes: the first four are the original layouts; the last three are the MPC-style note and chord layouts,
  * which remap as soon as the key, scale or octave changes */
-enum { VC_MODE_SONG, VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES, VC_MODE_CHROM_CHORDS, VC_MODE_COUNT };
+enum { VC_MODE_SONG, VC_MODE_KEY, VC_MODE_CUSTOM, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES, VC_MODE_CHROM_CHORDS, VC_MODE_COUNT };
 #define VC_MODE_IMPORT VC_MODE_COUNT /* internal: pads show chords imported from a MIDI file */
 extern const char *VC_MODE_NAMES[VC_MODE_COUNT];
 

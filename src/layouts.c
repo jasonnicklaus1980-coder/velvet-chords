@@ -2,7 +2,7 @@
 #include "progression.h"
 #include <string.h>
 
-const char *VC_MODE_NAMES[VC_MODE_COUNT] = {"Song", "Chords", "Chord types", "Custom", "Chromatic notes", "Scale notes", "Chromatic chords"};
+const char *VC_MODE_NAMES[VC_MODE_COUNT] = {"Song", "Chords", "Custom", "Chromatic notes", "Scale notes", "Chromatic chords"};
 
 const Scale VC_SCALES[] = {
     {"Major", 7, {0, 2, 4, 5, 7, 9, 11}, "Happy, bright, resolved"},
@@ -165,9 +165,6 @@ static ChordSpec diatonic(int key, int scale, int degree, int count) {
 
 typedef struct { signed char iv; const char *suf; signed char bass; } ChordEntry;
 
-static const char *TYPES_A[16] = {"", "m", "7", "maj7", "m7", "m7b5", "dim7", "aug", "sus2", "sus4", "6", "m6", "maj9", "m9", "9", "13"};
-static const char *TYPES_B[16] = {"add9", "madd9", "11", "m11", "maj7#11", "7#9", "7b9", "7#5", "13b9", "mmaj7", "6/9", "7sus4", "maj13", "m13", "dim", "7alt"};
-
 static void build_layout(const LayoutParams *p, const CustomPad *custom, PadChord out[VC_PADS]) {
     memset(out, 0, sizeof(PadChord) * VC_PADS);
     int key = pcmod(p->key);
@@ -240,16 +237,6 @@ static void build_layout(const LayoutParams *p, const CustomPad *custom, PadChor
         for (int i = 0; i < 8; i++) {
             pad_from(&out[32 + i], key, bor[i].iv, bor[i].suf, bor[i].bass, flats, 0);
             pad_from(&out[40 + i], key, SUBS[i].iv, SUBS[i].suf, SUBS[i].bass, flats, 0);
-        }
-        break;
-    }
-    case VC_MODE_TYPES: {
-        for (int i = 0; i < 16; i++) {
-            pad_from(&out[i], key, 0, TYPES_A[i], -1, flats, 0);
-            pad_from(&out[16 + i], key, 0, TYPES_B[i], -1, flats, 0);
-            pad_from(&out[32 + i], key, 0, TYPES_A[i], -1, flats, 1);
-            pad_from(&out[48 + i], key, 0, TYPES_B[i], -1, flats, 1);
-            out[i].roman[0] = out[16 + i].roman[0] = out[32 + i].roman[0] = out[48 + i].roman[0] = 0;
         }
         break;
     }

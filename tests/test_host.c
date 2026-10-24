@@ -213,7 +213,7 @@ int main(int argc, char **argv) {
     CHECK(block(fx, L, R, 256) == 0.0, "silent after all pads released");
 
     /* rapid overlapping pads with strum + arp + sustain, then all off */
-    fx->setParameter(fx, P_MODE, 1.f / 6.f); /* Chords (diatonic) */
+    fx->setParameter(fx, P_MODE, 1.f / 5.f); /* Chords (diatonic) */
     fx->setParameter(fx, P_MIDI_OUT, 1.f);
     int P_STRUM = find_param(fx, "Strum"), P_ARP = find_param(fx, "Arp");
     for (int r = 0; r < 300; r++) {
@@ -290,7 +290,7 @@ int main(int argc, char **argv) {
     fx2->setParameter(fx2, P_EXPORT, 1.f);
     display(fx2, P_EXPORT, buf);
     CHECK(strstr(buf, "Saved") != 0, "export reports success (%s)", buf);
-    fx2->setParameter(fx2, P_MODE, 1.f / 6.f);
+    fx2->setParameter(fx2, P_MODE, 1.f / 5.f);
     fx2->setParameter(fx2, P_EXPORT, 1.f);
     display(fx2, P_EXPORT, buf);
     CHECK(strstr(buf, "Saved") != 0, "kit export (%s)", buf);
@@ -335,7 +335,7 @@ int main(int argc, char **argv) {
         s->setParameter(s, P_SNEXT, 1.f);
         display(s, P_SONG, b2);
         CHECK(strcmp(a, b2) != 0 && s->getParameter(s, P_SNEXT) == 0.f, "Song next steps the song (%s -> %s) and resets", a, b2);
-        s->setParameter(s, P_MODE, 1.f / 6.f); /* Chords, C major */
+        s->setParameter(s, P_MODE, 1.f / 5.f); /* Chords, C major */
         display(s, P_PN1, a); display(s, P_PF1, b2);
         CHECK(!strcmp(a, "Cmaj7") && !strcmp(b2, "Imaj7"), "pad 1 label Cmaj7 / Imaj7 (%s / %s)", a, b2);
         CHECK(s->getParameter(s, P_HAS_CS) == 0.f, "C# not in C major");
@@ -651,14 +651,14 @@ int main(int argc, char **argv) {
         EvBuf eb;
         int bad = 0, name_bad = 0, checked = 0, empty = 0;
         m->setParameter(m, P_OUTM, 1.f / 3.f); /* To MPC host */
-        /* configurations: mode (Chords, Types, Custom, Chrom notes, Scale notes, Chrom chords), key, scale, smart pads, progression, voicing */
+        /* configurations: mode (Chords, Custom, Chrom notes, Scale notes, Chrom chords), key, scale, smart pads, progression, voicing */
         static const int CONF[][6] = {
             {1, 0, 0, 0, 0, 0}, {1, 7, 4, 0, 0, 1}, {1, 9, 1, 1, 0, 2}, {1, 2, 4, 2, 0, 3}, {1, 5, 0, 0, 1, 4},
-            {2, 0, 0, 0, 0, 0}, {2, 3, 1, 0, 0, 2}, {3, 0, 0, 0, 0, 0}, {4, 0, 0, 0, 0, 0}, {4, 6, 4, 0, 0, 3},
-            {5, 0, 0, 0, 0, 0}, {5, 2, 1, 0, 0, 0}, {6, 0, 0, 0, 0, 0}, {6, 10, 4, 0, 0, 1},
+            {2, 0, 0, 0, 0, 0}, {3, 0, 0, 0, 0, 0}, {3, 6, 4, 0, 0, 3},
+            {4, 0, 0, 0, 0, 0}, {4, 2, 1, 0, 0, 0}, {5, 0, 0, 0, 0, 0}, {5, 10, 4, 0, 0, 1},
         };
         for (unsigned c = 0; c < sizeof(CONF) / sizeof(CONF[0]); c++) {
-            m->setParameter(m, P_MD, CONF[c][0] / 6.f);
+            m->setParameter(m, P_MD, CONF[c][0] / 5.f);
             m->setParameter(m, P_PKEY, CONF[c][1] / 11.f);
             m->setParameter(m, P_PSC, CONF[c][2] / 16.f);
             m->setParameter(m, P_SM, CONF[c][3] / 2.f);
@@ -714,7 +714,7 @@ int main(int argc, char **argv) {
                 }
             }
         }
-        CHECK(checked > 0 && checked + empty == 14 * 64, "pads were checked in every layout (%d filled, %d empty)", checked, empty);
+        CHECK(checked > 0 && checked + empty == (int)(sizeof(CONF) / sizeof(CONF[0])) * 64, "pads were checked in every layout (%d filled, %d empty)", checked, empty);
         CHECK(bad == 0, "every pad plays the notes its screen shows, in every layout and bank (%d differ)", bad);
         CHECK(name_bad == 0, "every pad's chord name matches the notes it plays (%d differ)", name_bad);
         m->dispatcher(m, effClose, 0, 0, 0, 0);
@@ -746,6 +746,33 @@ int main(int argc, char **argv) {
         block(f, L, R, 256);
         CHECK(ons <= 8, "a held chord sounds once, not as a run of notes (%d note-ons in 200 blocks)", ons);
         f->dispatcher(f, effClose, 0, 0, 0, 0);
+    }
+
+    /* a project saved while Types existed still opens: Types becomes Chords, Custom stays Custom */
+    {
+        AEffect *a = open_fx(), *b = open_fx();
+        int PM = find_param(a, "Mode");
+        char mv[64];
+        a->setParameter(a, PM, 1.f / 5.f);
+        void *chunk = 0;
+        int size = (int)a->dispatcher(a, effGetChunk, 0, 0, &chunk, 0);
+        unsigned char *old = (unsigned char *)malloc((size_t)size);
+        memcpy(old, chunk, (size_t)size);
+        /* version 11 counted seven modes (Types at 2, Custom at 3): write the old values into the chunk */
+        uint32_t ver = 11;
+        memcpy(old + 4, &ver, 4);
+        float types = 2.f / 6.f, custom = 3.f / 6.f;
+        memcpy(old + 12 + 4 * PM, &types, 4);
+        CHECK(b->dispatcher(b, effSetChunk, 0, size, old, 0) == 1, "an old project with Types loads");
+        display(b, PM, mv);
+        CHECK(!strcmp(mv, "Chords"), "Types in an old project opens as Chords (%s)", mv);
+        memcpy(old + 12 + 4 * PM, &custom, 4);
+        CHECK(b->dispatcher(b, effSetChunk, 0, size, old, 0) == 1, "an old project with Custom loads");
+        display(b, PM, mv);
+        CHECK(!strcmp(mv, "Custom"), "Custom in an old project stays Custom (%s)", mv);
+        free(old);
+        a->dispatcher(a, effClose, 0, 0, 0, 0);
+        b->dispatcher(b, effClose, 0, 0, 0, 0);
     }
 
     /* loading a project redraws the pads: the screen shows the loaded key and scale straight away */
@@ -887,7 +914,7 @@ int main(int argc, char **argv) {
         CHECK(strcmp(a, b2) != 0, "press+release steps once");
         /* imported chords: choosing a mode afterwards shows that mode again */
         s->setParameter(s, find_param(s, "Pads play"), 1.f);
-        s->setParameter(s, find_param(s, "Mode"), 1.f / 6.f);
+        s->setParameter(s, find_param(s, "Mode"), 1.f / 5.f);
         display(s, find_param(s, "Pads play"), a);
         CHECK(!strcmp(a, "Layout"), "picking a mode leaves imported chords (%s)", a);
         (void)steps;

@@ -51,7 +51,7 @@
   <li><a href="#edit">The Edit page</a></li>
   <li><a href="#tools">The Tools page</a></li>
   <li><a href="#lanes">The Lanes page</a></li>
-  <li><a href="#modes">Modes: Chords, Types, Custom and the note modes</a></li>
+  <li><a href="#modes">Modes: Chords, Custom and the note modes</a></li>
   <li><a href="#smart">Smart Scale pads</a></li>
   <li><a href="#presets">Presets</a></li>
   <li><a href="#progressions">Progressions and progression play</a></li>
@@ -68,7 +68,7 @@
 <ol>
   <li>Make a new plugin track and choose <strong>Velvet Chords</strong> from the instrument plugins.</li>
   <li>Open the <strong>Play</strong> page. Tap a pad on the screen, or hit the matching MPC pad. Each pad plays its whole chord.</li>
-  <li>Pick a <strong>mode</strong> at the top: <em>Chords</em>, <em>Types</em>, <em>Custom</em>, <em>Chrom notes</em>, <em>Scale notes</em> or <em>Chrom chords</em>. The pads change at once.</li>
+  <li>Pick a <strong>mode</strong> at the top: <em>Chords</em>, <em>Custom</em>, <em>Chrom notes</em>, <em>Scale notes</em> or <em>Chrom chords</em>. The pads change at once.</li>
   <li>Choose a <strong>key</strong> on the keyboard on the right. The chords follow it.</li>
   <li>Choose a <strong>bank</strong> (A, B, C or D, top right). Each bank shows 16 of the 64 pads.</li>
 </ol>
@@ -98,7 +98,7 @@
   <tr><th>Area</th><th>What it does</th></tr>
   <tr><td>Top left</td><td>The factory preset in use, with prev and next.</td></tr>
   <tr><td>Top band</td><td>The notes of the current scale in the current key.</td></tr>
-  <tr><td>Mode row (top)</td><td>Chords, Types, Custom, Chrom notes, Scale notes or Chrom chords. See <a href="#modes">Modes</a>.</td></tr>
+  <tr><td>Mode row (top)</td><td>Chords, Custom, Chrom notes, Scale notes or Chrom chords. See <a href="#modes">Modes</a>.</td></tr>
   <tr><td>Bank A, B, C, D (top right)</td><td>Shows that bank's 16 pads. Each button is separate, so all four work.</td></tr>
   <tr><td>Pads (left)</td><td>16 chord pads for the bank in view. The name, the function (such as <em>root</em> or <em>V7</em>) and the notes appear on each pad. The pad you last played lights up.</td></tr>
   <tr><td>Key (right)</td><td>A one-octave keyboard. Tap a key to set the key. The dots show the notes of the scale.</td></tr>
@@ -170,17 +170,15 @@
   <li><strong>Shift keys</strong> (on by default): the black keys in the octave below the pads act without playing a chord. C# moves the key down a semitone, D# up, F# to the previous scale, G# to the next scale, A# to the next inversion.</li>
 </ul>
 
-<h2 id="modes">9. Modes: Chords, Types, Custom and the note modes</h2>
+<h2 id="modes">9. Modes: Chords, Custom and the note modes</h2>
 <ul>
   <li><strong>Chords</strong> builds the chords from the key and scale you choose, with the chord's roman numeral on each pad.</li>
-  <li><strong>Types</strong> puts one chord type on each pad, all built on the key's root. Bank A has the basic types (major, minor, 7ths, sus, 9ths). Bank B has the extended ones (11ths, 13ths, altered). Banks C and D are the same as A and B, one octave higher. For example, with F as the root: bank A gives F, Fm, F7, Fmaj7, Fm7…</li>
   <li><strong>Custom</strong> plays your own 64 pads. Edits switch to this mode.</li>
   <li><strong>Chrom notes</strong> puts one note on each pad, every semitone from the key up (pad 1 is the key, pad 13 the key an octave higher). The Octave setting moves the whole layout.</li>
   <li><strong>Scale notes</strong> puts the notes of the chosen scale on the pads in pitch order, so a bank runs up the scale.</li>
   <li><strong>Chrom chords</strong> puts one chord root on every semitone from the key: bank A is major, B minor, C dominant 7th and D minor 7th. Changing the key moves every chord.</li>
 </ul>
 <p>The note and chord modes remap at once when you change the key, scale or octave, even while the sequencer plays. A pad that is held when its notes change is released on the notes it started with.</p>
-<div class="note">To try Types: pick <em>Types</em>, set the key to F, and open bank A. Pad 1 should read F, pad 2 Fm and pad 3 F7. If the names don't change, the mode did not take.</div>
 
 <h2 id="smart">10. Smart Scale pads</h2>
 <p>Set <strong>Smart Scale pads</strong> to <em>Pads 9-16</em> and the bottom row of pads plays single notes that fit the chord you played last on the top row. Play a chord with one hand and a melody or bassline with the other, and nothing clashes. Smart pads only give notes that fit the chord, so they cannot play a wrong note.</p>

@@ -23,7 +23,7 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
-#define CHUNK_VERSION 11 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms */
+#define CHUNK_VERSION 12 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts) */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 
@@ -331,20 +331,28 @@ static int sound_index(const Plugin *p) {
 static float norm_of(int i, int idx) { int s = PINFO[i].steps; return s <= 1 ? 0.f : (float)idx / (float)(s - 1); }
 /* Saved projects from before the R&B kit was removed stored Mode as a fraction of 4 (five values: Song, Scale, R&B kit,
  * Types, Custom). R&B kit becomes Scale; Types and Custom move down one. */
-/* a saved Mode: before version 9 it counted the R&B kit too; from version 9 to 10 it counted four modes (the first four
- * keep their places, so the three new modes never change a saved one) */
+/* A saved Mode. Version 10 and earlier counted the layouts with Types in the list, at position 2 (Song, Key, Types, Custom,
+ * then the three note and chord modes). Types is gone: a saved Types moves to Chords, and the modes after it move up one. */
 static float mode_from_saved(float v, uint32_t ver) {
     int idx;
     if (ver < 9) {
         int old = (int)(v * 4.f + 0.5f);
         if (old < 0) old = 0;
         if (old > 4) old = 4;
-        static const int NEW[5] = {VC_MODE_SONG, VC_MODE_KEY, VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM};
+        static const int NEW[5] = {0, 1, 1, 2, 3}; /* R&B kit era: Song, Key, Key, Types, Custom */
         idx = NEW[old];
-    } else {
+    } else if (ver == 9) {
         idx = (int)(v * 3.f + 0.5f);
         if (idx < 0) idx = 0;
         if (idx > 3) idx = 3;
+    } else {
+        idx = (int)(v * 6.f + 0.5f); /* versions 10 and 11: seven layouts */
+        if (idx < 0) idx = 0;
+        if (idx > 6) idx = 6;
+    }
+    if (ver < 12) { /* the Types-era numbering to the current one */
+        if (idx == 2) idx = VC_MODE_KEY;
+        else if (idx > 2) idx -= 1;
     }
     return norm_of(P_MODE, idx);
 }
@@ -1530,7 +1538,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
         union { float f; uint32_t u; } u;
         u.u = r32(b, &k);
         if (ver < 8 && i == P_SCALE) u.f = scale_from_old(u.f);
-        if (ver < 10 && i == P_MODE) u.f = mode_from_saved(u.f, ver);
+        if (ver < 12 && i == P_MODE) u.f = mode_from_saved(u.f, ver);
         if (ver < 11 && i == P_PATTERN) u.f = pattern_from_saved(u.f);
         if (i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR) p->val[i] = u.f; /* shown only: the parameters saved with it already hold the preset's values */
         else if (i >= P_RIFF0 && i <= P_RIFF_END) p->val[i] = u.f; /* riff steps are stored as data below */

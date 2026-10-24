@@ -299,9 +299,9 @@ static void test_note_handling(void) {
 
     /* strum timing: 50 ms at 48 kHz = 2400 samples per note */
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_TYPES; e.lp.voicing = VC_VOICE_CLOSE; e.dirty = 1;
+    e.lp.mode = VC_MODE_KEY; e.lp.voicing = VC_VOICE_CLOSE; e.dirty = 1;
     e.midi_out = 1; e.strum_ms = 50.f;
-    en_push_midi(&e, 100, 0x90, 36 + 3, 100); /* Cmaj7, 4 notes */
+    en_push_midi(&e, 100, 0x90, 36 + 3, 100); /* a 4-note chord */
     int64_t times[8]; int nt = 0;
     for (int b = 0; b < 40; b++) {
         int64_t t0 = e.now;
@@ -314,7 +314,7 @@ static void test_note_handling(void) {
 
     /* arp timing: 120 bpm, 1/16 = 6000 samples at 48 kHz */
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_TYPES; e.dirty = 1;
+    e.lp.mode = VC_MODE_KEY; e.dirty = 1;
     e.midi_out = 1; e.lanes[0].order = ARP_UP; e.lanes[0].rate = RATE_16; e.tempo = 120.0;
     en_push_midi(&e, 0, 0x90, 36 + 3, 100);
     nt = 0;
@@ -361,7 +361,7 @@ static int collect(Engine *e, int blocks, Hit *h, int max) {
 static Engine *pat_engine(const char *steps, double tempo, int rate) {
     static Engine e;
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_TYPES; e.lp.voicing = VC_VOICE_BASS_UPPER; e.dirty = 1;
+    e.lp.mode = VC_MODE_KEY; e.lp.voicing = VC_VOICE_BASS_UPPER; e.dirty = 1;
     e.midi_out = 1; e.tempo = tempo; e.pat_rate = rate; e.pat_sync = 1; e.playing = 0;
     e.pattern_on = 1; e.gate = 1.0f;
     memcpy(e.pat, steps, EN_STEPS);
@@ -614,7 +614,7 @@ static void test_tools(void) {
     /* Repeat at 1/8, 120 bpm = 12000 samples at 48 kHz */
     static Hit h[4000];
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_TYPES; e.dirty = 1; e.midi_out = 1; e.tempo = 120.0; e.repeat = REP_8;
+    e.lp.mode = VC_MODE_KEY; e.dirty = 1; e.midi_out = 1; e.tempo = 120.0; e.repeat = REP_8;
     en_push_midi(&e, 0, 0x90, 36 + 3, 100);
     int n = collect(&e, 120, h, 4000), low = 999;
     for (int i = 0; i < n; i++) if (h[i].on && h[i].note < low) low = h[i].note;
@@ -1807,10 +1807,10 @@ static void test_live_remap(void) {
     /* changing the root transposes every chromatic chord, and the key moves all of them by the same steps */
     {
         Engine *base = live_engine(), *moved = live_engine();
-        base->lp.mode = VC_MODE_TYPES; base->lp.key = 0; base->dirty = 1; en_rebuild(base);
+        base->lp.mode = VC_MODE_KEY; base->lp.key = 0; base->dirty = 1; en_rebuild(base);
         int bad = 0, notes_bad = 0;
         for (int k = 0; k < 12; k++) {
-            moved->lp.mode = VC_MODE_TYPES; moved->lp.key = k; moved->dirty = 1; en_rebuild(moved);
+            moved->lp.mode = VC_MODE_KEY; moved->lp.key = k; moved->dirty = 1; en_rebuild(moved);
             for (int i = 0; i < 64; i++) {
                 if (!base->pads[i].valid) continue;
                 if (moved->pads[i].spec.root != pcm(base->pads[i].spec.root + k)) bad++;
@@ -1863,7 +1863,7 @@ static void test_live_remap(void) {
     {
         int bad = 0, total = 0;
         static const int SCALES[] = {0, 1, 4, 9, 10};
-        static const int MODES_CHECKED[] = {VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CHROM_CHORDS, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES};
+        static const int MODES_CHECKED[] = {VC_MODE_KEY, VC_MODE_CHROM_CHORDS, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES};
         int name_bad = 0;
         for (int k = 0; k < 12; k++) for (unsigned s = 0; s < sizeof(SCALES) / sizeof(SCALES[0]); s++)
         for (unsigned m = 0; m < sizeof(MODES_CHECKED) / sizeof(MODES_CHECKED[0]); m++) {
@@ -1905,7 +1905,7 @@ static void test_live_remap(void) {
     /* repeated switching: after many key, scale and mode changes the engine matches a fresh one with the same settings */
     {
         Engine *e = live_engine();
-        static const int MODES[] = {VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES, VC_MODE_CHROM_CHORDS};
+        static const int MODES[] = {VC_MODE_KEY, VC_MODE_CUSTOM, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES, VC_MODE_CHROM_CHORDS};
         for (int r = 0; r < 200; r++) {
             e->lp.mode = MODES[r % 6]; e->lp.key = (r * 5) % 12; e->lp.scale = (r * 3) % 9; e->lp.voicing = r % 4;
             e->dirty = 1; en_rebuild(e);
