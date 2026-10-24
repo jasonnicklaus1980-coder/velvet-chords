@@ -58,12 +58,14 @@ The installer checks the device and file checksums, **stops MPC** (save your pro
 
 ## The screen
 
-The plugin comes with its own MPC screen skin, six pages on the function keys:
+The plugin comes with its own MPC screen skin, six pages on the function keys, in this order:
 
-- **Play**: mode buttons, song and section pickers with the song's data status, Smart Scale controls, 16 chord keys showing each pad's chord and function (the key you last played lights up; tap a key to hear it), the bank buttons A-D, a one-octave keyboard for the key with dots on the notes of the scale, the scale picker, and a readout of the exact notes playing.
+- **Play**: the mode buttons (Chords, Custom, Chrom notes, Scale notes, Chrom chords), the Key and Scale pickers, the Smart Scale controls, 16 chord keys showing each pad's chord and function (the key you last played lights up; tap a key to hear it), the bank buttons A-D, a one-octave keyboard for the key with dots on the notes of the scale, the Progression play switch, the Voicing buttons, Direct, and a readout of the exact notes playing.
 - **Perform**: sound, tone, release, volume, velocity curve, strum, arpeggiator, voicing, inversion, octave, transpose, voice leading, MIDI out, pad 1 note with Learn, and Export MIDI.
-- **Pattern**: rhythm presets, the 16-step grid, swing, note length and timing, plus MIDI output settings.
 - **Edit**: tap a chord key to pick it, then set its root on the keyboard, its bass note, chord type, inversion and octave. Copy to Custom starts you from whatever layout you were playing.
+- **Pattern**: rhythm presets, the 16-step grid, swing, note length and timing, plus MIDI output settings.
+- **Tools**: Hold, Repeat, Melody, Key sync, MIDI import (the Import file picker, Load chords, Pads play and the status line), Smart Scale notes and octave, the progression slot, Harmony, and Volume.
+- **Lanes**: the preset selector, the shift keys, the riff, the four arpeggio lanes and the riff steps.
 
 The Q-Links follow the page. If the skin doesn't appear (for example `/sdcard/Synths` isn't in MPC's content locations; the installer warns about this), the plugin still works through MPC's generic parameter view.
 
