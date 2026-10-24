@@ -1352,6 +1352,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
             int n = snprintf(b, sizeof(b), "Scale:");
             int fl = vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
             for (int j = 0; j < sc->n; j++) n += snprintf(b + n, sizeof(b) - (size_t)n, " %s", vc_pc_name(lp->key + sc->iv[j], fl));
+            if (sc->desc) snprintf(b + n, sizeof(b) - (size_t)n, "  |  %s", sc->desc);   /* the scale's character, as a few words */
         }
         break;
     }

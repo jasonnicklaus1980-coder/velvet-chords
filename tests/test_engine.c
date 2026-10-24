@@ -1641,6 +1641,26 @@ static void test_audio_analysis(void) {
 }
 
 /* Detect: the scale that holds the notes played, ranked by how many of them it holds */
+/* every scale has a name, a description that fits the Info line, and its own set of notes */
+static void test_scale_table(void) {
+    int named = 1, short_desc = 1, distinct = 1, sized = 1;
+    for (int i = 0; i < VC_NUM_SCALES; i++) {
+        const Scale *a = &VC_SCALES[i];
+        if (!a->name || !a->name[0] || !a->desc || !a->desc[0]) named = 0;
+        if (a->desc && strlen(a->desc) > 40) short_desc = 0;
+        if (a->n < 4 || a->n > 8 || a->iv[0] != 0) sized = 0;
+        for (int j = 0; j < i; j++) {
+            const Scale *b = &VC_SCALES[j];
+            if (a->n == b->n && !memcmp(a->iv, b->iv, sizeof(a->iv))) distinct = 0;
+            if (!strcmp(a->name, b->name)) distinct = 0;
+        }
+    }
+    CHECK(named, "every scale has a name and a description");
+    CHECK(short_desc, "every description is at most 40 characters");
+    CHECK(sized, "every scale has 4 to 8 notes, starting on its tonic");
+    CHECK(distinct, "no two scales share a name or the same notes from the tonic");
+}
+
 static void test_detect(void) {
     DetectHit h[8];
     unsigned white = 1u << 0 | 1u << 2 | 1u << 4 | 1u << 5 | 1u << 7 | 1u << 9 | 1u << 11;   /* C D E F G A B */
@@ -1659,13 +1679,12 @@ static void test_detect(void) {
     for (int i = 0; i < n; i++) if (h[i].matches != 3) ok = 0;
     CHECK(ok, "containing: every hit holds all three notes");
     n = vc_detect(white | 1u << 1, 0, h, 8);                          /* plus C# : no scale holds all eight */
-    CHECK(vc_detect(white | 1u << 1, 1, h, 8) > 0 && h[0].matches == 8 && h[0].size == 8,
-          "containing: an eight-note scale holds all eight notes (%s)", VC_SCALES[h[0].scale].name);
+    CHECK(vc_detect(white | 1u << 1, 1, h, 8) == 0, "containing: nothing holds all eight notes");
     CHECK(n == 8, "not containing: at most the list size, best first (%d)", n);
     int sorted = 1;
     for (int i = 1; i < n; i++) if (h[i].matches > h[i - 1].matches) sorted = 0;
     CHECK(sorted, "hits sorted by matches");
-    CHECK(h[0].matches == 8, "best fit of the eight notes holds all of them");
+    CHECK(h[0].matches == 7 && h[0].key == 0 && h[0].scale == 0, "best fit of the eight notes: C Major (7 of 8)");
     CHECK(vc_detect(white, 1, h, 1) == 1, "a list of one returns one hit");
 }
 
@@ -1700,6 +1719,7 @@ int main(void) {
     printf("harmony...\n"); test_harmony();
     printf("audio analysis...\n"); test_audio_analysis();
     printf("scale detection...\n"); test_detect();
+    printf("scale table...\n"); test_scale_table();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

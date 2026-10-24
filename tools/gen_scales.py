@@ -1,78 +1,103 @@
 #!/usr/bin/env python3
-"""Generate src/scales_gen.inc: the scales added after the 17 built in to layouts.c.
+"""Generate src/scales_gen.inc: the named scales added after the 17 built in to layouts.c.
 
-Every pitch-class set of 4 to 8 notes is taken once per transposition and inversion (the usual set-theory
-equivalence), so each scale appears once. Sets that the built-in table already holds are left out. Scales with a
-name we know keep it; the rest are labelled by note count and position in this list (not Forte numbers).
-The built-in scales keep their indices, so saved projects and presets that store a scale index still load.
+Modes of the harmonic minor, melodic minor and harmonic major scales are made by rotating the parent scale, so
+each mode's notes follow from its parent. The rest are written out from standard references. Each scale has a name
+and a short description (kept to about 40 characters, so it fits the Info line on the MPC screen).
+Scales already in the built-in table are skipped by name.
 
 usage: gen_scales.py <out.inc>
 """
-import itertools, os, sys
+import sys
 
-BUILT_IN = [  # the 17 scales in layouts.c, as pitch classes from the tonic (checks that no generated set repeats one)
-    [0, 2, 4, 5, 7, 9, 11], [0, 2, 3, 5, 7, 8, 10], [0, 2, 3, 5, 7, 8, 11], [0, 2, 3, 5, 7, 9, 11],
-    [0, 2, 3, 5, 7, 9, 10], [0, 1, 3, 5, 7, 8, 10], [0, 2, 4, 6, 7, 9, 11], [0, 2, 4, 5, 7, 9, 10],
-    [0, 1, 3, 5, 6, 8, 10], [0, 2, 4, 7, 9], [0, 3, 5, 7, 10], [0, 3, 5, 6, 7, 10], [0, 2, 3, 4, 7, 9],
-    [0, 2, 4, 6, 7, 9, 10], [0, 1, 4, 5, 7, 8, 10], [0, 2, 4, 6, 8, 10], [0, 1, 3, 4, 6, 7, 9, 10],
-]
-
-KNOWN = {  # names for sets with a common name, given as pitch classes from any starting note
-    "Hirajoshi": [0, 2, 3, 7, 8],
-    "In sen": [0, 1, 5, 7, 10],
-    "Iwato": [0, 1, 5, 6, 10],
-    "Egyptian pentatonic": [0, 2, 5, 7, 10],
-    "Augmented hexatonic": [0, 3, 4, 7, 8, 11],
-    "Prometheus": [0, 2, 4, 6, 9, 10],
-    "Hungarian major": [0, 3, 4, 6, 7, 9, 10],
-    "Ukrainian Dorian": [0, 2, 3, 6, 7, 9, 10],
-    "Hungarian minor": [0, 2, 3, 6, 7, 8, 11],
-    "Double harmonic": [0, 1, 4, 5, 7, 8, 11],
-    "Neapolitan minor": [0, 1, 3, 5, 7, 8, 11],
-    "Neapolitan major": [0, 1, 3, 5, 7, 9, 11],
-    "Enigmatic": [0, 1, 4, 6, 8, 10, 11],
-    "Persian": [0, 1, 4, 5, 6, 8, 11],
-    "Bebop dominant": [0, 2, 4, 5, 7, 9, 10, 11],
-    "Bebop major": [0, 2, 4, 5, 7, 8, 9, 11],
-    "Diminished whole-half": [0, 2, 3, 5, 6, 8, 9, 11],
+BUILT_IN = {  # names already in layouts.c; a generated entry with one of these names is skipped
+    "Major", "Natural minor", "Harmonic minor", "Melodic minor", "Dorian", "Phrygian", "Lydian", "Mixolydian",
+    "Locrian", "Major pentatonic", "Minor pentatonic", "Blues", "Major blues (gospel)", "Lydian dominant",
+    "Phrygian dominant", "Whole tone", "Diminished (half-whole)",
 }
 
 
-def normal(pcs):
-    """the rotation of a set that starts at 0 and is smallest when read as a list"""
-    return min(tuple(sorted((p - r) % 12 for p in pcs)) for r in pcs)
+def rotate(parent, degree):
+    """the mode that starts on the given degree (0 = the parent itself), as pitch classes from its own tonic"""
+    root = parent[degree]
+    return sorted((p - root) % 12 for p in parent)
 
 
-def prime(pcs):
-    """one name for a set under transposition and inversion"""
-    return min(normal(pcs), normal([(-p) % 12 for p in pcs]))
+HARMONIC_MINOR = [0, 2, 3, 5, 7, 8, 11]
+MELODIC_MINOR = [0, 2, 3, 5, 7, 9, 11]
+HARMONIC_MAJOR = [0, 2, 4, 5, 7, 8, 11]
+
+MODES = [  # (parent, degree, name, description)
+    (HARMONIC_MINOR, 1, "Locrian natural 6", "Dark and tense, with a bright 6th"),
+    (HARMONIC_MINOR, 2, "Ionian sharp 5", "Dreamy, bright, floating"),
+    (HARMONIC_MINOR, 3, "Ukrainian Dorian", "Minor with a sharp 4th, folk-like"),
+    (HARMONIC_MINOR, 5, "Lydian sharp 2", "Bright and exotic, unresolved"),
+    (HARMONIC_MINOR, 6, "Ultralocrian", "Very dark, tense, unstable"),
+    (MELODIC_MINOR, 1, "Dorian flat 2", "Dark minor with a flat 2nd, moody"),
+    (MELODIC_MINOR, 2, "Lydian augmented", "Dreamy and otherworldly"),
+    (MELODIC_MINOR, 4, "Mixolydian flat 6", "Dominant with a flat 6th, exotic"),
+    (MELODIC_MINOR, 5, "Locrian natural 2", "Half-diminished, soft, unstable"),
+    (MELODIC_MINOR, 6, "Altered", "Dominant tension, jazz, unresolved"),
+    (HARMONIC_MAJOR, 0, "Harmonic major", "Major with a flat 6th, lush"),
+    (HARMONIC_MAJOR, 1, "Dorian flat 5", "Minor with a flat 5th, dark jazz"),
+    (HARMONIC_MAJOR, 2, "Phrygian flat 4", "Dark and Spanish-leaning"),
+    (HARMONIC_MAJOR, 3, "Lydian flat 3", "Bright, unusual, cinematic"),
+    (HARMONIC_MAJOR, 4, "Mixolydian flat 2", "Dominant with a flat 2nd, tense"),
+    (HARMONIC_MAJOR, 5, "Lydian augmented sharp 2", "Bright, dreamy, very tense"),
+    (HARMONIC_MAJOR, 6, "Locrian flat 7", "Dark, unstable, Locrian with a flat 7"),
+]
+
+OTHER = [  # (name, pitch classes, description)
+    ("Bebop dominant", [0, 2, 4, 5, 7, 9, 10, 11], "Dominant with a passing 7th, bebop"),
+    ("Bebop major", [0, 2, 4, 5, 7, 8, 9, 11], "Major with a passing sharp 5th"),
+    ("Hungarian major", [0, 3, 4, 6, 7, 9, 10], "Gypsy major, exotic and dramatic"),
+    ("Hungarian minor", [0, 2, 3, 6, 7, 8, 11], "Minor with a raised 4th, dramatic"),
+    ("Double harmonic", [0, 1, 4, 5, 7, 8, 11], "Byzantine and Bhairav, very exotic"),
+    ("Neapolitan minor", [0, 1, 3, 5, 7, 8, 11], "Minor with a flat 2nd, dramatic"),
+    ("Neapolitan major", [0, 1, 3, 5, 7, 9, 11], "Major with a flat 2nd, classical"),
+    ("Persian", [0, 1, 4, 5, 6, 8, 11], "Persian, dark and exotic"),
+    ("Enigmatic", [0, 1, 4, 6, 8, 10, 11], "Strange and shifting, chromatic"),
+    ("Augmented hexatonic", [0, 3, 4, 7, 8, 11], "Symmetrical, dreamy, unresolved"),
+    ("Prometheus", [0, 2, 4, 6, 9, 10], "Mystic and bright, Scriabin-style"),
+    ("Diminished (whole-half)", [0, 2, 3, 5, 6, 8, 9, 11], "Dominant diminished, jazz tension"),
+    ("Hirajoshi", [0, 2, 3, 7, 8], "Japanese, bright and sad"),
+    ("In sen", [0, 1, 5, 7, 10], "Japanese, dark and mysterious"),
+    ("Iwato", [0, 1, 5, 6, 10], "Japanese, dark and tense"),
+    ("Kumoi", [0, 2, 3, 7, 9], "Japanese, soft and reflective"),
+    ("Yo", [0, 2, 5, 7, 9], "Japanese, open and bright"),
+    ("Ryukyu", [0, 4, 5, 7, 11], "Okinawan, bright folk"),
+    ("Egyptian pentatonic", [0, 2, 5, 7, 10], "Suspended, open, no 3rd"),
+    ("Todi", [0, 1, 3, 6, 7, 8, 11], "Raga Todi: deep and emotional"),
+    ("Marwa", [0, 1, 4, 6, 7, 9, 11], "Raga Marwa: dusk, restless"),
+    ("Purvi", [0, 1, 4, 6, 7, 8, 11], "Raga Purvi: dusk, reflective"),
+]
+
+
+def entries():
+    out = []
+    for parent, degree, name, desc in MODES:
+        out.append((name, rotate(parent, degree), desc))
+    out.extend(OTHER)
+    return out
 
 
 def main():
-    out = sys.argv[1]
-    built = {prime(s) for s in BUILT_IN}
-    known = {prime(v): (name, sorted((x - v[0]) % 12 for x in v)) for name, v in KNOWN.items()}
-    sets = []
-    for n in range(4, 9):
-        seen = set()
-        for c in itertools.combinations(range(12), n):
-            if 0 not in c:
-                continue  # every set has a rotation that holds 0, so this keeps one copy of each transposition
-            p = prime(c)
-            if p in seen or p in built:
-                continue
-            seen.add(p)
-            sets.append(p)
+    rows = []
+    seen = set(BUILT_IN)
+    for name, pcs, desc in entries():
+        if name in seen:
+            continue
+        seen.add(name)
+        assert len(desc) <= 40, (name, len(desc))
+        assert 4 <= len(pcs) <= 8 and pcs[0] == 0, name
+        rows.append((name, pcs, desc))
     lines = ["/* generated by tools/gen_scales.py: scales 17 and up of VC_SCALES. Do not edit by hand. */"]
-    for n in range(4, 9):
-        group = [p for p in sets if len(p) == n]
-        for i, p in enumerate(sorted(group), 1):
-            name, iv_list = known.get(p, ("%d-note set %d" % (n, i), list(p)))  # named scales keep their own notes
-            iv = ", ".join(str(x) for x in iv_list)
-            lines.append('    {"%s", %d, {%s}},' % (name, n, iv))
-    with open(out, "w") as f:
+    for name, pcs, desc in rows:
+        iv = ", ".join(str(x) for x in pcs)
+        lines.append('    {"%s", %d, {%s}, "%s"},' % (name, len(pcs), iv, desc))
+    with open(sys.argv[1], "w") as f:
         f.write("\n".join(lines) + "\n")
-    print("%d scales generated, %d built in, %d in total" % (len(sets), len(BUILT_IN), len(sets) + len(BUILT_IN)))
+    print("%d scales generated, %d built in, %d in total" % (len(rows), len(BUILT_IN), len(rows) + len(BUILT_IN)))
 
 
 if __name__ == "__main__":

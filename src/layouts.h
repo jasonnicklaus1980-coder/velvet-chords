@@ -13,7 +13,7 @@ enum { VC_MODE_SONG, VC_MODE_KEY, VC_MODE_RNB, VC_MODE_TYPES, VC_MODE_CUSTOM, VC
 #define VC_MODE_IMPORT VC_MODE_COUNT /* internal: pads show chords imported from a MIDI file */
 extern const char *VC_MODE_NAMES[VC_MODE_COUNT];
 
-typedef struct { const char *name; int n; signed char iv[8]; } Scale;
+typedef struct { const char *name; int n; signed char iv[8]; const char *desc; } Scale; /* desc: a few words, shown with the scale */
 extern const Scale VC_SCALES[];
 extern const int VC_NUM_SCALES;
 

@@ -16,7 +16,7 @@ depending on whether MPC routes MIDI *out* of plugins, which is unknown.
 | Voicings | 192,000 combinations: every type x 12 roots x slash basses x 5 styles x 4 inversions x 5 octaves; pitch classes, bass note, order, range | Pass |
 | Transposition | Every type in all 12 keys keeps its interval shape; transposed song pads keep quality | Pass |
 | Voice leading | Top voice of a voice-led progression moves no more than a 4th | Pass |
-| Smart Scale | Diatonic chords for C major and A harmonic minor checked by name; all 194 scales x 12 keys stay in scale | Pass |
+| Smart Scale | Diatonic chords for C major and A harmonic minor checked by name; all 56 scales x 12 keys stay in scale | Pass |
 | Song data | All chord symbols parse, whole bars only, no duplicate ids, none claims `verified` | Pass |
 | Note handling | 4,000 random blocks of overlapping notes, sustain, strum, arp, layout changes; then all off | No held chords, no stuck voices, MIDI out on/off balanced |
 | Retrigger, sustain | Double note-on with one note-off; pedal hold and release | Pass |

@@ -184,7 +184,7 @@ The grid shows the 16 steps. Tap a cell to set what a step does: **Accent** or *
 |---|---|
 | Mode | Scale, R&B kit, Chord types, Custom |
 | Section | Section on bank A; banks B-D get the following sections |
-| Key, Scale | Key and scale for Smart scale, R&B kit and Chord types (194 scales) |
+| Key, Scale | Key and scale for Smart scale, R&B kit and Chord types (56 scales) |
 | Transpose | Shifts the chords by -12 to +12 semitones |
 | Voicing | Bass + upper (default), Close, Drop 2, Spread, Upper only |
 | Inversion, Octave | Global chord inversion and register |
