@@ -9,7 +9,9 @@
 
 #define VC_PADS 64 /* 4 MPC pad banks (A-D) x 16 */
 
-enum { VC_MODE_SONG, VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM, VC_MODE_COUNT };
+/* the Pad Perform modes: the first four are the original layouts; the last three are the MPC-style note and chord layouts,
+ * which remap as soon as the key, scale or octave changes */
+enum { VC_MODE_SONG, VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES, VC_MODE_CHROM_CHORDS, VC_MODE_COUNT };
 #define VC_MODE_IMPORT VC_MODE_COUNT /* internal: pads show chords imported from a MIDI file */
 extern const char *VC_MODE_NAMES[VC_MODE_COUNT];
 
@@ -32,6 +34,7 @@ typedef struct {
 typedef struct {
     int valid;
     ChordSpec spec;
+    unsigned char single, midi; /* single: the pad plays one note, midi, and nothing else */
     int inv, oct;      /* per-pad offsets added to the global settings */
     char name[24];     /* chord symbol shown to the user */
     char roman[16];    /* function in the current key, may be empty */

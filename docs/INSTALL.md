@@ -52,7 +52,7 @@ The installer checks the device and file checksums, **stops MPC** (save your pro
 
 1. Make a new plugin track and choose **Velvet Chords** from the plugin browser (instrument plugins).
 2. Hit pad A01. If you hear nothing, open the plugin's parameters, turn **Learn pad 1** on, and hit the pad you want as pad 1. Pads 2-64 follow from there (16 per bank, banks A-D).
-3. Pick a **Mode**: Scale, Chord types or Custom. (Song mode has been removed from the screen; an old project saved in Song mode opens in Scale.)
+3. Pick a **Mode**: Chords, Types, Custom, Chrom notes, Scale notes or Chrom chords. Chords is the diatonic layout (the Scale in the Key and Scale fields); Chrom notes puts every semitone on a pad, Scale notes the scale's notes up the bank, and Chrom chords one chord root on every semitone. (Song mode has been removed from the screen; an old project saved in Song mode opens in Scale.)
 
 ## The screen
 
@@ -178,7 +178,7 @@ The grid shows the 16 steps. Tap a cell to set what a step does: **Accent** or *
 
 | Parameter | What it does |
 |---|---|
-| Mode | Scale, Chord types, Custom |
+| Mode | Chords, Types, Custom, Chrom notes, Scale notes, Chrom chords |
 | Section | Section on bank A; banks B-D get the following sections |
 | Key, Scale | Key and scale for Smart scale and Chord types (223 scales) |
 | Transpose | Shifts the chords by -12 to +12 semitones |

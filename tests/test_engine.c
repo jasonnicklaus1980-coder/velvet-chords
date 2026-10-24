@@ -1863,11 +1863,23 @@ static void test_live_remap(void) {
     {
         int bad = 0, total = 0;
         static const int SCALES[] = {0, 1, 4, 9, 10};
-        for (int k = 0; k < 12; k++) for (unsigned s = 0; s < sizeof(SCALES) / sizeof(SCALES[0]); s++) {
+        static const int MODES_CHECKED[] = {VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CHROM_CHORDS, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES};
+        int name_bad = 0;
+        for (int k = 0; k < 12; k++) for (unsigned s = 0; s < sizeof(SCALES) / sizeof(SCALES[0]); s++)
+        for (unsigned m = 0; m < sizeof(MODES_CHECKED) / sizeof(MODES_CHECKED[0]); m++) {
             Engine *e = live_engine();
-            e->lp.mode = VC_MODE_KEY; e->lp.key = k; e->lp.scale = SCALES[s]; e->dirty = 1; en_rebuild(e);
-            for (int i = 0; i < 64; i++) if (e->pads[i].valid) { total++; if (!voiced_inside_chord(e, i)) bad++; }
+            e->lp.mode = MODES_CHECKED[m]; e->lp.key = k; e->lp.scale = SCALES[s]; e->dirty = 1; en_rebuild(e);
+            int flats = vc_prefer_flats(k, vc_scale_is_minor(SCALES[s]));
+            for (int i = 0; i < 64; i++) if (e->pads[i].valid) {
+                total++;
+                if (e->pads[i].single) { /* a note pad: its label is the note it plays */
+                    char nm[24];
+                    vc_note_name(e->voicings[i].notes[0], flats, nm, sizeof(nm));
+                    if (strcmp(nm, e->pads[i].name)) name_bad++;
+                } else if (!voiced_inside_chord(e, i)) bad++;
+            }
         }
+        CHECK(name_bad == 0, "every note pad's label names the note it plays (%d off)", name_bad);
         CHECK(bad == 0, "every pad's notes match its label in every key (%d of %d off)", bad, total);
     }
 
@@ -1893,9 +1905,9 @@ static void test_live_remap(void) {
     /* repeated switching: after many key, scale and mode changes the engine matches a fresh one with the same settings */
     {
         Engine *e = live_engine();
-        static const int MODES[] = {VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM};
+        static const int MODES[] = {VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM, VC_MODE_CHROM_NOTES, VC_MODE_SCALE_NOTES, VC_MODE_CHROM_CHORDS};
         for (int r = 0; r < 200; r++) {
-            e->lp.mode = MODES[r % 3]; e->lp.key = (r * 5) % 12; e->lp.scale = (r * 3) % 9; e->lp.voicing = r % 4;
+            e->lp.mode = MODES[r % 6]; e->lp.key = (r * 5) % 12; e->lp.scale = (r * 3) % 9; e->lp.voicing = r % 4;
             e->dirty = 1; en_rebuild(e);
         }
         Engine *f = live_engine();
@@ -1923,6 +1935,69 @@ static void test_live_remap(void) {
         for (int i = 0; i < 4; i++) live_block(e, ons, offs, &dup, active);
         CHECK(silent < 40, "audio keeps flowing through a key change (%d silent of 40 blocks)", silent);
         CHECK(dup == 0, "playback through a key change starts no duplicate note (%d)", dup);
+    }
+}
+
+/* the three Pad Perform modes added for the MPC-style layouts: chromatic notes, scale notes and chromatic chords */
+static void test_pad_perform_modes(void) {
+    /* chromatic notes: every semitone from the key, one note per pad */
+    {
+        Engine *e = live_engine();
+        e->lp.mode = VC_MODE_CHROM_NOTES; e->lp.key = 0; e->lp.octave = 0; e->dirty = 1; en_rebuild(e);
+        int steps_bad = 0, sounds_bad = 0;
+        for (int i = 0; i < 13; i++) {
+            if (!e->pads[i].valid || e->voicings[i].n != 1 || e->voicings[i].notes[0] != 36 + i) steps_bad++;
+        }
+        for (int i = 0; i < 13; i++) if (!e->pads[i].valid || e->pads[i].single != 1) sounds_bad++;
+        CHECK(steps_bad == 0 && sounds_bad == 0, "chromatic notes: pads 1-13 are C, C#, ... C one octave up (%d wrong)", steps_bad + sounds_bad);
+        e->lp.key = 5; e->dirty = 1; en_rebuild(e);
+        int moved = 0;
+        for (int i = 0; i < 64; i++) if (e->pads[i].valid && e->voicings[i].notes[0] != 36 + 5 + i) moved++;
+        CHECK(moved == 0, "chromatic notes: the root note moves every pad up by the same steps (%d wrong)", moved);
+        e->lp.octave = 1; e->dirty = 1; en_rebuild(e);
+        CHECK(e->voicings[0].notes[0] == 36 + 5 + 12, "chromatic notes: the octave moves the whole layout (%d)", e->voicings[0].notes[0]);
+    }
+
+    /* scale notes: the scale's own notes, up the bank, and the scale changes them */
+    {
+        Engine *e = live_engine();
+        e->lp.mode = VC_MODE_SCALE_NOTES; e->lp.key = 0; e->lp.scale = 0; e->lp.octave = 0; e->dirty = 1; en_rebuild(e);
+        static const int MAJ[8] = {36, 38, 40, 41, 43, 45, 47, 48};
+        int bad = 0;
+        for (int i = 0; i < 8; i++) if (e->voicings[i].notes[0] != MAJ[i]) bad++;
+        CHECK(bad == 0, "scale notes: C major runs C D E F G A B C up the first pads (%d wrong)", bad);
+        e->lp.scale = 4; e->dirty = 1; en_rebuild(e); /* Dorian: the third is Eb */
+        CHECK(e->voicings[2].notes[0] == 39, "scale notes: changing to Dorian makes pad 3 an Eb (%d)", e->voicings[2].notes[0]);
+        e->lp.key = 2; e->lp.scale = 1; e->dirty = 1; en_rebuild(e); /* D natural minor */
+        int outside = 0;
+        for (int i = 0; i < 64; i++) if (e->pads[i].valid) {
+            int pc = e->voicings[i].notes[0] % 12, ok = 0;
+            for (int j = 0; j < VC_SCALES[1].n; j++) if ((2 + VC_SCALES[1].iv[j]) % 12 == pc) ok = 1;
+            if (!ok) outside++;
+        }
+        CHECK(outside == 0, "scale notes: every pad in D natural minor is a note of that scale (%d outside)", outside);
+    }
+
+    /* chromatic chords: a chord root on every semitone, the quality set by the bank, and the key moves them all */
+    {
+        Engine *e = live_engine();
+        e->lp.mode = VC_MODE_CHROM_CHORDS; e->lp.key = 0; e->dirty = 1; en_rebuild(e);
+        int roots_bad = 0, qual_bad = 0;
+        for (int i = 0; i < 12; i++) if (e->pads[i].spec.root != i) roots_bad++;
+        if (e->pads[15].spec.root != 3) roots_bad++; /* the 16th pad is the root of pad 4, an octave up */
+        if (vc_chord_pcmask(&e->pads[0].spec) != mask_of_notes("C E G")) qual_bad++;      /* bank A: major */
+        if (vc_chord_pcmask(&e->pads[16].spec) != mask_of_notes("C Eb G")) qual_bad++;    /* bank B: minor */
+        if (vc_chord_pcmask(&e->pads[32].spec) != mask_of_notes("C E G Bb")) qual_bad++;  /* bank C: 7 */
+        if (vc_chord_pcmask(&e->pads[48].spec) != mask_of_notes("C Eb G Bb")) qual_bad++; /* bank D: m7 */
+        CHECK(roots_bad == 0, "chromatic chords: the roots run through every semitone (%d wrong)", roots_bad);
+        CHECK(qual_bad == 0, "chromatic chords: each bank has its quality (%d wrong)", qual_bad);
+        e->lp.key = 7; e->dirty = 1; en_rebuild(e);
+        int moved = 0;
+        for (int i = 0; i < 64; i++) if (e->pads[i].spec.root != pcm(i % 16 % 12 + 7)) moved++; /* a bank's 13th-16th pads repeat the first four roots */
+        CHECK(moved == 0, "chromatic chords: changing the key transposes every chord (%d wrong)", moved);
+        int notes_bad = 0;
+        for (int i = 0; i < 64; i++) if (!voiced_inside_chord(e, i)) notes_bad++;
+        CHECK(notes_bad == 0, "chromatic chords: every chord plays its own notes (%d off)", notes_bad);
     }
 }
 
@@ -1960,6 +2035,7 @@ int main(void) {
     printf("scale table...\n"); test_scale_table();
     printf("relative chords...\n"); test_relative();
     printf("smart pads wait for a chord...\n"); test_smart_ready();
+    printf("pad perform modes: chromatic notes, scale notes, chromatic chords...\n"); test_pad_perform_modes();
     printf("live pad remapping...\n"); test_live_remap();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;

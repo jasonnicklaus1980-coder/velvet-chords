@@ -2,7 +2,7 @@
 #include "progression.h"
 #include <string.h>
 
-const char *VC_MODE_NAMES[VC_MODE_COUNT] = {"Song", "Smart scale", "Chord types", "Custom"};
+const char *VC_MODE_NAMES[VC_MODE_COUNT] = {"Song", "Chords", "Chord types", "Custom", "Chromatic notes", "Scale notes", "Chromatic chords"};
 
 const Scale VC_SCALES[] = {
     {"Major", 7, {0, 2, 4, 5, 7, 9, 11}, "Happy, bright, resolved"},
@@ -261,6 +261,51 @@ static void build_layout(const LayoutParams *p, const CustomPad *custom, PadChor
         }
         break;
     }
+    case VC_MODE_CHROM_NOTES: {
+        /* one note per pad, every semitone from the key up: pad 1 is the key, pad 13 the key an octave higher */
+        for (int i = 0; i < VC_PADS; i++) {
+            int midi = 36 + 12 * p->octave + key + i;
+            if (midi > 127) break;
+            ChordSpec c;
+            memset(&c, 0, sizeof(c));
+            c.bass = -1;
+            c.root = pcmod(midi);
+            c.quality = -1;
+            c.ncustom = 1;
+            set_pad(&out[i], &c, -1, flats, 0, 0);
+            vc_note_name(midi, flats, out[i].name, sizeof(out[i].name));
+            out[i].single = 1;
+            out[i].midi = (unsigned char)midi;
+        }
+        break;
+    }
+    case VC_MODE_SCALE_NOTES: {
+        /* the scale's notes in pitch order: degree k % n in octave k / n, so the bank runs up the scale */
+        const Scale *sc = &VC_SCALES[scale];
+        for (int i = 0; i < VC_PADS; i++) {
+            int midi = 36 + 12 * p->octave + key + sc->iv[i % sc->n] + 12 * (i / sc->n);
+            if (midi > 127) break;
+            ChordSpec c;
+            memset(&c, 0, sizeof(c));
+            c.bass = -1;
+            c.root = pcmod(midi);
+            c.quality = -1;
+            c.ncustom = 1;
+            set_pad(&out[i], &c, -1, flats, 0, 0);
+            vc_note_name(midi, flats, out[i].name, sizeof(out[i].name));
+            out[i].single = 1;
+            out[i].midi = (unsigned char)midi;
+        }
+        break;
+    }
+    case VC_MODE_CHROM_CHORDS: {
+        /* a chromatic chord-root layout: each bank is one quality on all twelve roots (then the first four again, an octave up).
+         * A: major, B: minor, C: dominant 7th, D: minor 7th */
+        static const char *QUAL[4] = {"", "m", "7", "m7"};
+        for (int b = 0; b < 4; b++) for (int i = 0; i < 16; i++)
+            pad_from(&out[b * 16 + i], key, i % 12, QUAL[b], -1, flats, i / 12);
+        break;
+    }
     default: { /* custom */
         for (int i = 0; i < VC_PADS; i++) {
             const CustomPad *cp = &custom[i];
@@ -297,6 +342,11 @@ void vc_voice_pads(const LayoutParams *p, const PadChord pads[VC_PADS], Voicing 
         for (int i = 0; i < 16; i++) {
             int k = b * 16 + i;
             if (!pads[k].valid) { prev = 0; continue; }
+            if (pads[k].single) { /* a note pad: the note itself, not a chord */
+                out[k].n = 1; out[k].has_bass = 0; out[k].notes[0] = pads[k].midi;
+                prev = 0;
+                continue;
+            }
             int oct = p->octave + pads[k].oct;
             if (oct < -3) oct = -3;
             if (oct > 3) oct = 3;
