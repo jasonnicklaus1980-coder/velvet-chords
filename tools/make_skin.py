@@ -515,7 +515,10 @@ class Skin:
         bg.caption(656, 166, "Key")
         bg.a.text(1252, 166, "DOTS MARK THE SCALE", 9.5, "#4d5159", "Medium", anchor="ra", tracking=1.0)
         self.keyboard(c, "Key", 656, 186, 85, 100, 50, 60, dots=True)   # seven white keys across the panel
-        self.segments(c, bg, "bassl", "Bassline", ["Off", "Root", "5th", "Octave", "Walk"], 656, 294, 119, 28)
+        self.segments(c, bg, "bassl", "Bassline", ["Off", "Root", "5th", "Octave", "Walk"], 656, 294, 80, 28)
+        # progression play: the bassline only plays while the progression runs with the host playing
+        self.switch(c, bg, "Progression play", 1070, 296)
+        bg.a.text(1124, 310, "PROGRESSION", 9.5, LABEL, "Medium", anchor="lm", tracking=1.0)
         self.stepper(c, bg, "Scale", "Scale prev", "Scale next", 656, 344, 596, "Scale")
         self.segments(c, bg, "smart", "Smart pads", ["Off", "Pads 9-16", "Follow"], 656, 412, 104, caption="Smart Scale pads")
         self.segments(c, bg, "smartn", "Smart notes", ["Chord", "Scale", "Bass"], 976, 412, 92, caption="Smart notes")
