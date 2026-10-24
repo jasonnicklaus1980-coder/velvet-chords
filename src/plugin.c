@@ -23,7 +23,7 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
-#define CHUNK_VERSION 7 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data) */
+#define CHUNK_VERSION 8 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 
@@ -317,6 +317,15 @@ static int sound_index(const Plugin *p) {
     return x > 0 ? SY_SILENT + x : idx_of(p, P_SOUND);
 }
 static float norm_of(int i, int idx) { int s = PINFO[i].steps; return s <= 1 ? 0.f : (float)idx / (float)(s - 1); }
+/* Saved projects and presets from before the longer scale list stored Scale as a fraction of 16 (17 scales). This maps
+ * that value to the same scale in the current list; the built-in scales keep their indices. */
+#define SCALES_BEFORE_EXTENSION 17
+static float scale_from_old(float v) {
+    int old = (int)(v * (float)(SCALES_BEFORE_EXTENSION - 1) + 0.5f);
+    if (old < 0) old = 0;
+    if (old >= SCALES_BEFORE_EXTENSION) old = SCALES_BEFORE_EXTENSION - 1;
+    return norm_of(P_SCALE, old);
+}
 /* the four bank buttons show which screen bank is up; they follow P_VIEW_BANK whoever changed it */
 static void sync_banks(Plugin *p) {
     int cur = idx_of(p, P_VIEW_BANK);
@@ -552,6 +561,8 @@ static void load_user_preset(Plugin *p, int slot) {
  * it doesn't know and keeps the default for any setting the file doesn't mention. Out-of-range or non-numeric values are skipped. */
 static const char *export_dir(void);
 
+/* where Scale sits in a user preset (its index in the saved settings) */
+static int upre_scale_slot(void) { for (int k = 0; k < UPRE_NIDS; k++) if (UPRE_IDS[k] == P_SCALE) return k; return -1; }
 static const char *upre_name(int k) { return k < UPRE_NIDS ? PINFO[UPRE_IDS[k]].name : PINFO[P_STEP0 + (k - UPRE_NIDS)].name; }
 
 static void upre_path(char *out, size_t n, int slot) { snprintf(out, n, "%s/user-preset-%d.vcpreset", export_dir(), slot + 1); }
@@ -564,7 +575,7 @@ static void export_user_preset(Plugin *p, int slot) {
     upre_path(path, sizeof(path), slot);
     FILE *f = fopen(path, "w");
     if (!f) { snprintf(p->upre_msg, sizeof(p->upre_msg), "Could not write the file"); return; }
-    fprintf(f, "VELVET-PRESET 1\n# Velvet Chords user preset. One setting per line: name=value, with value 0 to 1 (the plugin's own parameter values).\n");
+    fprintf(f, "VELVET-PRESET 2\n# Velvet Chords user preset. One setting per line: name=value, with value 0 to 1 (the plugin's own parameter values).\n");
     for (int k = 0; k < UPRE_NIDS + EN_STEPS; k++) fprintf(f, "%s=%.6f\n", upre_name(k), (double)p->upre[slot][k]);
     int ok = fclose(f) == 0;
     if (ok) snprintf(p->upre_msg, sizeof(p->upre_msg), "Exported slot %d", slot + 1);
@@ -580,7 +591,8 @@ static void import_user_preset(Plugin *p, int slot) {
     if (!fgets(line, sizeof(line), f) || strncmp(line, "VELVET-PRESET ", 14)) {
         fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Not a Velvet preset file"); return;
     }
-    if (atoi(line + 14) != 1) { fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Made by a newer version"); return; }
+    int file_ver = atoi(line + 14);
+    if (file_ver < 1 || file_ver > 2) { fclose(f); snprintf(p->upre_msg, sizeof(p->upre_msg), "Made by a newer version"); return; }
     float tmp[UPRE_MAX];
     for (int k = 0; k < UPRE_NIDS; k++) tmp[k] = PINFO[UPRE_IDS[k]].def;
     for (int j = 0; j < EN_STEPS; j++) tmp[UPRE_NIDS + j] = norm_of(P_STEP0 + j, en_step_index('.'));
@@ -595,6 +607,7 @@ static void import_user_preset(Plugin *p, int slot) {
         for (int i = 0; i < UPRE_NIDS + EN_STEPS && k < 0; i++) if (!strcmp(upre_name(i), line)) k = i;
         if (k < 0) continue; /* a setting this version doesn't have */
         if (end == eq + 1 || !(v >= 0.0 && v <= 1.0)) { skipped++; continue; } /* also rejects NaN */
+        if (file_ver < 2 && k == upre_scale_slot()) v = scale_from_old((float)v);   /* version 1 files: Scale is out of 16 */
         tmp[k] = (float)v;
         applied++;
     }
@@ -1431,6 +1444,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
     for (uint32_t i = 0; i < np; i++) {
         union { float f; uint32_t u; } u;
         u.u = r32(b, &k);
+        if (ver < 8 && i == P_SCALE) u.f = scale_from_old(u.f);
         if (i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR) p->val[i] = u.f; /* shown only: the parameters saved with it already hold the preset's values */
         else if (i >= P_RIFF0 && i <= P_RIFF_END) p->val[i] = u.f; /* riff steps are stored as data below */
         else if (i == P_NOTE_IV) p->val[i] = u.f;                  /* the note list is stored as data below */
@@ -1505,7 +1519,11 @@ static int set_chunk(Plugin *p, const void *data, int size) {
             for (int j = 0; j < per; j++) {
                 union { float f; uint32_t u; } u;
                 u.u = r32(b, &k);
-                if (j < UPRE_MAX) p->upre[s][j] = (u.f >= 0.f && u.f <= 1.f) ? u.f : 0.f; /* also rejects NaN */
+                if (j < UPRE_MAX) {
+                    float v = (u.f >= 0.f && u.f <= 1.f) ? u.f : 0.f; /* also rejects NaN */
+                    if (ver < 8 && j == upre_scale_slot()) v = scale_from_old(v);
+                    p->upre[s][j] = v;
+                }
             }
         }
     }

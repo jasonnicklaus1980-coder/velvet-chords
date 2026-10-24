@@ -79,6 +79,17 @@ static long g_probe_blocks;
 #define PROBE_ON() do { if (g_probe_on) *g_probe_on = 1; } while (0)
 #define PROBE_OFF() do { if (g_probe_on) *g_probe_on = 0; } while (0)
 
+/* the normalised value whose display text is `name` (scales and other lists grow; don't assume their count) */
+static float value_of(AEffect *fx, int i, const char *name) {
+    char buf[96];
+    for (int k = 0; k <= 4000; k++) {
+        fx->setParameter(fx, i, (float)k / 4000.f);
+        display(fx, i, buf);
+        if (!strcmp(buf, name)) return (float)k / 4000.f;
+    }
+    return 0.f;
+}
+
 static void send(AEffect *fx, EvBuf *b, int n) {
     b->hdr.numEvents = n;
     for (int i = 0; i < n; i++) { b->ev[i].type = kVstMidiType; b->ev[i].byteSize = sizeof(VstMidiEvent); b->hdr.events[i] = (VstEvent *)&b->ev[i]; }
@@ -575,7 +586,7 @@ int main(int argc, char **argv) {
         b->setParameter(b, SYNC, 1.f);
         block(b, L, R, 256);
         a->setParameter(a, KEY, 5.f / 11.f);       /* F */
-        a->setParameter(a, SCALE, 4.f / 16.f);     /* Dorian */
+        a->setParameter(a, SCALE, value_of(a, SCALE, "Dorian"));
         block(b, L, R, 256);
         char x[96], y[96];
         display(b, KEY, x); display(b, SCALE, y);
@@ -864,7 +875,7 @@ int main(int argc, char **argv) {
             size_t nread = pf ? fread(text, 1, sizeof(text) - 1, pf) : 0;
             if (pf) fclose(pf);
             text[nread] = 0;
-            CHECK(!strncmp(text, "VELVET-PRESET 1\n", 16) && strstr(text, "Tone=0.9") && strstr(text, "Sound=1.0"), "the file has the header and the settings");
+            CHECK(!strncmp(text, "VELVET-PRESET 2\n", 16) && strstr(text, "Tone=0.9") && strstr(text, "Sound=1.0"), "the file has the header and the settings");
 
             fx->setParameter(fx, P_T, 0.2f);
             fx->setParameter(fx, P_UPSV, 1.f); /* the slot now holds Tone 20% */
@@ -894,6 +905,15 @@ int main(int argc, char **argv) {
             fx->setParameter(fx, P_IMP, 1.f);
             display(fx, P_ST, got);
             CHECK(!strcmp(got, "Imported 1 settings, skipped 2"), "out-of-range and non-numeric values are skipped, unknown names ignored (%s)", got);
+
+            /* a version 1 file stores Scale out of 16: 9/16 was Major pentatonic before the scale list grew */
+            pf = fopen(path, "w"); fprintf(pf, "VELVET-PRESET 1\nScale=%.6f\n", 9.0 / 16.0); fclose(pf);
+            fx->setParameter(fx, P_IMP, 1.f);
+            display(fx, P_ST, got);
+            fx->setParameter(fx, P_UPLD, 1.f);
+            char sc[64];
+            display(fx, find_param(fx, "Scale"), sc);
+            CHECK(!strcmp(sc, "Major pentatonic"), "a version 1 preset keeps its scale (%s)", sc);
         }
         fx->setParameter(fx, P_UPS, 2.f / 3.f); /* slot 3 was never saved */
         fx->setParameter(fx, P_EXP, 1.f);

@@ -22,6 +22,8 @@ const Scale VC_SCALES[] = {
     {"Phrygian dominant", 7, {0, 1, 4, 5, 7, 8, 10}},
     {"Whole tone", 6, {0, 2, 4, 6, 8, 10}},
     {"Diminished (half-whole)", 8, {0, 1, 3, 4, 6, 7, 9, 10}},
+    /* scales 17 and up: tools/gen_scales.py */
+#include "scales_gen.inc"
 };
 const int VC_NUM_SCALES = (int)(sizeof(VC_SCALES) / sizeof(VC_SCALES[0]));
 

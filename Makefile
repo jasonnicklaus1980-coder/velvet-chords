@@ -19,6 +19,9 @@ ARM_LDEXTRA ?= -static-libgcc
 all: native test
 
 data: src/songs_gen.c
+src/scales_gen.inc: tools/gen_scales.py
+	python3 tools/gen_scales.py src/scales_gen.inc
+
 src/songs_gen.c: data/songs.json tools/gen_songs.py
 	python3 tools/gen_songs.py
 src/presets_gen.c: data/presets.json tools/gen_presets.py

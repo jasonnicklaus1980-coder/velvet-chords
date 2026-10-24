@@ -1659,12 +1659,13 @@ static void test_detect(void) {
     for (int i = 0; i < n; i++) if (h[i].matches != 3) ok = 0;
     CHECK(ok, "containing: every hit holds all three notes");
     n = vc_detect(white | 1u << 1, 0, h, 8);                          /* plus C# : no scale holds all eight */
-    CHECK(vc_detect(white | 1u << 1, 1, h, 8) == 0, "containing: nothing holds all eight notes");
+    CHECK(vc_detect(white | 1u << 1, 1, h, 8) > 0 && h[0].matches == 8 && h[0].size == 8,
+          "containing: an eight-note scale holds all eight notes (%s)", VC_SCALES[h[0].scale].name);
     CHECK(n == 8, "not containing: at most the list size, best first (%d)", n);
     int sorted = 1;
     for (int i = 1; i < n; i++) if (h[i].matches > h[i - 1].matches) sorted = 0;
     CHECK(sorted, "hits sorted by matches");
-    CHECK(h[0].matches == 7 && h[0].key == 0 && h[0].scale == 0, "best fit of the eight notes: C Major (7 of 8)");
+    CHECK(h[0].matches == 8, "best fit of the eight notes holds all of them");
     CHECK(vc_detect(white, 1, h, 1) == 1, "a list of one returns one hit");
 }
 
