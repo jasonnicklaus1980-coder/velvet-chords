@@ -940,10 +940,12 @@ static void scan_import_dir(const char *rel, int depth) {
         else copy_str(child_rel, de->d_name, sizeof(child_rel));
         if (strlen(child_rel) >= IMP_NAME - 1) continue;
         snprintf(child, sizeof(child), "%s/%s", import_dir(), child_rel);
-        struct stat st;
-        if (lstat(child, &st)) continue;
-        if (S_ISDIR(st.st_mode)) { if (depth < IMP_MAX_DEPTH) scan_import_dir(child_rel, depth + 1); }
-        else if (S_ISREG(st.st_mode) && ends_with_mid(de->d_name)) copy_str(imp_scan[imp_scan_n++], child_rel, IMP_NAME);
+        /* no stat() here: a folder is one that opens, a file is one with a .mid name (stat is not safe on this libc) */
+        DIR *sub = opendir(child);
+        if (sub) {
+            closedir(sub);
+            if (depth < IMP_MAX_DEPTH) scan_import_dir(child_rel, depth + 1);
+        } else if (ends_with_mid(de->d_name)) copy_str(imp_scan[imp_scan_n++], child_rel, IMP_NAME);
     }
     closedir(d);
 }
