@@ -1627,6 +1627,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
     load_edit_fields(p);
     sync_banks(p); /* a project saved before the bank buttons existed has none of their values */
     sync_layout(p);
+    refresh_host(p); /* the pads on screen follow the project's key, scale and modes at once */
     return 1;
 }
 

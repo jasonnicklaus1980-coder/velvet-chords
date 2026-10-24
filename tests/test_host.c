@@ -21,13 +21,23 @@ static VstTimeInfo g_time;
 static pthread_t g_main_thread;
 static volatile int g_refresh_calls = 0, g_refresh_on_audio_thread = 0;
 static int g_midi_out_events = 0;
+static int g_out_on[128];   /* the notes sent to the host since the last reset */
 
 static intptr_t host_cb(AEffect *fx, int32_t op, int32_t index, intptr_t value, void *ptr, float opt) {
     (void)fx; (void)index; (void)value; (void)opt;
     switch (op) {
     case audioMasterVersion: return 2400;
     case audioMasterGetTime: return (intptr_t)&g_time;
-    case audioMasterProcessEvents: g_midi_out_events += ((VstEvents *)ptr)->numEvents; return 1;
+    case audioMasterProcessEvents: {
+        VstEvents *evs = (VstEvents *)ptr;
+        g_midi_out_events += evs->numEvents;
+        for (int i = 0; i < evs->numEvents; i++) {
+            VstMidiEvent *m = (VstMidiEvent *)evs->events[i];
+            if (m->type == kVstMidiType && ((unsigned char)m->midiData[0] & 0xF0) == 0x90 && (unsigned char)m->midiData[2] > 0)
+                g_out_on[(unsigned char)m->midiData[1] & 127] = 1;
+        }
+        return 1;
+    }
     case audioMasterUpdateDisplay: /* the test's audio thread is the main thread */
         g_refresh_calls++;
         if (pthread_equal(pthread_self(), g_main_thread)) g_refresh_on_audio_thread++;
@@ -628,6 +638,109 @@ int main(int argc, char **argv) {
         }
         CHECK(changed > 0, "a preset changes what Pad 1 notes shows (base '%s', at %d)", base, changed);
         n->dispatcher(n, effClose, 0, 0, 0, 0);
+    }
+
+    /* what the screen says a pad plays is what it plays: for every pad, the notes on "Pad N notes" and the chord name on
+     * "Pad N chord" match the notes the MIDI out sends when that pad is hit, in every screen bank and layout tried */
+    {
+        AEffect *m = open_fx();
+        int P_OUTM = find_param(m, "MIDI out"), P_SBK = find_param(m, "Screen bank"), P_MD = find_param(m, "Mode");
+        int P_PKEY = find_param(m, "Key"), P_PSC = find_param(m, "Scale"), P_SM = find_param(m, "Smart pads");
+        int P_PRG = find_param(m, "Progression"), P_VC = find_param(m, "Voicing"), P_INV = find_param(m, "Inversion");
+        float L[256], R[256];
+        EvBuf eb;
+        int bad = 0, name_bad = 0, checked = 0, empty = 0;
+        m->setParameter(m, P_OUTM, 1.f / 3.f); /* To MPC host */
+        /* configurations: mode (Chords, Types, Custom, Chrom notes, Scale notes, Chrom chords), key, scale, smart pads, progression, voicing */
+        static const int CONF[][6] = {
+            {1, 0, 0, 0, 0, 0}, {1, 7, 4, 0, 0, 1}, {1, 9, 1, 1, 0, 2}, {1, 2, 4, 2, 0, 3}, {1, 5, 0, 0, 1, 4},
+            {2, 0, 0, 0, 0, 0}, {2, 3, 1, 0, 0, 2}, {3, 0, 0, 0, 0, 0}, {4, 0, 0, 0, 0, 0}, {4, 6, 4, 0, 0, 3},
+            {5, 0, 0, 0, 0, 0}, {5, 2, 1, 0, 0, 0}, {6, 0, 0, 0, 0, 0}, {6, 10, 4, 0, 0, 1},
+        };
+        for (unsigned c = 0; c < sizeof(CONF) / sizeof(CONF[0]); c++) {
+            m->setParameter(m, P_MD, CONF[c][0] / 6.f);
+            m->setParameter(m, P_PKEY, CONF[c][1] / 11.f);
+            m->setParameter(m, P_PSC, CONF[c][2] / 16.f);
+            m->setParameter(m, P_SM, CONF[c][3] / 2.f);
+            m->setParameter(m, P_PRG, CONF[c][4] ? 1.f / 60.f : 0.f); /* a progression fills pads 1.. */
+            m->setParameter(m, P_VC, CONF[c][5] / 4.f);
+            for (int bank = 0; bank < 4; bank++) {
+                m->setParameter(m, P_SBK, bank / 3.f);
+                for (int i = 0; i < 16; i++) {
+                    int k = bank * 16 + i;
+                    char notes[96], name[64], shown[96], pname[40];
+                    snprintf(pname, sizeof(pname), "Pad %d notes", i + 1);
+                    display(m, find_param(m, pname), notes);
+                    snprintf(pname, sizeof(pname), "Pad %d chord", i + 1);
+                    display(m, find_param(m, pname), name);
+                    snprintf(shown, sizeof(shown), "%s", notes);
+                    memset(g_out_on, 0, sizeof(g_out_on));
+                    midi(&eb.ev[0], 0, 0x90, (unsigned char)(36 + k), 100); send(m, &eb, 1);
+                    block(m, L, R, 256);
+                    int sent_pcs = 0, shown_pcs = 0, nsent = 0;
+                    for (int n = 0; n < 128; n++) if (g_out_on[n]) { sent_pcs |= 1 << (n % 12); nsent++; }
+                    midi(&eb.ev[0], 0, 0x80, (unsigned char)(36 + k), 0); send(m, &eb, 1);
+                    block(m, L, R, 256);
+                    if (!notes[0]) { /* an empty pad shows nothing and sends nothing */
+                        empty++;
+                        if (nsent || name[0]) { bad++; printf("  conf %u: empty pad %d sends notes\n", c, k + 1); }
+                        continue;
+                    }
+                    for (char *t = strtok(shown, " "); t; t = strtok(0, " ")) { int pc = vc_pc_parse(t, 0); if (pc >= 0) shown_pcs |= 1 << pc; }
+                    checked++;
+                    if (!nsent || sent_pcs != shown_pcs) { bad++; printf("  conf %u: pad %d shows '%s' but sends different notes\n", c, k + 1, notes); }
+                    /* the chord name says the notes the pad sends: a chord symbol, a note list "C(E G B)", or a single note */
+                    int named = 0;
+                    ChordSpec cs;
+                    if (vc_chord_parse(name, &cs) && cs.quality >= 0 && vc_chord_pcmask(&cs) == sent_pcs) named = 1;  /* a chord symbol */
+                    if (!named) {
+                        char *lp = strchr(name, '('), *rp = strchr(name, ')');
+                        int root = vc_pc_parse(name, 0), mask = 0;
+                        if (lp && rp && root >= 0) {
+                            mask = 1 << root;
+                            char list[64];
+                            snprintf(list, sizeof(list), "%.*s", (int)(rp - lp - 1), lp + 1);
+                            for (char *t = strtok(list, " "); t; t = strtok(0, " ")) { int pc = vc_pc_parse(t, 0); if (pc >= 0) mask |= 1 << pc; }
+                            named = mask == sent_pcs;
+                        } else { /* a single note: its name, with or without an octave number (a name like D7 may also be a chord) */
+                            char bare[16];
+                            snprintf(bare, sizeof(bare), "%s", name);
+                            for (int j = (int)strlen(bare); j > 0 && bare[j - 1] >= '0' && bare[j - 1] <= '9'; j--) bare[j - 1] = 0;
+                            root = vc_pc_parse(bare, 0);
+                            named = root >= 0 && sent_pcs == (1 << root);
+                        }
+                    }
+                    if (!named) { name_bad++; printf("  conf %u: pad %d is named '%s' but sends '%s'\n", c, k + 1, name, notes); }
+                }
+            }
+        }
+        CHECK(checked > 0 && checked + empty == 14 * 64, "pads were checked in every layout (%d filled, %d empty)", checked, empty);
+        CHECK(bad == 0, "every pad plays the notes its screen shows, in every layout and bank (%d differ)", bad);
+        CHECK(name_bad == 0, "every pad's chord name matches the notes it plays (%d differ)", name_bad);
+        m->dispatcher(m, effClose, 0, 0, 0, 0);
+    }
+
+    /* loading a project redraws the pads: the screen shows the loaded key and scale straight away */
+    {
+        AEffect *a = open_fx(), *b = open_fx();
+        int PK = find_param(a, "Key"), PN = find_param(a, "Pad 1 notes"), PKb = find_param(b, "Key"), PNb = find_param(b, "Pad 1 notes");
+        float L[256], R[256];
+        a->setParameter(a, PK, 7.f / 11.f); /* G */
+        block(a, L, R, 256);
+        void *chunk = 0;
+        int size = (int)a->dispatcher(a, effGetChunk, 0, 0, &chunk, 0);
+        void *cp = malloc((size_t)size); memcpy(cp, chunk, (size_t)size);
+        char want[96], got[96];
+        display(a, PN, want);
+        { struct timespec ts = {0, 150 * 1000000L}; nanosleep(&ts, 0); }
+        int before = g_refresh_calls;
+        CHECK(b->dispatcher(b, effSetChunk, 0, size, cp, 0) == 1, "a project saved in G loads");
+        { struct timespec ts = {0, 150 * 1000000L}; nanosleep(&ts, 0); }
+        display(b, PNb, got);
+        CHECK(!strcmp(want, got) && g_refresh_calls > before, "loading a project redraws its pads (%s / %s)", want, got);
+        free(cp);
+        a->dispatcher(a, effClose, 0, 0, 0, 0);
+        b->dispatcher(b, effClose, 0, 0, 0, 0);
     }
 
     /* live Pad Perform through the plugin: C major to D minor, from the host, remaps the pads on screen at once */
