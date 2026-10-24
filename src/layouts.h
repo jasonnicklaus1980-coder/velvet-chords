@@ -9,7 +9,7 @@
 
 #define VC_PADS 64 /* 4 MPC pad banks (A-D) x 16 */
 
-enum { VC_MODE_SONG, VC_MODE_KEY, VC_MODE_RNB, VC_MODE_TYPES, VC_MODE_CUSTOM, VC_MODE_COUNT };
+enum { VC_MODE_SONG, VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM, VC_MODE_COUNT };
 #define VC_MODE_IMPORT VC_MODE_COUNT /* internal: pads show chords imported from a MIDI file */
 extern const char *VC_MODE_NAMES[VC_MODE_COUNT];
 

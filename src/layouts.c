@@ -2,7 +2,7 @@
 #include "progression.h"
 #include <string.h>
 
-const char *VC_MODE_NAMES[VC_MODE_COUNT] = {"Song", "Smart scale", "R&B kit", "Chord types", "Custom"};
+const char *VC_MODE_NAMES[VC_MODE_COUNT] = {"Song", "Smart scale", "Chord types", "Custom"};
 
 const Scale VC_SCALES[] = {
     {"Major", 7, {0, 2, 4, 5, 7, 9, 11}, "Happy, bright, resolved"},
@@ -163,20 +163,7 @@ static ChordSpec diatonic(int key, int scale, int degree, int count) {
     return c;
 }
 
-typedef struct { signed char iv; const char *suf; signed char bass; } KitEntry;
-
-static const KitEntry RNB_MAJ_A[16] = {
-    {0, "maj9", -1}, {2, "m9", -1}, {4, "m7", -1}, {5, "maj9", -1}, {7, "9sus4", -1}, {9, "m9", -1}, {11, "m7b5", -1}, {7, "13", -1},
-    {4, "7b9", -1}, {9, "9", -1}, {1, "9", -1}, {5, "m9", -1}, {10, "13", -1}, {6, "m7b5", -1}, {5, "maj7", 7}, {1, "dim7", -1}};
-static const KitEntry RNB_MAJ_B[16] = {
-    {0, "maj7", 4}, {5, "", 0}, {0, "9", -1}, {5, "maj7", -1}, {6, "dim7", -1}, {0, "add9", 7}, {9, "7b9", -1}, {2, "m11", -1},
-    {7, "7#9", -1}, {8, "maj7", -1}, {10, "9", -1}, {3, "maj7", -1}, {4, "m11", -1}, {9, "m11", -1}, {5, "m6", -1}, {0, "6/9", -1}};
-static const KitEntry RNB_MIN_A[16] = {
-    {0, "m9", -1}, {2, "m7b5", -1}, {3, "maj7", -1}, {5, "m9", -1}, {7, "m9", -1}, {8, "maj7", -1}, {10, "9", -1}, {7, "7#9", -1},
-    {0, "m11", -1}, {5, "9", -1}, {1, "maj7", -1}, {8, "maj7#11", -1}, {7, "7b9", -1}, {11, "dim7", -1}, {10, "9sus4", -1}, {0, "mmaj9", -1}};
-static const KitEntry RNB_MIN_B[16] = {
-    {0, "m6/9", -1}, {3, "maj9", -1}, {5, "m11", -1}, {7, "m11", -1}, {8, "9", -1}, {10, "7sus4", -1}, {1, "9", -1}, {7, "7alt", -1},
-    {0, "m9", 7}, {8, "maj7", 10}, {2, "m11", -1}, {9, "m7b5", -1}, {6, "dim7", -1}, {0, "7#9", -1}, {5, "7", -1}, {3, "7", -1}};
+typedef struct { signed char iv; const char *suf; signed char bass; } ChordEntry;
 
 static const char *TYPES_A[16] = {"", "m", "7", "maj7", "m7", "m7b5", "dim7", "aug", "sus2", "sus4", "6", "m6", "maj9", "m9", "9", "13"};
 static const char *TYPES_B[16] = {"add9", "madd9", "11", "m11", "maj7#11", "7#9", "7b9", "7#5", "13b9", "mmaj7", "6/9", "7sus4", "maj13", "m13", "dim", "7alt"};
@@ -246,23 +233,13 @@ static void build_layout(const LayoutParams *p, const CustomPad *custom, PadChor
             strncat(pc->roman, tr, sizeof(pc->roman) - strlen(pc->roman) - 1);
         }
         /* bank C: borrowed chords and common substitutions */
-        static const KitEntry BORROW_FROM_MINOR[8] = {{0, "m7", -1}, {2, "m7b5", -1}, {3, "maj7", -1}, {5, "m7", -1}, {7, "m7", -1}, {8, "maj7", -1}, {10, "7", -1}, {1, "maj7", -1}};
-        static const KitEntry BORROW_FROM_MAJOR[8] = {{0, "maj7", -1}, {2, "m7", -1}, {4, "m7", -1}, {5, "maj7", -1}, {7, "7", -1}, {9, "m7", -1}, {5, "7", -1}, {11, "m7b5", -1}};
-        static const KitEntry SUBS[8] = {{1, "7", -1}, {6, "m7b5", -1}, {1, "dim7", -1}, {7, "7sus4", -1}, {5, "m6", -1}, {10, "9", -1}, {7, "13", -1}, {7, "7alt", -1}};
-        const KitEntry *bor = minor ? BORROW_FROM_MAJOR : BORROW_FROM_MINOR;
+        static const ChordEntry BORROW_FROM_MINOR[8] = {{0, "m7", -1}, {2, "m7b5", -1}, {3, "maj7", -1}, {5, "m7", -1}, {7, "m7", -1}, {8, "maj7", -1}, {10, "7", -1}, {1, "maj7", -1}};
+        static const ChordEntry BORROW_FROM_MAJOR[8] = {{0, "maj7", -1}, {2, "m7", -1}, {4, "m7", -1}, {5, "maj7", -1}, {7, "7", -1}, {9, "m7", -1}, {5, "7", -1}, {11, "m7b5", -1}};
+        static const ChordEntry SUBS[8] = {{1, "7", -1}, {6, "m7b5", -1}, {1, "dim7", -1}, {7, "7sus4", -1}, {5, "m6", -1}, {10, "9", -1}, {7, "13", -1}, {7, "7alt", -1}};
+        const ChordEntry *bor = minor ? BORROW_FROM_MAJOR : BORROW_FROM_MINOR;
         for (int i = 0; i < 8; i++) {
             pad_from(&out[32 + i], key, bor[i].iv, bor[i].suf, bor[i].bass, flats, 0);
             pad_from(&out[40 + i], key, SUBS[i].iv, SUBS[i].suf, SUBS[i].bass, flats, 0);
-        }
-        break;
-    }
-    case VC_MODE_RNB: {
-        const KitEntry *A = minor ? RNB_MIN_A : RNB_MAJ_A, *B = minor ? RNB_MIN_B : RNB_MAJ_B;
-        for (int i = 0; i < 16; i++) {
-            pad_from(&out[i], key, A[i].iv, A[i].suf, A[i].bass, flats, 0);
-            pad_from(&out[16 + i], key, B[i].iv, B[i].suf, B[i].bass, flats, 0);
-            pad_from(&out[32 + i], key, A[i].iv, A[i].suf, A[i].bass, flats, 1);
-            pad_from(&out[48 + i], key, B[i].iv, B[i].suf, B[i].bass, flats, 1);
         }
         break;
     }

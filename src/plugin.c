@@ -23,7 +23,7 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
-#define CHUNK_VERSION 8 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list */
+#define CHUNK_VERSION 9 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 
@@ -323,6 +323,15 @@ static int sound_index(const Plugin *p) {
     return x > 0 ? SY_SILENT + x : idx_of(p, P_SOUND);
 }
 static float norm_of(int i, int idx) { int s = PINFO[i].steps; return s <= 1 ? 0.f : (float)idx / (float)(s - 1); }
+/* Saved projects from before the R&B kit was removed stored Mode as a fraction of 4 (five values: Song, Scale, R&B kit,
+ * Types, Custom). R&B kit becomes Scale; Types and Custom move down one. */
+static float mode_from_old(float v) {
+    int old = (int)(v * 4.f + 0.5f);
+    if (old < 0) old = 0;
+    if (old > 4) old = 4;
+    static const int NEW[5] = {VC_MODE_SONG, VC_MODE_KEY, VC_MODE_KEY, VC_MODE_TYPES, VC_MODE_CUSTOM};
+    return norm_of(P_MODE, NEW[old]);
+}
 /* Saved projects and presets from before the longer scale list stored Scale as a fraction of 16 (17 scales). This maps
  * that value to the same scale in the current list; the built-in scales keep their indices. */
 #define SCALES_BEFORE_EXTENSION 17
@@ -1469,6 +1478,7 @@ static int set_chunk(Plugin *p, const void *data, int size) {
         union { float f; uint32_t u; } u;
         u.u = r32(b, &k);
         if (ver < 8 && i == P_SCALE) u.f = scale_from_old(u.f);
+        if (ver < 9 && i == P_MODE) u.f = mode_from_old(u.f);
         if (i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR) p->val[i] = u.f; /* shown only: the parameters saved with it already hold the preset's values */
         else if (i >= P_RIFF0 && i <= P_RIFF_END) p->val[i] = u.f; /* riff steps are stored as data below */
         else if (i == P_NOTE_IV) p->val[i] = u.f;                  /* the note list is stored as data below */

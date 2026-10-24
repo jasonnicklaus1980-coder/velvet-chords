@@ -235,7 +235,7 @@ static void test_note_handling(void) {
     static Engine e;
     static float L[512], R[512];
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_RNB;
+    e.lp.mode = VC_MODE_KEY;
     e.midi_out = 1;
     e.dirty = 1;
     long ons[128] = {0}, offs[128] = {0};
@@ -277,7 +277,7 @@ static void test_note_handling(void) {
 
     /* retrigger the same pad without a note-off, then one note-off */
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_RNB; e.dirty = 1;
+    e.lp.mode = VC_MODE_KEY; e.dirty = 1;
     en_push_midi(&e, 0, 0x90, 36, 100);
     en_push_midi(&e, 10, 0x90, 36, 100);
     en_push_midi(&e, 20, 0x80, 36, 0);
@@ -287,7 +287,7 @@ static void test_note_handling(void) {
 
     /* sustain: chord keeps ringing after pad release until pedal up */
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_RNB; e.synth.sound = SY_PAD; e.dirty = 1;
+    e.lp.mode = VC_MODE_KEY; e.synth.sound = SY_PAD; e.dirty = 1;
     en_push_midi(&e, 0, 0xB0, 64, 127);
     en_push_midi(&e, 0, 0x90, 36, 100);
     en_push_midi(&e, 100, 0x80, 36, 0);
@@ -331,7 +331,7 @@ static void test_note_handling(void) {
     float rms[2];
     for (int k = 0; k < 2; k++) {
         en_init(&e, 48000.f);
-        e.lp.mode = VC_MODE_RNB; e.dirty = 1;
+        e.lp.mode = VC_MODE_KEY; e.dirty = 1;
         en_push_midi(&e, 0, 0x90, 36, k ? 127 : 30);
         double acc = 0;
         for (int b = 0; b < 20; b++) { en_process(&e, L, R, 512); for (int i = 0; i < 512; i++) acc += L[i] * L[i]; }
@@ -507,7 +507,7 @@ static void test_tools(void) {
     static float L[512], R[512];
     /* Hold: chord keeps sounding after release; another pad replaces it; same pad again turns it off */
     en_init(&e, 48000.f);
-    e.lp.mode = VC_MODE_RNB; e.dirty = 1; e.hold = 1;
+    e.lp.mode = VC_MODE_KEY; e.dirty = 1; e.hold = 1;
     en_push_midi(&e, 0, 0x90, 36, 100); en_push_midi(&e, 100, 0x80, 36, 0);
     run(&e, 20, 512, L, R);
     CHECK(en_owner_count(&e) == 1 && sy_active(&e.synth) > 0, "hold keeps the chord after pad release");
@@ -526,7 +526,7 @@ static void test_tools(void) {
     /* Humanize: the same pad hit wanders in velocity when it is on, and repeats exactly when it is off */
     {
         en_init(&e, 48000.f);
-        e.lp.mode = VC_MODE_RNB; e.dirty = 1; e.midi_out = 1;
+        e.lp.mode = VC_MODE_KEY; e.dirty = 1; e.midi_out = 1;
         int vmin = 127, vmax = 0, vmin0 = 127, vmax0 = 0;
         e.humanize = 1.f;
         for (int k = 0; k < 8; k++) {
@@ -549,7 +549,7 @@ static void test_tools(void) {
     /* the MPC's all notes off / all sound off (sent when a recording starts) don't cut a chord that is still held */
     {
         en_init(&e, 48000.f);
-        e.lp.mode = VC_MODE_RNB; e.dirty = 1;
+        e.lp.mode = VC_MODE_KEY; e.dirty = 1;
         en_push_midi(&e, 0, 0x90, 36, 100); run(&e, 2, 512, L, R);
         en_push_midi(&e, 0, 0xB0, 123, 0); en_push_midi(&e, 0, 0xB0, 120, 0); run(&e, 2, 512, L, R);
         CHECK(en_owner_count(&e) == 1 && sy_active(&e.synth) > 0, "all notes off / all sound off keep a held chord sounding");
@@ -561,7 +561,7 @@ static void test_tools(void) {
     {
         static const int SENDS[16] = {48, 49, 50, 51, 44, 45, 46, 47, 40, 41, 42, 43, 36, 37, 38, 39};
         en_init(&e, 48000.f);
-        e.lp.mode = VC_MODE_RNB; e.dirty = 1;
+        e.lp.mode = VC_MODE_KEY; e.dirty = 1;
         e.learn_all = 1;
         for (int r = 0; r < 5; r++) { en_push_midi(&e, 0, 0x90, 48, 100); run(&e, 1, 512, L, R); en_push_midi(&e, 0, 0x80, 48, 0); run(&e, 1, 512, L, R); }
         CHECK(e.learn_all == 2 && e.pad_map[48] == 0, "five hits on pad 1 learn only pad 1 (slot %d)", e.learn_all);
@@ -575,7 +575,7 @@ static void test_tools(void) {
     {
         static const int SENDS[16] = {48, 49, 50, 51, 44, 45, 46, 47, 40, 41, 42, 43, 36, 37, 38, 39};
         en_init(&e, 48000.f);
-        e.lp.mode = VC_MODE_RNB; e.dirty = 1;
+        e.lp.mode = VC_MODE_KEY; e.dirty = 1;
         e.learn_all = 1;
         for (int k = 0; k < 16; k++) { en_push_midi(&e, 0, 0x90, (unsigned char)SENDS[k], 100); en_push_midi(&e, 10, 0x80, (unsigned char)SENDS[k], 0); run(&e, 1, 512, L, R); }
         CHECK(e.map_set && e.learn_all == 0, "learning finishes after 16 pads");
@@ -597,7 +597,7 @@ static void test_tools(void) {
     /* MPC Note Repeat (1/32 at 120 bpm) must not pile up voices: retriggered notes choke their old tails */
     for (int snd = 0; snd < 3; snd++) {
         en_init(&e, 48000.f);
-        e.lp.mode = VC_MODE_RNB; e.dirty = 1; e.synth.sound = snd;
+        e.lp.mode = VC_MODE_KEY; e.dirty = 1; e.synth.sound = snd;
         int maxv = 0;
         for (long b = 0; b < 48000 * 6 / 256; b++) {
             for (int f = 0; f < 256; f++) {

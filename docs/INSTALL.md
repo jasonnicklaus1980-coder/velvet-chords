@@ -51,7 +51,7 @@ The installer checks the device and file checksums, **stops MPC** (save your pro
 
 1. Make a new plugin track and choose **Velvet Chords** from the plugin browser (instrument plugins).
 2. Hit pad A01. If you hear nothing, open the plugin's parameters, turn **Learn pad 1** on, and hit the pad you want as pad 1. Pads 2-64 follow from there (16 per bank, banks A-D).
-3. Pick a **Mode**: Scale, R&B kit, Chord types or Custom. (Song mode has been removed from the screen; an old project saved in Song mode opens in Scale.)
+3. Pick a **Mode**: Scale, Chord types or Custom. (Song mode has been removed from the screen; an old project saved in Song mode opens in Scale.)
 
 ## The screen
 
@@ -182,9 +182,9 @@ The grid shows the 16 steps. Tap a cell to set what a step does: **Accent** or *
 
 | Parameter | What it does |
 |---|---|
-| Mode | Scale, R&B kit, Chord types, Custom |
+| Mode | Scale, Chord types, Custom |
 | Section | Section on bank A; banks B-D get the following sections |
-| Key, Scale | Key and scale for Smart scale, R&B kit and Chord types (56 scales) |
+| Key, Scale | Key and scale for Smart scale and Chord types (56 scales) |
 | Transpose | Shifts the chords by -12 to +12 semitones |
 | Voicing | Bass + upper (default), Close, Drop 2, Spread, Upper only |
 | Inversion, Octave | Global chord inversion and register |
@@ -263,7 +263,7 @@ decides which tracks hear them.
 
 ## Using the song files without the plugin
 
-`payload/data/midi` holds a MIDI file per song section and per R&B kit, importable into any MPC sequence or DAW. `payload/data/progressions` holds Pad Perform `.progression` files. Their format follows commonly shared `.progression` files and has not been confirmed on a device, so compare one with a progression saved from your own MPC before relying on them.
+`payload/data/midi` holds a MIDI file per song section, importable into any MPC sequence or DAW. `payload/data/progressions` holds Pad Perform `.progression` files. Their format follows commonly shared `.progression` files and has not been confirmed on a device, so compare one with a progression saved from your own MPC before relying on them.
 
 ## Song data (removed from the screen)
 

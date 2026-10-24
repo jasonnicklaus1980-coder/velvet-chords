@@ -1,4 +1,4 @@
-/* vc_export: writes every song section and the R&B kits as MIDI + .progression files, plus a JSON
+/* vc_export: writes every song section as MIDI + .progression files, plus a JSON
  * database where each chord symbol sits next to the exact MIDI notes it plays.
  * Uses the same chord/voicing code as the plugin, so files and pads can't disagree. */
 #include "../src/export.h"
@@ -117,33 +117,6 @@ int main(int argc, char **argv) {
     fprintf(db, "  ]\n}\n");
     fclose(db);
 
-    /* R&B kits, every key, major + minor, banks A and B */
-    snprintf(dir, sizeof(dir), "%s/progressions/rnb-kits", out);
-    mkdirs(dir);
-    char mdir[512];
-    snprintf(mdir, sizeof(mdir), "%s/midi/rnb-kits", out);
-    mkdirs(mdir);
-    for (int minor = 0; minor < 2; minor++)
-        for (int key = 0; key < 12; key++) {
-            static PadChord pads[VC_PADS];
-            static Voicing v[VC_PADS];
-            LayoutParams kp = lp;
-            kp.mode = VC_MODE_RNB;
-            kp.key = key;
-            kp.scale = minor ? 1 : 0;
-            vc_build_pads(&kp, 0, pads);
-            vc_voice_pads(&kp, pads, v);
-            for (int bank = 0; bank < 2; bank++) {
-                int n = vc_bank_chords(pads, v, bank, ch, 16);
-                const char *kn = vc_pc_name(key, vc_prefer_flats(key, minor));
-                snprintf(name, sizeof(name), "RnB kit %s %s bank %c", kn, minor ? "minor" : "major", 'A' + bank);
-                vc_safe_filename(name, fname, sizeof(fname));
-                snprintf(path, sizeof(path), "%s/%s.progression", dir, fname);
-                if (vc_progression_write(path, name, kn, ch, n)) files++;
-                snprintf(path, sizeof(path), "%s/%s.mid", mdir, fname);
-                if (vc_midi_write(path, name, "Velvet Chords R&B kit: original stylistic chord palette, not song data. One chord per bar.", ch, n, 90.0, 4, 4)) files++;
-            }
-        }
     /* pad reference: which pad plays which chord (default settings: Bass + upper voicing, voice leading on) */
     snprintf(path, sizeof(path), "%s/PAD_REFERENCE.md", out);
     FILE *pr = fopen(path, "w");
@@ -172,15 +145,6 @@ int main(int argc, char **argv) {
                 fprintf(pr, " |\n");
             }
         }
-        for (int minor = 0; minor < 2; minor++) {
-            static PadChord pads[VC_PADS];
-            LayoutParams kp = lp;
-            kp.mode = VC_MODE_RNB; kp.key = 0; kp.scale = minor;
-            vc_build_pads(&kp, 0, pads);
-            fprintf(pr, "\n## R&B kit, C %s (transposes with Key)\n\n| Pad | Chord | Function |\n|---|---|---|\n", minor ? "minor" : "major");
-            for (int p = 0; p < 32; p++) fprintf(pr, "| %c%02d | %s | %s |\n", 'A' + p / 16, p % 16 + 1, pads[p].name, pads[p].roman);
-        }
-        fprintf(pr, "\nBanks C and D of the R&B kit repeat A and B one octave up.\n");
         fclose(pr);
     }
     printf("wrote %d files + database.json to %s\n", files, out);

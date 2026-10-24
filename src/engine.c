@@ -213,9 +213,9 @@ void en_init(Engine *e, float sr) {
     memset(e->pad_map, -1, sizeof(e->pad_map));
     e->mel_rng = 0x9E3779B9u ^ (unsigned)e->instance_id;
     e->mel_prev = 79;
-    /* seed the custom banks with the R&B kit in C so Custom mode is playable out of the box */
+    /* seed the custom banks with the Scale layout in C so Custom mode is playable out of the box */
     LayoutParams kit = e->lp;
-    kit.mode = VC_MODE_RNB;
+    kit.mode = VC_MODE_KEY;
     PadChord tmp[VC_PADS];
     vc_build_pads(&kit, e->custom, tmp);
     for (int i = 0; i < 32; i++) {

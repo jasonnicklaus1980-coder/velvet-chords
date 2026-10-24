@@ -203,7 +203,7 @@ int main(int argc, char **argv) {
     CHECK(block(fx, L, R, 256) == 0.0, "silent after all pads released");
 
     /* rapid overlapping pads with strum + arp + sustain, then all off */
-    fx->setParameter(fx, P_MODE, 2.f / 4.f); /* R&B kit */
+    fx->setParameter(fx, P_MODE, 1.f / 3.f); /* Smart scale */
     fx->setParameter(fx, P_MIDI_OUT, 1.f);
     int P_STRUM = find_param(fx, "Strum"), P_ARP = find_param(fx, "Arp");
     for (int r = 0; r < 300; r++) {
@@ -280,7 +280,7 @@ int main(int argc, char **argv) {
     fx2->setParameter(fx2, P_EXPORT, 1.f);
     display(fx2, P_EXPORT, buf);
     CHECK(strstr(buf, "Saved") != 0, "export reports success (%s)", buf);
-    fx2->setParameter(fx2, P_MODE, 2.f / 4.f);
+    fx2->setParameter(fx2, P_MODE, 1.f / 3.f);
     fx2->setParameter(fx2, P_EXPORT, 1.f);
     display(fx2, P_EXPORT, buf);
     CHECK(strstr(buf, "Saved") != 0, "kit export (%s)", buf);
@@ -325,7 +325,7 @@ int main(int argc, char **argv) {
         s->setParameter(s, P_SNEXT, 1.f);
         display(s, P_SONG, b2);
         CHECK(strcmp(a, b2) != 0 && s->getParameter(s, P_SNEXT) == 0.f, "Song next steps the song (%s -> %s) and resets", a, b2);
-        s->setParameter(s, P_MODE, 1.f / 4.f); /* Smart scale, C major */
+        s->setParameter(s, P_MODE, 1.f / 3.f); /* Smart scale, C major */
         display(s, P_PN1, a); display(s, P_PF1, b2);
         CHECK(!strcmp(a, "Cmaj7") && !strcmp(b2, "Imaj7"), "pad 1 label Cmaj7 / Imaj7 (%s / %s)", a, b2);
         CHECK(s->getParameter(s, P_HAS_CS) == 0.f, "C# not in C major");
