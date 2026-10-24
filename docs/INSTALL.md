@@ -80,7 +80,7 @@ While the port is on, the plugin ignores notes arriving on its own output channe
 
 ## Smart Scale pads
 
-Set **Smart Scale pads** (Play page) to **Pads 9-16** and the bottom row of every bank stops playing chords and plays single notes that fit the chord you last played on the top row. Play a chord with your left hand and a melody, bassline or riff with your right, and nothing clashes. The keys on screen show each note and what it is (root, 3rd, 5th, b7...), and they relabel the moment you change chords.
+Set **Smart Scale pads** (Play page) to **Pads 9-16** and the top two rows of every bank (pads 9-16) stop playing chords and play single notes that fit the chord you last played on the bottom two rows (pads 1-8). Play a chord with your left hand and a melody, bassline or riff with your right, and nothing clashes. The keys on screen show each note and what it is (root, 3rd, 5th, b7...), and they relabel the moment you change chords.
 
 **Smart notes** chooses what those pads play:
 - **Chord**: only the chord's notes, rising across two octaves.
