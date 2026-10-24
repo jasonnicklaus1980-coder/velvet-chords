@@ -139,6 +139,9 @@ class Images:
 
     def key(self, pc, on, w, h):
         """piano key of any size; white keys carry their note name above the scale dot"""
+        return self.save("vc_key_%d_%dx%d_%s.png" % (pc, w, h, "on" if on else "off"), self.key_image(pc, on, w, h))
+
+    def key_image(self, pc, on, w, h):
         black = pc in (1, 3, 6, 8, 10)
         names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
         a = Art(w, h)
@@ -149,7 +152,7 @@ class Images:
                    corners=(False, False, True, True))
             yy = h - 38
             a.text_center(0, yy, w, yy + 14, names[pc], 11 if w >= 52 else 10, INK_ON_ACCENT if on else "#55575c", "Medium")
-        return self.save("vc_key_%d_%dx%d_%s.png" % (pc, w, h, "on" if on else "off"), a.done())
+        return a.done()
 
     def dot(self, on_black):
         a = Art(14, 14)
@@ -405,15 +408,40 @@ class Skin:
                                      ("Function", self.p("Pad %d function" % (k + 1)))]))
 
     def keyboard(self, comps, param, x0, y0, ww=56, wh=100, bw=34, bh=60, dots=False):
-        """one-octave keyboard; each key is a button in a 12-way group bound to param"""
+        """one-octave keyboard; each key is a button in a 12-way group bound to param.
+        The white keys stop where the black keys sit, so a tap on a black key lands on the black key only."""
         whites = [0, 2, 4, 5, 7, 9, 11]
+        blacks = [1, 3, 6, 8, 10]
+        left_white = {1: 0, 3: 2, 6: 5, 8: 7, 10: 9}
         pos = {}
         for i, pc in enumerate(whites):
             pos[pc] = (x0 + i * ww, y0, ww, wh)
-        for pc, left in ((1, 0), (3, 2), (6, 5), (8, 7), (10, 9)):
-            pos[pc] = (pos[left][0] + ww - bw // 2, y0, bw, bh)
-        order = whites + [1, 3, 6, 8, 10]  # black keys last, on top
-        for pc in order:
+        for pc in blacks:
+            pos[pc] = (pos[left_white[pc]][0] + ww - bw // 2, y0, bw, bh)
+        black_spans = [(pos[pc][0], pos[pc][0] + bw) for pc in blacks]
+        for pc in whites:
+            x = pos[pc][0]
+            on_full, off_full = self.img.key_image(pc, True, ww, wh), self.img.key_image(pc, False, ww, wh)
+            # the part of the key above the black keys: the spans not covered by a black key
+            spans = [(x, x + ww)]
+            for b0, b1 in black_spans:
+                nxt = []
+                for a0, a1 in spans:
+                    if b1 <= a0 or b0 >= a1:
+                        nxt.append((a0, a1))
+                    else:
+                        if a0 < b0: nxt.append((a0, b0))
+                        if b1 < a1: nxt.append((b1, a1))
+                spans = nxt
+            pieces = [(a0, y0, a1 - a0, bh, a0 - x, 0) for a0, a1 in spans if a1 > a0]
+            pieces.append((x, y0 + bh, ww, wh - bh, 0, bh))   # the lower part, under the black keys
+            for px, py, pw, ph, ox, oy in pieces:
+                box = (ox, oy, ox + pw, oy + ph)
+                on = self.img.save("vc_keypc_%d_%d_%d_%dx%d_on.png" % (pc, ox, oy, pw, ph), on_full.crop(box))
+                off = self.img.save("vc_keypc_%d_%d_%d_%dx%d_off.png" % (pc, ox, oy, pw, ph), off_full.crop(box))
+                key = self.define("vcKeyPc_%d_%dx%d_%d_%d" % (pc, pw, ph, ox, oy), definition([A_QLINK], [button_sub(on, off, pc, 12, pw, ph)]))
+                comps.append(self.place(key, "Key %d" % pc, px, py, pw, ph, [("Data", self.p(param))]))
+        for pc in blacks:
             x, y, w, h = pos[pc]
             on, off = self.img.key(pc, True, w, h), self.img.key(pc, False, w, h)
             key = self.define("vcKey_%d_%dx%d" % (pc, w, h), definition([A_QLINK], [button_sub(on, off, pc, 12, w, h)]))
@@ -421,12 +449,13 @@ class Skin:
         if dots:
             names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
             blank = self.img.blank(14, 14)
-            for pc in order:
-                black = pc in (1, 3, 6, 8, 10)
+            for pc in whites + blacks:
+                black = pc in blacks
                 im = self.img.dot(black)
                 key = self.define("vcDot_%s" % ("b" if black else "w"), definition([], [button_sub(im, blank, 1, 1, 14, 14)], ignore=True))
                 x, y, w, h = pos[pc]
                 comps.append(self.place(key, "in scale %s" % names[pc], x + (w - 14) // 2, y + h - 20, 14, 14,
+
                                         [("Data", self.p("Scale has %s" % names[pc]))]))
 
     def step_matrix(self, comps, bg, x0, y0, cw=65, ch=24, gapx=5, gapy=4):

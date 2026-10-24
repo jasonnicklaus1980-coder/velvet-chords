@@ -3159,7 +3159,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_0_85x100",
+                    "key": "vcKeyPc_0_60x60_0_0",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3201,8 +3201,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_0_85x100_on.png",
-                                        "offImage": "vc_key_0_85x100_off.png",
+                                        "onImage": "vc_keypc_0_0_0_60x60_on.png",
+                                        "offImage": "vc_keypc_0_0_0_60x60_off.png",
                                         "buttonId": 0,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3219,7 +3219,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 85 100",
+                                    "bounds": "0 0 60 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3227,7 +3227,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_2_85x100",
+                    "key": "vcKeyPc_0_85x40_0_60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3269,8 +3269,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_2_85x100_on.png",
-                                        "offImage": "vc_key_2_85x100_off.png",
+                                        "onImage": "vc_keypc_0_0_60_85x40_on.png",
+                                        "offImage": "vc_keypc_0_0_60_85x40_off.png",
+                                        "buttonId": 0,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 85 40",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_2_35x60_25_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_2_25_0_35x60_on.png",
+                                        "offImage": "vc_keypc_2_25_0_35x60_off.png",
                                         "buttonId": 2,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3287,7 +3355,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 85 100",
+                                    "bounds": "0 0 35 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3295,7 +3363,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_4_85x100",
+                    "key": "vcKeyPc_2_85x40_0_60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3337,8 +3405,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_4_85x100_on.png",
-                                        "offImage": "vc_key_4_85x100_off.png",
+                                        "onImage": "vc_keypc_2_0_60_85x40_on.png",
+                                        "offImage": "vc_keypc_2_0_60_85x40_off.png",
+                                        "buttonId": 2,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 85 40",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_4_60x60_25_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_4_25_0_60x60_on.png",
+                                        "offImage": "vc_keypc_4_25_0_60x60_off.png",
                                         "buttonId": 4,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3355,7 +3491,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 85 100",
+                                    "bounds": "0 0 60 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3363,7 +3499,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_5_85x100",
+                    "key": "vcKeyPc_4_85x40_0_60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3405,8 +3541,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_5_85x100_on.png",
-                                        "offImage": "vc_key_5_85x100_off.png",
+                                        "onImage": "vc_keypc_4_0_60_85x40_on.png",
+                                        "offImage": "vc_keypc_4_0_60_85x40_off.png",
+                                        "buttonId": 4,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 85 40",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_5_60x60_0_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_5_0_0_60x60_on.png",
+                                        "offImage": "vc_keypc_5_0_0_60x60_off.png",
                                         "buttonId": 5,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3423,7 +3627,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 85 100",
+                                    "bounds": "0 0 60 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3431,7 +3635,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_7_85x100",
+                    "key": "vcKeyPc_5_85x40_0_60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3473,8 +3677,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_7_85x100_on.png",
-                                        "offImage": "vc_key_7_85x100_off.png",
+                                        "onImage": "vc_keypc_5_0_60_85x40_on.png",
+                                        "offImage": "vc_keypc_5_0_60_85x40_off.png",
+                                        "buttonId": 5,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 85 40",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_7_35x60_25_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_7_25_0_35x60_on.png",
+                                        "offImage": "vc_keypc_7_25_0_35x60_off.png",
                                         "buttonId": 7,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3491,7 +3763,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 85 100",
+                                    "bounds": "0 0 35 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3499,7 +3771,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_9_85x100",
+                    "key": "vcKeyPc_7_85x40_0_60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3541,8 +3813,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_9_85x100_on.png",
-                                        "offImage": "vc_key_9_85x100_off.png",
+                                        "onImage": "vc_keypc_7_0_60_85x40_on.png",
+                                        "offImage": "vc_keypc_7_0_60_85x40_off.png",
+                                        "buttonId": 7,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 85 40",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_9_35x60_25_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_9_25_0_35x60_on.png",
+                                        "offImage": "vc_keypc_9_25_0_35x60_off.png",
                                         "buttonId": 9,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3559,7 +3899,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 85 100",
+                                    "bounds": "0 0 35 60",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -3567,7 +3907,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_11_85x100",
+                    "key": "vcKeyPc_9_85x40_0_60",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -3609,8 +3949,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_11_85x100_on.png",
-                                        "offImage": "vc_key_11_85x100_off.png",
+                                        "onImage": "vc_keypc_9_0_60_85x40_on.png",
+                                        "offImage": "vc_keypc_9_0_60_85x40_off.png",
+                                        "buttonId": 9,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 85 40",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_11_60x60_25_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_11_25_0_60x60_on.png",
+                                        "offImage": "vc_keypc_11_25_0_60x60_off.png",
                                         "buttonId": 11,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -3627,7 +4035,75 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 85 100",
+                                    "bounds": "0 0 60 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_11_85x40_0_60",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_11_0_60_85x40_on.png",
+                                        "offImage": "vc_keypc_11_0_60_85x40_off.png",
+                                        "buttonId": 11,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -6425,7 +6901,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 0",
-                                    "type": "vcKey_0_85x100",
+                                    "type": "vcKeyPc_0_60x60_0_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6446,7 +6922,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "656 186 85 100",
+                                    "bounds": "656 186 60 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 0",
+                                    "type": "vcKeyPc_0_85x40_0_60",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 3"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "656 246 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6455,7 +6961,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 2",
-                                    "type": "vcKey_2_85x100",
+                                    "type": "vcKeyPc_2_35x60_25_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6476,7 +6982,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "741 186 85 100",
+                                    "bounds": "766 186 35 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 2",
+                                    "type": "vcKeyPc_2_85x40_0_60",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 3"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "741 246 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6485,7 +7021,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 4",
-                                    "type": "vcKey_4_85x100",
+                                    "type": "vcKeyPc_4_60x60_25_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6506,7 +7042,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "826 186 85 100",
+                                    "bounds": "851 186 60 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 4",
+                                    "type": "vcKeyPc_4_85x40_0_60",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 3"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "826 246 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6515,7 +7081,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 5",
-                                    "type": "vcKey_5_85x100",
+                                    "type": "vcKeyPc_5_60x60_0_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6536,7 +7102,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "911 186 85 100",
+                                    "bounds": "911 186 60 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 5",
+                                    "type": "vcKeyPc_5_85x40_0_60",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 3"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "911 246 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6545,7 +7141,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 7",
-                                    "type": "vcKey_7_85x100",
+                                    "type": "vcKeyPc_7_35x60_25_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6566,7 +7162,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "996 186 85 100",
+                                    "bounds": "1021 186 35 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 7",
+                                    "type": "vcKeyPc_7_85x40_0_60",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 3"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "996 246 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6575,7 +7201,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 9",
-                                    "type": "vcKey_9_85x100",
+                                    "type": "vcKeyPc_9_35x60_25_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6596,7 +7222,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "1081 186 85 100",
+                                    "bounds": "1106 186 35 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 9",
+                                    "type": "vcKeyPc_9_85x40_0_60",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 3"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "1081 246 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -6605,7 +7261,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 11",
-                                    "type": "vcKey_11_85x100",
+                                    "type": "vcKeyPc_11_60x60_25_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -6626,7 +7282,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "1166 186 85 100",
+                                    "bounds": "1191 186 60 60",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 11",
+                                    "type": "vcKeyPc_11_85x40_0_60",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 3"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "1166 246 85 40",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -15216,7 +15902,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_0_48x86",
+                    "key": "vcKeyPc_0_33x52_0_0",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15258,8 +15944,8 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_0_48x86_on.png",
-                                        "offImage": "vc_key_0_48x86_off.png",
+                                        "onImage": "vc_keypc_0_0_0_33x52_on.png",
+                                        "offImage": "vc_keypc_0_0_0_33x52_off.png",
                                         "buttonId": 0,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15276,7 +15962,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 48 86",
+                                    "bounds": "0 0 33 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15284,7 +15970,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_2_48x86",
+                    "key": "vcKeyPc_0_48x34_0_52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15326,8 +16012,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_2_48x86_on.png",
-                                        "offImage": "vc_key_2_48x86_off.png",
+                                        "onImage": "vc_keypc_0_0_52_48x34_on.png",
+                                        "offImage": "vc_keypc_0_0_52_48x34_off.png",
+                                        "buttonId": 0,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 48 34",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_2_18x52_15_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_2_15_0_18x52_on.png",
+                                        "offImage": "vc_keypc_2_15_0_18x52_off.png",
                                         "buttonId": 2,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15344,7 +16098,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 48 86",
+                                    "bounds": "0 0 18 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15352,7 +16106,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_4_48x86",
+                    "key": "vcKeyPc_2_48x34_0_52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15394,8 +16148,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_4_48x86_on.png",
-                                        "offImage": "vc_key_4_48x86_off.png",
+                                        "onImage": "vc_keypc_2_0_52_48x34_on.png",
+                                        "offImage": "vc_keypc_2_0_52_48x34_off.png",
+                                        "buttonId": 2,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 48 34",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_4_33x52_15_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_4_15_0_33x52_on.png",
+                                        "offImage": "vc_keypc_4_15_0_33x52_off.png",
                                         "buttonId": 4,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15412,7 +16234,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 48 86",
+                                    "bounds": "0 0 33 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15420,7 +16242,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_5_48x86",
+                    "key": "vcKeyPc_4_48x34_0_52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15462,8 +16284,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_5_48x86_on.png",
-                                        "offImage": "vc_key_5_48x86_off.png",
+                                        "onImage": "vc_keypc_4_0_52_48x34_on.png",
+                                        "offImage": "vc_keypc_4_0_52_48x34_off.png",
+                                        "buttonId": 4,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 48 34",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_5_33x52_0_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_5_0_0_33x52_on.png",
+                                        "offImage": "vc_keypc_5_0_0_33x52_off.png",
                                         "buttonId": 5,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15480,7 +16370,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 48 86",
+                                    "bounds": "0 0 33 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15488,7 +16378,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_7_48x86",
+                    "key": "vcKeyPc_5_48x34_0_52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15530,8 +16420,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_7_48x86_on.png",
-                                        "offImage": "vc_key_7_48x86_off.png",
+                                        "onImage": "vc_keypc_5_0_52_48x34_on.png",
+                                        "offImage": "vc_keypc_5_0_52_48x34_off.png",
+                                        "buttonId": 5,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 48 34",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_7_18x52_15_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_7_15_0_18x52_on.png",
+                                        "offImage": "vc_keypc_7_15_0_18x52_off.png",
                                         "buttonId": 7,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15548,7 +16506,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 48 86",
+                                    "bounds": "0 0 18 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15556,7 +16514,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_9_48x86",
+                    "key": "vcKeyPc_7_48x34_0_52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15598,8 +16556,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_9_48x86_on.png",
-                                        "offImage": "vc_key_9_48x86_off.png",
+                                        "onImage": "vc_keypc_7_0_52_48x34_on.png",
+                                        "offImage": "vc_keypc_7_0_52_48x34_off.png",
+                                        "buttonId": 7,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 48 34",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_9_18x52_15_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_9_15_0_18x52_on.png",
+                                        "offImage": "vc_keypc_9_15_0_18x52_off.png",
                                         "buttonId": 9,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15616,7 +16642,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 48 86",
+                                    "bounds": "0 0 18 52",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -15624,7 +16650,7 @@
                     }
                 },
                 {
-                    "key": "vcKey_11_48x86",
+                    "key": "vcKeyPc_9_48x34_0_52",
                     "value": {
                         "version": 4,
                         "actions": [
@@ -15666,8 +16692,76 @@
                                     "type": "Button",
                                     "data": {
                                         "version": 2,
-                                        "onImage": "vc_key_11_48x86_on.png",
-                                        "offImage": "vc_key_11_48x86_off.png",
+                                        "onImage": "vc_keypc_9_0_52_48x34_on.png",
+                                        "offImage": "vc_keypc_9_0_52_48x34_off.png",
+                                        "buttonId": 9,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 48 34",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_11_33x52_15_0",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_11_15_0_33x52_on.png",
+                                        "offImage": "vc_keypc_11_15_0_33x52_off.png",
                                         "buttonId": 11,
                                         "numButtonsInGroup": 12,
                                         "handleName": "Data",
@@ -15684,7 +16778,75 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 48 86",
+                                    "bounds": "0 0 33 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcKeyPc_11_48x34_0_52",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_keypc_11_0_52_48x34_on.png",
+                                        "offImage": "vc_keypc_11_0_52_48x34_off.png",
+                                        "buttonId": 11,
+                                        "numButtonsInGroup": 12,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -18830,7 +19992,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 0",
-                                    "type": "vcKey_0_48x86",
+                                    "type": "vcKeyPc_0_33x52_0_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18851,7 +20013,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "656 98 48 86",
+                                    "bounds": "656 98 33 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 0",
+                                    "type": "vcKeyPc_0_48x34_0_52",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 23"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "656 150 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -18860,7 +20052,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 2",
-                                    "type": "vcKey_2_48x86",
+                                    "type": "vcKeyPc_2_18x52_15_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18881,7 +20073,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "704 98 48 86",
+                                    "bounds": "719 98 18 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 2",
+                                    "type": "vcKeyPc_2_48x34_0_52",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 23"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "704 150 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -18890,7 +20112,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 4",
-                                    "type": "vcKey_4_48x86",
+                                    "type": "vcKeyPc_4_33x52_15_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18911,7 +20133,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "752 98 48 86",
+                                    "bounds": "767 98 33 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 4",
+                                    "type": "vcKeyPc_4_48x34_0_52",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 23"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "752 150 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -18920,7 +20172,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 5",
-                                    "type": "vcKey_5_48x86",
+                                    "type": "vcKeyPc_5_33x52_0_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18941,7 +20193,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "800 98 48 86",
+                                    "bounds": "800 98 33 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 5",
+                                    "type": "vcKeyPc_5_48x34_0_52",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 23"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "800 150 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -18950,7 +20232,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 7",
-                                    "type": "vcKey_7_48x86",
+                                    "type": "vcKeyPc_7_18x52_15_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -18971,7 +20253,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "848 98 48 86",
+                                    "bounds": "863 98 18 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 7",
+                                    "type": "vcKeyPc_7_48x34_0_52",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 23"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "848 150 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -18980,7 +20292,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 9",
-                                    "type": "vcKey_9_48x86",
+                                    "type": "vcKeyPc_9_18x52_15_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19001,7 +20313,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "896 98 48 86",
+                                    "bounds": "911 98 18 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 9",
+                                    "type": "vcKeyPc_9_48x34_0_52",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 23"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "896 150 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -19010,7 +20352,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Key 11",
-                                    "type": "vcKey_11_48x86",
+                                    "type": "vcKeyPc_11_33x52_15_0",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"
@@ -19031,7 +20373,37 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "944 98 48 86",
+                                    "bounds": "959 98 33 52",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Key 11",
+                                    "type": "vcKeyPc_11_48x34_0_52",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 23"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "944 150 48 34",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
