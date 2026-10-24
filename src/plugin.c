@@ -23,6 +23,7 @@
 #define VC_EXPORT __attribute__((visibility("default")))
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
+#define IMP_LIST_MAX 256 /* most files the MIDI picker lists */
 #define IMP_NAME 96     /* longest path kept for an import file */
 #define IMP_MAX_DEPTH 4 /* folder levels below Import that are searched */
 #define CHUNK_VERSION 12 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts) */
@@ -183,7 +184,7 @@ static void init_param_info(void) {
     P(P_MELODY, "Melody", MEL_COUNT, 0.f, 0)
     P(P_MEL_RATE, "Melody rate", MRATE_COUNT, 0.f, 0)
     P(P_KEYSYNC, "Key sync", 2, 0.f, 0)
-    P(P_IMP_FILE, "Import file", 64, 0.f, 0)
+    P(P_IMP_FILE, "Import file", IMP_LIST_MAX, 0.f, 0)
     P(P_IMP_PREV, "Import prev", 2, 0.f, 1)
     P(P_IMP_NEXT, "Import next", 2, 0.f, 1)
     P(P_IMP_LOAD, "Import load", 2, 0.f, 1)
@@ -305,7 +306,7 @@ typedef struct {
     /* MIDI import */
     ImportChord imp[VC_PADS], imp_engine[VC_PADS];
     int nimp;
-    char imp_files[64][IMP_NAME];   /* the .mid files in the Import folder and its subfolders, as paths from it */
+    char imp_files[IMP_LIST_MAX][IMP_NAME];   /* the .mid files in the Import folder and its subfolders, as paths from it */
     int nfiles;
     char imp_status[96];
     unsigned key_seen;
@@ -921,9 +922,9 @@ static int ends_with_mid(const char *n) {
 
 /* walks the Import folder and its subfolders (up to IMP_MAX_DEPTH levels) and collects every .mid file by its path from
  * Import, such as "Songs/blues.mid". Links and hidden entries are skipped. The folder order is arbitrary, so the walk
- * collects up to IMP_SCAN_MAX files, then the list is sorted and the first 64 are kept: a big library never hides the
+ * collects up to IMP_SCAN_MAX files, then the list is sorted and the first IMP_LIST_MAX are kept: a big library never hides the
  * files that sort first. */
-#define IMP_SCAN_MAX 512
+#define IMP_SCAN_MAX 1024
 static char imp_scan[IMP_SCAN_MAX][IMP_NAME];
 static int imp_scan_n;
 
@@ -964,7 +965,7 @@ static void scan_import_files(Plugin *p) {
         snprintf(p->imp_status, sizeof(p->imp_status), "Checked %s: %d entries, no .mid", import_dir(), entries);
     }
     qsort(imp_scan, (size_t)imp_scan_n, IMP_NAME, cmp_import_names); /* alphabetical, so a folder's files sit together */
-    p->nfiles = imp_scan_n < 64 ? imp_scan_n : 64;
+    p->nfiles = imp_scan_n < IMP_LIST_MAX ? imp_scan_n : IMP_LIST_MAX;
     for (int i = 0; i < p->nfiles; i++) copy_str(p->imp_files[i], imp_scan[i], IMP_NAME);
 }
 

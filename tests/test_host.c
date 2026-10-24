@@ -845,7 +845,7 @@ int main(int argc, char **argv) {
         }
     }
 
-    /* a big library does not hide the files that sort first: the picker keeps the first 64 names in alphabetical order */
+    /* a big library does not hide files: the picker lists up to IMP_LIST_MAX names in alphabetical order */
     {
         const char *edir = getenv("VC_EXPORT_DIR");
         char p1[800];
@@ -865,9 +865,9 @@ int main(int argc, char **argv) {
             char name[160];
             display(bg, PF, name);
             CHECK(!strcmp(name, "big/f00.mid"), "the picker starts at the first name in order (%s)", name);
-            for (int k = 0; k < 63; k++) bg->setParameter(bg, PN, 1.f);
+            for (int k = 0; k < 69; k++) bg->setParameter(bg, PN, 1.f);
             display(bg, PF, name);
-            CHECK(!strcmp(name, "big/f63.mid"), "the 64th name is big/f63.mid (%s)", name);
+            CHECK(!strcmp(name, "big/f69.mid"), "all 70 files are listed, the last is big/f69.mid (%s)", name);
             bg->dispatcher(bg, effClose, 0, 0, 0, 0);
             snprintf(p1, sizeof(p1), "rm -rf '%s/Import'", edir);
             system(p1);
