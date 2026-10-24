@@ -61,6 +61,11 @@ OTHER = [  # (name, pitch classes, description)
     ("Augmented hexatonic", [0, 3, 4, 7, 8, 11], "Symmetrical, dreamy, unresolved"),
     ("Prometheus", [0, 2, 4, 6, 9, 10], "Mystic and bright, Scriabin-style"),
     ("Diminished (whole-half)", [0, 2, 3, 5, 6, 8, 9, 11], "Dominant diminished, jazz tension"),
+    ("Spanish octatonic", [0, 1, 3, 4, 5, 6, 8, 10], "Spanish and flamenco, very tense"),
+    ("Lydian diminished", [0, 2, 3, 6, 7, 9, 11], "Bright and unsettled, film-score"),
+    ("Lydian minor", [0, 2, 4, 6, 7, 8, 10], "Dreamy minor with a bright 4th"),
+    ("Dominant pentatonic", [0, 2, 4, 7, 10], "Open dominant, rock and blues"),
+    ("Malkauns", [0, 3, 5, 8, 10], "Raga Malkauns: deep and meditative"),
     ("Hirajoshi", [0, 2, 3, 7, 8], "Japanese, bright and sad"),
     ("In sen", [0, 1, 5, 7, 10], "Japanese, dark and mysterious"),
     ("Iwato", [0, 1, 5, 6, 10], "Japanese, dark and tense"),
@@ -105,8 +110,12 @@ MAJOR = {0, 2, 4, 5, 7, 9, 11}
 
 
 def auto_description(pcs):
-    """a description from the notes alone: the mood the 3rd and 6th give, then the notes that are not in the major scale"""
+    """a description from the notes alone: a symmetric set says what it repeats; otherwise the mood the 3rd and 6th
+    give, then the notes that are not in the major scale"""
     st = set(pcs)
+    for k in range(1, 12):
+        if {(p + k) % 12 for p in st} == st and 12 % k == 0:
+            return ("symmetric: repeats every %d, %d notes" % (k, len(st)))[:40]
     if 3 in st and 8 in st: mood = "dark"
     elif 4 in st and 9 in st: mood = "bright"
     else: mood = "mixed"
