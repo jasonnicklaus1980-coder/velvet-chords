@@ -1,6 +1,6 @@
 # Velvet Chords 1.0.0
 
-A chord-pad instrument plugin for MPC OS. Each pad plays a full chord through a built-in electric piano, pad or organ sound, with song sections, a Smart Scale mode, an R&B chord kit and 64 editable custom pads.
+A chord-pad instrument plugin for MPC OS. Each pad plays a full chord through a built-in electric piano, pad or organ sound. It has five pad layouts (Chords, Custom, Chrom notes, Scale notes and Chrom chords), a Smart Scale mode, 900 factory presets and 64 editable custom pads.
 
 It is a native MPC OS plugin (VST2 `.so`) loaded by MPC's built-in plugin host, installed the same way as community plugins such as the JV-880 port.
 
@@ -9,8 +9,11 @@ It is a native MPC OS plugin (VST2 `.so`) loaded by MPC's built-in plugin host, 
 - **900 factory presets.** The presets are 90 genres with 10 variations each. The genres include trap, drill, phonk, G-Funk and Southern styles, plus house, soul, Latin, African, rock and more. The **Preset genre** and **Preset variation**
   knobs (Play page Q-Links) pick one: genre first, then the variation within it, so every preset is reachable by knob.
   **Preset** and Preset prev / next still step through all 900 in order. The top left of the Play page shows the preset in use, with prev / next beside it, and the MPC's own preset box lists Manual and all 900 presets, so you can pick one from there too. A preset sets the
-  tone, voicing, strum, key, scale and Smart Scale pads. A preset never picks the instrument, the riff or the rhythm: the Sound, Sound extra, riff, pattern, its rate, swing and gate, and the arpeggio stay as you set them. (A preset's rhythm would play the chord as a run, so it isn't switched on.) It never changes your song or your custom pads; the layout
-  pads follow the new key and scale.
+  tone, voicing, strum, key, scale and Smart Scale pads.
+
+  A preset never picks the instrument, the riff or the rhythm. The Sound, Sound extra, riff, pattern, its rate, swing and gate, and the arpeggio stay as you set them. (A preset's rhythm would play the chord as a run, so it isn't switched on.)
+
+  A preset never changes your custom pads. The layout follows the new key and scale.
   Manual changes nothing.
   Nothing turns on by itself: a preset never replaces **Silent** and never turns the arpeggio on. It sets the arpeggio's
   order, rate and octaves only when you already have an arpeggio running. A pattern you have chosen plays instead of the arpeggio.
@@ -179,7 +182,7 @@ The grid shows the 16 steps. Tap a cell to set what a step does: **Accent** or *
 |---|---|
 | Mode | Chords, Custom, Chrom notes, Scale notes, Chrom chords |
 | Section | Section on bank A; banks B-D get the following sections |
-| Key, Scale | Key and scale for Smart scale and Chord types (223 scales) |
+| Key, Scale | Key and scale for the Chords and Scale notes modes (223 scales) |
 | Transpose | Shifts the chords by -12 to +12 semitones |
 | Voicing | Bass + upper (default), Close, Drop 2, Spread, Upper only |
 | Inversion, Octave | Global chord inversion and register |

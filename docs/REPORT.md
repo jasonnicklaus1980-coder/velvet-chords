@@ -1,5 +1,7 @@
 # Velvet Chords 1.0.0: verification report
 
+> **Not current.** These results are from the 1.0.0 build. Since then the Types mode was removed, five Pad Perform modes were added or changed, presets stopped switching on the instrument, riff, rhythm or arpeggio, and the pad checks were extended. Rerun `make test` and the device checks before relying on this report.
+
 ## Integration method
 
 MPC OS on first-generation devices runs a JUCE-based plugin host that loads VST2 shared libraries listed under

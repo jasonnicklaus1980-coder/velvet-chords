@@ -32,7 +32,7 @@ symbols; `scripts/check_so.sh` refuses builds that need anything newer than glib
 | Path | Contents |
 |---|---|
 | `src/chords.c` | chord types, symbol parsing, voicings, voice leading |
-| `src/layouts.c` | scales, Smart Scale, chord types, song-section and custom pad layouts |
+| `src/layouts.c` | scales, Smart Scale, the Chords, Custom, Chrom notes, Scale notes and Chrom chords layouts, and song-section layouts |
 | `src/engine.c` | pad triggering, pattern generator, strum, arpeggiator, sustain, stuck-note protection, MIDI out |
 | `src/synth.c` | built-in electric piano, pad and organ |
 | `src/midiport.c` | virtual ALSA MIDI output port (*Velvet Chords Out*) |
