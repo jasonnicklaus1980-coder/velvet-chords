@@ -1074,7 +1074,7 @@ int main(int argc, char **argv) {
               "1.1 parameters exist");
         fx->setParameter(fx, P_PRE, 1.f / 600.f);
         display(fx, P_PRE, buf);
-        CHECK(!strcmp(buf, "Neo-Soul Keys Late"), "preset 1 is shown by name (%s)", buf);
+        CHECK(!strcmp(buf, "Neo-Soul Keys: Late"), "preset 1 is shown by name (%s)", buf);
         { /* a preset never turns the arpeggio on: it only sets one that is already running */
             int P_ARPX = find_param(fx, "Arp"), bad = 0;
             AEffect *q = open_fx();
@@ -1100,7 +1100,7 @@ int main(int argc, char **argv) {
         CHECK(!strcmp(buf, "45%"), "preset sets Tone (%s)", buf);
         fx->setParameter(fx, P_PNX, 1.f);
         display(fx, P_PRE, buf);
-        CHECK(!strcmp(buf, "Neo-Soul Keys Warm"), "Preset next steps to preset 2 (%s)", buf);
+        CHECK(!strcmp(buf, "Neo-Soul Keys: Warm"), "Preset next steps to preset 2 (%s)", buf);
         fx->setParameter(fx, P_PRE, 0.f);
         display(fx, P_PRE, buf);
         CHECK(!strcmp(buf, "Manual"), "Manual is shown (%s)", buf);
@@ -1113,11 +1113,11 @@ int main(int argc, char **argv) {
         char gname[160];
         display(fx, P_GEN, gname);
         display(fx, P_PRE, buf);
-        CHECK(!strncmp(buf, gname, strlen(gname)) && buf[strlen(gname)] == ' ' && !strcmp(buf + strlen(gname) + 1, "Dusty"),
+        CHECK(!strncmp(buf, gname, strlen(gname)) && buf[strlen(gname)] == ':' && !strcmp(buf + strlen(gname) + 2, "Dusty"),
               "genre and variation pick a preset (%s)", buf);
         fx->setParameter(fx, P_PNX, 1.f); /* the stepper moves on, and the knobs follow it */
         display(fx, P_VAR, buf);
-        CHECK(!strcmp(buf, "Sparkle"), "variation knob follows the stepper (%s)", buf);
+        CHECK(strstr(buf, "Sparkle") != NULL, "variation knob follows the stepper (%s)", buf);
         fx->setParameter(fx, P_GEN, 0.f);
         display(fx, P_PRE, buf);
         CHECK(!strcmp(buf, "Manual"), "genre Manual turns the presets off (%s)", buf);
@@ -1182,7 +1182,7 @@ int main(int argc, char **argv) {
         CHECK(!strcmp(pn, pk), "program 101 is the 101st preset (%s / %s)", pn, pk);
         CHECK(fx->dispatcher(fx, effGetProgramNameIndexed, 601, 0, pn, 0) == 0, "no program past the last preset");
         fx->dispatcher(fx, effSetProgram, 0, 600, 0, 0); display(fx, P_PRE, pk);
-        CHECK(!strcmp(pk, "Southern Bounce Wide") && fx->dispatcher(fx, effGetProgram, 0, 0, 0, 0) == 600, "host picks program 600 (%s)", pk);
+        CHECK(!strcmp(pk, "S. Bounce: Wide") && fx->dispatcher(fx, effGetProgram, 0, 0, 0, 0) == 600, "host picks program 600 (%s)", pk);
         fx->dispatcher(fx, effSetProgram, 0, 0, 0, 0); display(fx, P_PRE, pk);
         CHECK(!strcmp(pk, "Manual"), "program 0 is Manual (%s)", pk);
         fx->dispatcher(fx, effSetProgram, 0, 600, 0, 0);

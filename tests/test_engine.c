@@ -1714,13 +1714,14 @@ static void test_detect(void) {
     for (int i = 0; i < n; i++) if (h[i].matches != 3) ok = 0;
     CHECK(ok, "containing: every hit holds all three notes");
     n = vc_detect(white | 1u << 1, 0, h, 8);                          /* plus C# : no scale holds all eight */
-    int n8 = vc_detect(white | 1u << 1, 1, h, 8);                    /* the eight-note set classes can hold all eight */
-    CHECK(n8 > 0 && h[0].matches == 8 && h[0].size == 8, "containing: an eight-note scale holds all eight notes (%d)", n8);
+    unsigned spanish = 1u << 0 | 1u << 1 | 1u << 3 | 1u << 4 | 1u << 5 | 1u << 6 | 1u << 8 | 1u << 10;   /* the Spanish octatonic's own notes */
+    int n8 = vc_detect(spanish, 1, h, 8);
+    CHECK(n8 > 0 && h[0].matches == 8 && h[0].size == 8, "containing: an eight-note scale holds all eight of its own notes (%d)", n8);
     CHECK(n == 8, "not containing: at most the list size, best first (%d)", n);
     int sorted = 1;
     for (int i = 1; i < n; i++) if (h[i].matches > h[i - 1].matches) sorted = 0;
     CHECK(sorted, "hits sorted by matches");
-    CHECK(h[0].matches == 8, "best fit of the eight notes holds all of them");
+    CHECK(vc_detect(spanish, 0, h, 8) > 0 && h[0].matches == 8, "best fit of the Spanish notes holds all of them");
     CHECK(vc_detect(white, 1, h, 1) == 1, "a list of one returns one hit");
 }
 

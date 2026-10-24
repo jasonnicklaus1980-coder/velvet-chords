@@ -29,7 +29,6 @@
     {"Prometheus", 6, {0, 2, 4, 6, 9, 10}, "Mystic and bright, Scriabin-style"},
     {"Diminished (whole-half)", 8, {0, 2, 3, 5, 6, 8, 9, 11}, "Dominant diminished, jazz tension"},
     {"Spanish octatonic", 8, {0, 1, 3, 4, 5, 6, 8, 10}, "Spanish and flamenco, very tense"},
-    {"Lydian diminished", 7, {0, 2, 3, 6, 7, 9, 11}, "Bright and unsettled, film-score"},
     {"Lydian minor", 7, {0, 2, 4, 6, 7, 8, 10}, "Dreamy minor with a bright 4th"},
     {"Dominant pentatonic", 5, {0, 2, 4, 7, 10}, "Open dominant, rock and blues"},
     {"Malkauns", 5, {0, 3, 5, 8, 10}, "Raga Malkauns: deep and meditative"},
