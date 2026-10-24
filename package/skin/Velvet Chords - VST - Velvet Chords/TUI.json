@@ -18594,7 +18594,7 @@
                     }
                 },
                 {
-                    "key": "vcField_596x40_15_a78bfa_r",
+                    "key": "vcField_596x40_15_8fe6d8_r",
                     "value": {
                         "version": 4,
                         "actions": [],
@@ -18632,7 +18632,7 @@
                                                 "style": "SemiBold",
                                                 "height": 15.0
                                             },
-                                            "colour": "ffa78bfa",
+                                            "colour": "ff8fe6d8",
                                             "justification": "horizontallyCentred verticallyCentred",
                                             "case": "Original"
                                         },
@@ -21216,7 +21216,7 @@
                                 "componentData": {
                                     "version": 1,
                                     "name": "Now playing",
-                                    "type": "vcField_596x40_15_a78bfa_r",
+                                    "type": "vcField_596x40_15_8fe6d8_r",
                                     "data": {
                                         "version": 1,
                                         "handleName": "Data"

@@ -586,13 +586,14 @@ class Skin:
         self.pad_grid(c, 20, 110)
         bg.a.text(28, 84, "TAP A PAD TO EDIT IT", 10.5, LABEL, "Medium", tracking=1.3)
         bg.panel((640, 64, 1268, 620))
-        bg.caption(656, 78, "Root")
+        bg.a.label(656, 78, "Chord")   # section heading: root, bass, type, inversion and octave belong to the chord
         self.keyboard(c, "Edit root", 656, 98, 48, 86, 30, 52)
         self.segments(c, bg, "bass", "Edit bass", ["Root"] + notes, 656, 222, 46, caption="Bass note")
         self.stepper(c, bg, "Edit type", "Edit type prev", "Edit type next", 656, 296, 596, "Chord type")
         self.segments(c, bg, "einv", "Edit inversion", ["Root", "1st", "2nd", "3rd"], 656, 370, 84, caption="Inversion")
         self.segments(c, bg, "eoct", "Edit octave", ["-2", "-1", "0", "+1", "+2"], 1012, 370, 48, caption="Octave")
-        self.readout(c, bg, "Now playing", 656, 444, 596, 40, size=15, colour=ACCENT, caption="Now playing")
+        bg.a.line(656, 430, 1252, 430, HAIRLINE)   # divider: the chord above, what it plays below
+        self.readout(c, bg, "Now playing", 656, 444, 596, 40, size=15, colour=LCD_TEXT, caption="Now playing")
         self.action_button(c, bg, "copy", "Copy layout to Custom", "Copy to Custom", 656, 496, w=292)
         self.action_button(c, bg, "relative", "Relative chord", "Relative chord", 960, 496, w=292)
         self.action_button(c, bg, "analyze", "Analyze sample", "Analyze sample", 656, 548, w=292)
