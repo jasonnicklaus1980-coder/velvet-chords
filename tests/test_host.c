@@ -613,6 +613,23 @@ int main(int argc, char **argv) {
         v->dispatcher(v, effClose, 0, 0, 0, 0);
     }
 
+    /* the pads' notes text follows a preset: the key and voicing it sets change the notes */
+    {
+        AEffect *n = open_fx();
+        int PRE = find_param(n, "Preset"), PN = find_param(n, "Pad 1 notes");
+        char base[96], cur[96];
+        CHECK(PN > 0, "Pad 1 notes param exists");
+        display(n, PN, base);
+        int changed = 0;
+        for (int k = 2; k <= 600 && !changed; k += 13) {
+            n->setParameter(n, PRE, (float)k / 600.f);
+            display(n, PN, cur);
+            if (strcmp(cur, base)) changed = k;
+        }
+        CHECK(changed > 0, "a preset changes what Pad 1 notes shows (base '%s', at %d)", base, changed);
+        n->dispatcher(n, effClose, 0, 0, 0, 0);
+    }
+
     /* key sync, MIDI import through the plugin, imports saved with the project */
     {
         AEffect *a = open_fx(), *b = open_fx();

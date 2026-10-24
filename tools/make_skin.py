@@ -406,13 +406,15 @@ class Skin:
                 button_sub(on, off, k + 1, 17, w, h),
                 label_sub("Chord", "Chord", 6, 24, w - 12, 38, 24, TEXT),
                 label_sub("Function", "Function", 6, 62, w - 12, 22, 14, ACCENT),  # the Roman numeral, as on Chord Prism's keys
+                label_sub("Notes", "Notes", 6, 84, w - 12, 16, 11, TEXT_2),       # the notes this pad plays
             ]))
             col, row = k % 4, 3 - k // 4
             x = x0 + col * (w + gap)
             y = y0 + row * (h + gap)
             comps.append(self.place(key, "Pad %d" % (k + 1), x, y, w, h,
                                     [("Data", self.p("Screen pad")), ("Chord", self.p("Pad %d chord" % (k + 1))),
-                                     ("Function", self.p("Pad %d function" % (k + 1)))]))
+                                     ("Function", self.p("Pad %d function" % (k + 1))),
+                                     ("Notes", self.p("Pad %d notes" % (k + 1)))]))
 
     def keyboard(self, comps, param, x0, y0, ww=56, wh=100, bw=34, bh=60, dots=False):
         """one-octave keyboard; each key is a button in a 12-way group bound to param.

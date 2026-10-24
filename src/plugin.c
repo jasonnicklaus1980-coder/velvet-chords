@@ -63,6 +63,8 @@ enum {
     P_DET_INFO, P_DET_CLEAR, P_DET_APPLY,
     /* Edit: the relative chord of the pad being edited */
     P_RELATIVE,
+    /* the notes each pad plays in the bank on screen, for the pads (display only) */
+    P_PADNOTES0 = P_RELATIVE + 1, P_PADNOTES_END = P_PADNOTES0 + 15,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -78,7 +80,7 @@ static int lane_of(int i, const int *ids) {
 enum { OUT_OFF = 0, OUT_HOST = 1, OUT_PORT = 2, OUT_BOTH = 3 }; /* bit 0 host, bit 1 port */
 
 static int is_display_only(int i) {
-    return i == P_NOW || i == P_DET_INFO || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || i == P_ANA_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
+    return (i >= P_PADNOTES0 && i <= P_PADNOTES_END) || i == P_NOW || i == P_DET_INFO || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || i == P_ANA_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
 }
 
 typedef struct { const char *name; int steps; float def; int trigger; } ParamInfo; /* steps 0 = continuous */
@@ -136,6 +138,13 @@ static void init_param_info(void) {
         for (int k = 0; k < 12; k++) {
             snprintf(names[32 + k], 20, "Scale has %s", NOTE[k]);
             P(P_SCALENOTE0 + k, names[32 + k], 2, 0.f, 0)
+        }
+    }
+    {
+        static char pnames[16][20];
+        for (int k = 0; k < 16; k++) {
+            snprintf(pnames[k], 20, "Pad %d notes", k + 1);
+            P(P_PADNOTES0 + k, pnames[k], 1, 0.f, 0)
         }
     }
     P(P_SONG_PREV, "Song prev", 2, 0.f, 1)
@@ -1196,11 +1205,34 @@ static int getParameterValueInScale(const Plugin *p, int pc) {
 
 static void pad_label(int idx, char *buf) { buf[0] = (char)('A' + idx / 16); buf[1] = (char)('0' + (idx % 16 + 1) / 10); buf[2] = (char)('0' + (idx % 16 + 1) % 10); buf[3] = 0; }
 
+static int view_bank_of(const Plugin *p) { return idx_of(p, P_VIEW_BANK); }
+
 static void param_display(Plugin *p, int i, char *out, int max) {
     char b[160];
     b[0] = 0;
     int x = idx_of(p, i);
     Engine *e = p->eng;
+    if (i >= P_PADNOTES0 && i <= P_PADNOTES_END) { /* the notes this pad plays, from the layout the screen shows */
+        static Voicing v[VC_PADS];
+        int k = view_bank_of(p) * 16 + (i - P_PADNOTES0);
+        const LayoutParams *lp = &p->lp_pending;
+        vc_voice_pads(lp, p->ui_pads, v);
+        int flats = vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
+        b[0] = 0;
+        int si = en_smart_index(e, k);
+        if (si >= 0) {   /* a smart pad plays one note: the one it is set to */
+            vc_note_name(e->smart_notes[si], e->smart_src.flats, b, sizeof(b));
+        } else if (p->ui_pads[k].valid) {
+            for (int j = 0; j < v[k].n; j++) {
+                char nn[8];
+                vc_note_name(v[k].notes[j], flats, nn, sizeof(nn));
+                size_t used = strlen(b);
+                snprintf(b + used, sizeof(b) - used, "%s%s", j ? " " : "", nn);
+            }
+        }
+        copy_str(out, b, max);
+        return;
+    }
     if (i >= P_RIFF0 && i <= P_RIFF_END) { /* riff step: Rest, or semitones from the chord root */
         if (x == 0) copy_str(out, "Rest", max); else snprintf(out, (size_t)max, "%+d st", x - 13);
         return;
