@@ -64,7 +64,7 @@ The plugin comes with its own MPC screen skin, six pages on the function keys, i
 - **Perform**: sound, tone, release, volume, velocity curve, strum, arpeggiator, voicing, inversion, octave, transpose, voice leading, MIDI out, pad 1 note with Learn, and Export MIDI.
 - **Edit**: tap a chord key to pick it, then set its root on the keyboard, its bass note, chord type, inversion and octave. Copy to Custom starts you from whatever layout you were playing.
 - **Pattern**: rhythm presets, the 16-step grid, swing, note length and timing, plus MIDI output settings.
-- **Tools**: Hold, Repeat, Melody, Key sync, MIDI import (the Import file picker, Load chords, Pads play and the status line), Smart Scale notes and octave, the progression slot, Harmony, and Volume.
+- **Tools**: Hold, Repeat, Melody, Key sync, MIDI import (the file picker with Import prev and Import next, Load chords, Pads play and the status line), Smart Scale notes and octave, the progression slot, Harmony, and Volume.
 - **Lanes**: the preset selector, the shift keys, the riff, the four arpeggio lanes and the riff steps.
 
 The Q-Links follow the page. If the skin doesn't appear (for example `/sdcard/Synths` isn't in MPC's content locations; the installer warns about this), the plugin still works through MPC's generic parameter view.
@@ -140,8 +140,8 @@ real recordings or on the MPC.
 starred and how many you have starred. Stars are stored with the project. **Clear** (Tools page, next to Export and Import) empties the
 chosen user preset slot.
 
-**Sharing your presets:** **Export file** writes the chosen slot to `user-preset-N.vcpreset` in the Velvet Chords folder (the same folder as
-Export MIDI), and **Import file** reads that file back into the slot. Copy the file to another MPC or keep it as a backup. The file is
+**Sharing your presets:** **Export preset** writes the chosen slot to `user-preset-N.vcpreset` in the Velvet Chords folder (the same folder as
+Export MIDI), and **Import preset** reads that file back into the slot. Copy the file to another MPC or keep it as a backup. The file is
 plain text, version 1: the first line is `VELVET-PRESET 1`, then lines starting with `#` are comments, and every other line is
 `name=value`, where `name` is the setting's name as shown by the plugin (Sound, Tone, Swing, Step 1 ...) and `value` is the plugin's own
 0 to 1 value for it. On import, a file without the header is refused, a file from a newer version is refused, names the plugin

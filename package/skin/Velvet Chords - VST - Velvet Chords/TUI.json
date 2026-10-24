@@ -32637,7 +32637,7 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "Export file",
+                                    "name": "Export preset",
                                     "type": "vcBtn_upre_export",
                                     "data": {
                                         "version": 1,
@@ -32667,7 +32667,7 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
-                                    "name": "Import file",
+                                    "name": "Import preset",
                                     "type": "vcBtn_upre_import",
                                     "data": {
                                         "version": 1,
