@@ -34,7 +34,7 @@ void sy_init(Synth *s, float sr) {
     memset(s, 0, sizeof(*s));
     s->sr = sr > 1000.f ? sr : 44100.f;
     s->tone = 0.5f;
-    s->release = 0.3f;
+    s->release = 0.1f;
     s->volume = 0.7f;
     s->rng = 0x2545F491u;
     for (int i = 0; i < SY_VOICES; i++) s->v[i].ks = s->ks[i];

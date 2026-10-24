@@ -106,7 +106,7 @@ static void init_param_info(void) {
     P(P_VEL, "Velocity", VEL_COUNT, 0.f, 0)
     P(P_SOUND, "Sound", SY_BASE_COUNT, 0.f, 0)
     P(P_TONE, "Tone", 0, 0.5f, 0)
-    P(P_RELEASE, "Release", 0, 0.3f, 0)
+    P(P_RELEASE, "Release", 0, 0.1f, 0)
     P(P_VOLUME, "Volume", 0, 0.75f, 0)
     P(P_PAD_BASE, "Pad 1 note", 113, 36.f / 112.f, 0)
     P(P_LEARN, "Learn pad 1", 2, 0.f, 1)
