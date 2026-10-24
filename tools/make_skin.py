@@ -191,11 +191,11 @@ class Images:
         return self.save("vc_chev_%s_on.png" % ("next" if nxt else "prev"), a.done())
 
     def switch(self, on):
-        w, h = 44, 24
+        w, h, top = 44, 36, 6   # 36 px tall touch area, the pill is 24 px of it
         a = Art(w, h)
-        a.rect(0, 0, w, h, 12, fill=ACCENT if on else CTRL, edge=None if on else CTRL_EDGE)
+        a.rect(0, top, w, top + 24, 12, fill=ACCENT if on else CTRL, edge=None if on else CTRL_EDGE)
         cx = w - 12 if on else 12
-        a.d.ellipse(a.s(cx - 8, 4, cx + 8, 20), fill=INK_ON_ACCENT if on else "#6c7079")
+        a.d.ellipse(a.s(cx - 8, top + 4, cx + 8, top + 20), fill=INK_ON_ACCENT if on else "#6c7079")
         return self.save("vc_switch_%s.png" % ("on" if on else "off"), a.done())
 
     def button(self, name, text, w, h, on):
@@ -381,10 +381,10 @@ class Skin:
 
     def switch(self, comps, bg, param, x, y, caption=None):
         on, off = self.img.switch(True), self.img.switch(False)
-        key = self.define("vcSwitch", definition([A_QLINK, A_TOGGLE_ENTER], [focus_sub(44, 24), button_sub(on, off, 1, 1, 44, 24)]))
+        key = self.define("vcSwitch", definition([A_QLINK, A_TOGGLE_ENTER], [focus_sub(44, 36), button_sub(on, off, 1, 1, 44, 36)]))
         if caption:
             bg.caption(x + 1, y - 17, caption)
-        comps.append(self.place(key, caption or param, x, y, 44, 24, [("Data", self.p(param))], focus="Yes"))
+        comps.append(self.place(key, caption or param, x, y, 44, 36, [("Data", self.p(param))], focus="Yes"))
 
     def action_button(self, comps, bg, name, text, param, x, y, w=188, h=CH):
         on, off = self.img.button(name, text, w, h, True), self.img.button(name, text, w, h, False)
@@ -488,9 +488,9 @@ class Skin:
         """four independent buttons, each on its own parameter: a segmented group put A and D out of reach on the MPC"""
         bg.a.text(1066, 28, "BANK", 10.5, LABEL, "Medium", anchor="rm", tracking=1.3)
         for i, t in enumerate(["A", "B", "C", "D"]):
-            on, off = self.img.seg(group, i, 4, t, 45, 32, True), self.img.seg(group, i, 4, t, 45, 32, False)
-            key = self.define("vcBank_%s_%s" % (group, t), definition([A_QLINK, A_TOGGLE_ENTER], [button_sub(on, off, 1, 1, 45, 32)]))
-            c.append(self.place(key, "Bank %s" % t, 1076 + i * 45, 12, 45, 32, [("Data", self.p("Bank %s" % t))],
+            on, off = self.img.seg(group, i, 4, t, 45, 36, True), self.img.seg(group, i, 4, t, 45, 36, False)
+            key = self.define("vcBank_%s_%s" % (group, t), definition([A_QLINK, A_TOGGLE_ENTER], [button_sub(on, off, 1, 1, 45, 36)]))
+            c.append(self.place(key, "Bank %s" % t, 1076 + i * 45, 10, 45, 36, [("Data", self.p("Bank %s" % t))],
                                 focus="Yes" if i == 0 else "No"))
 
     def header_info(self, c, bg):
@@ -506,7 +506,7 @@ class Skin:
         c = []
         self.segments(c, bg, "mode", "Mode", ["Scale", "Types", "Custom"], 456, 12, 104, 32, ids=[1, 2, 3], ntotal=4)
         self.header_banks(c, bg, "bank")
-        self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 12, 428, h=32)  # the factory preset in use, top left
+        self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 10, 428, h=36)  # the factory preset in use, top left
         bg.panel((12, 64, 1268, 144))
         self.readout(c, bg, "Info", 28, 88, 1224, 36, size=16, colour=TEXT_2)  # the scale's notes in the key, across the top
         bg.panel((12, 152, 632, 620))
@@ -561,8 +561,8 @@ class Skin:
         self.action_button(c, bg, "learnall", "Learn all 16 pads", "Learn all pads", R + 396, rows[4], w=192)
         self.readout(c, bg, "Now playing", R, rows[4] + 44, 588, 30, size=14, colour=ACCENT)
         self.action_button(c, bg, "export", "Export MIDI", "Export MIDI", R, rows[5])
-        self.value_field(c, bg, "Reverb", R + 204, rows[5] + 60, 188, h=30, caption="Reverb")
-        self.value_field(c, bg, "Humanize", R, rows[5] + 60, 188, h=30, caption="Humanize (velocity)")
+        self.value_field(c, bg, "Reverb", R + 204, rows[5] + 60, 188, h=36, caption="Reverb")
+        self.value_field(c, bg, "Humanize", R, rows[5] + 60, 188, h=36, caption="Humanize (velocity)")
         self.readout(c, bg, "Export MIDI", R + 204, rows[5], 180, size=14)
         self.action_button(c, bg, "uprog_save", "Save progression", "Save progression", R + 396, rows[5], w=192)
         self.page("Perform", 1, c, "vc_bg_perform.png", bg)
