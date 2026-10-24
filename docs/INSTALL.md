@@ -115,7 +115,7 @@ by Harmony; Release is still on the Perform page.
 **Your presets** (Tools page, bottom right): pick a slot (1-4) and press **Save** to keep your current settings in it, or **Load** to bring them
 back. A user preset holds the sound, tone, release and volume, voicing, inversion, octave and voice leading, strum, all four arpeggio lanes,
 velocity, the pattern and its 16 steps, rate, swing, gate, length, chance and seed, the smart pads settings, the riff, the key and scale,
-the bassline, harmony, and the progression with Progression play. Unlike a factory preset it restores all of that, including Silent or an
+harmony, and the progression with Progression play. Unlike a factory preset it restores all of that, including Silent or an
 arpeggio, because you saved it. Slots are stored with the project. It does not hold your custom pads, saved progressions or imported chords.
 
 **Analyze a sample** (Edit page, bottom): put a WAV file in `Velvet Chords/Analyze/` (the installer and the first press of **Analyze sample** create the `Analyze` folder). The file can have any name: if there's no `sample.wav`, Velvet uses the first WAV in the folder. It reads 16-bit, 24-bit PCM and 32-bit float WAV (16-bit, 24-bit PCM or 32-bit float, mono or
