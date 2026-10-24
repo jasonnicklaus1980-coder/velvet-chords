@@ -554,7 +554,7 @@ class Skin:
         self.segments(c, bg, "vel", "Velocity", ["Linear", "Soft", "Hard", "Fixed"], L, 320, 147, caption="Velocity")
         self.value_field(c, bg, "Strum", L, 388, 188, caption="Strum")
         self.segments(c, bg, "strumdir", "Strum dir", ["Up", "Down", "Alternate"], L + 204, 388, 128, caption="Strum direction")
-        self.segments(c, bg, "arp", "Arp", ["Off", "Up", "Down", "Up-down", "Random"], L, 456, 117, caption="Arpeggiator")
+        self.segments(c, bg, "arp", "Arp", ["Off", "Up", "Down", "Up-down", "Random", "Converge", "Diverge"], L, 456, 83, caption="Arpeggiator")
         self.segments(c, bg, "rate", "Arp rate", ["1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"], L, 524, 98, caption="Arp rate")
         bg.panel((648, 64, 1268, 620))
         self.segments(c, bg, "voicing2", "Voicing", voicings, R, rows[0], 117, caption="Voicing")

@@ -10940,7 +10940,7 @@
                                         "onImage": "vc_seg_arp_0_on.png",
                                         "offImage": "vc_seg_arp_0_off.png",
                                         "buttonId": 0,
-                                        "numButtonsInGroup": 5,
+                                        "numButtonsInGroup": 7,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -10955,7 +10955,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 117 36",
+                                    "bounds": "0 0 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -11008,7 +11008,7 @@
                                         "onImage": "vc_seg_arp_1_on.png",
                                         "offImage": "vc_seg_arp_1_off.png",
                                         "buttonId": 1,
-                                        "numButtonsInGroup": 5,
+                                        "numButtonsInGroup": 7,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -11023,7 +11023,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 117 36",
+                                    "bounds": "0 0 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -11076,7 +11076,7 @@
                                         "onImage": "vc_seg_arp_2_on.png",
                                         "offImage": "vc_seg_arp_2_off.png",
                                         "buttonId": 2,
-                                        "numButtonsInGroup": 5,
+                                        "numButtonsInGroup": 7,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -11091,7 +11091,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 117 36",
+                                    "bounds": "0 0 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -11144,7 +11144,7 @@
                                         "onImage": "vc_seg_arp_3_on.png",
                                         "offImage": "vc_seg_arp_3_off.png",
                                         "buttonId": 3,
-                                        "numButtonsInGroup": 5,
+                                        "numButtonsInGroup": 7,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -11159,7 +11159,7 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 117 36",
+                                    "bounds": "0 0 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -11212,7 +11212,7 @@
                                         "onImage": "vc_seg_arp_4_on.png",
                                         "offImage": "vc_seg_arp_4_off.png",
                                         "buttonId": 4,
-                                        "numButtonsInGroup": 5,
+                                        "numButtonsInGroup": 7,
                                         "handleName": "Data",
                                         "gestureBehaviour": "Instant"
                                     }
@@ -11227,7 +11227,143 @@
                                     "showWhenDataModelInvalid": "Show",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "0 0 117 36",
+                                    "bounds": "0 0 83 36",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcSeg_arp_5",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_seg_arp_5_on.png",
+                                        "offImage": "vc_seg_arp_5_off.png",
+                                        "buttonId": 5,
+                                        "numButtonsInGroup": 7,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 83 36",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
+                    "key": "vcSeg_arp_6",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Button",
+                                    "type": "Button",
+                                    "data": {
+                                        "version": 2,
+                                        "onImage": "vc_seg_arp_6_on.png",
+                                        "offImage": "vc_seg_arp_6_off.png",
+                                        "buttonId": 6,
+                                        "numButtonsInGroup": 7,
+                                        "handleName": "Data",
+                                        "gestureBehaviour": "Instant"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             }
@@ -14276,7 +14412,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "28 456 117 36",
+                                    "bounds": "28 456 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -14306,7 +14442,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "145 456 117 36",
+                                    "bounds": "111 456 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -14336,7 +14472,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "262 456 117 36",
+                                    "bounds": "194 456 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -14366,7 +14502,7 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "379 456 117 36",
+                                    "bounds": "277 456 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
@@ -14396,7 +14532,67 @@
                                     "showWhenDataModelInvalid": "Hide",
                                     "whenVisible": "Always",
                                     "boundsType": "Absolute",
-                                    "bounds": "496 456 117 36",
+                                    "bounds": "360 456 83 36",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Arpeggiator Converge",
+                                    "type": "vcSeg_arp_5",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 12"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "443 456 83 36",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Arpeggiator Diverge",
+                                    "type": "vcSeg_arp_6",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 12"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "526 456 83 36",
                                     "additionalInvalidatingHandles": []
                                 }
                             },
