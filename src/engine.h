@@ -171,6 +171,7 @@ typedef struct Engine {
 
     /* smart scale */
     int smart, smart_mode, smart_oct, smart_map, harmony, instance_id;
+    int smart_ready;             /* a chord has been played that the smart pads can follow; until then they stay silent */
     int scale_pcs_mask;          /* key scale for "Scale" mode */
     SmartChord own_chord;        /* last chord this instance played */
     SmartChord smart_src;        /* chord the smart pads currently follow */

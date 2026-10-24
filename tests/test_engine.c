@@ -1118,6 +1118,38 @@ static void test_smart_keys(void) {
     CHECK(checks_bad == 0, "smart notes stay in their mode's pitch classes, all keys (%d of %d outside)", checks_bad, total);
 }
 
+/* the note-ons in the next block, for the smart pad tests */
+static int count_note_ons(Engine *e) {
+    static float L[256], R[256];
+    en_process(e, L, R, 256);
+    int n = 0;
+    for (int i = 0; i < e->nout; i++) if ((e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0) n++;
+    e->nout = 0;
+    return n;
+}
+
+static void test_smart_ready(void) {
+    Engine *e = v11_engine();
+    e->lp.key = 0; e->lp.scale = 0; e->lp.mode = VC_MODE_CUSTOM; e->dirty = 1;
+    custom_chord(e, 0, "Dm7", 2);
+    e->smart = SMART_SPLIT; e->smart_mode = 0; e->smart_map = SMAP_FOLLOW;
+    en_rebuild(e);
+    int smart_pad = e->pad_base + 8, chord_pad = e->pad_base;
+    en_push_midi(e, 0, 0x90, (unsigned char)smart_pad, 100);
+    int before = count_note_ons(e);
+    en_push_midi(e, 0, 0x80, (unsigned char)smart_pad, 0);
+    CHECK(before == 0, "a smart pad before any chord is played sounds nothing (%d notes)", before);
+    en_push_midi(e, 0, 0x90, (unsigned char)chord_pad, 100);
+    count_note_ons(e);
+    en_push_midi(e, 0, 0x80, (unsigned char)chord_pad, 0);
+    count_note_ons(e);
+    en_push_midi(e, 0, 0x90, (unsigned char)smart_pad, 100);
+    int after = count_note_ons(e);
+    CHECK(after > 0, "after a chord is played the smart pad sounds a note (%d)", after);
+    en_push_midi(e, 0, 0x80, (unsigned char)smart_pad, 0);
+    count_note_ons(e);
+}
+
 /* Smart map in every key: Relative follows the key's scale from the key root, Absolute the scale from C, Chromatic
  * all twelve semitones from the key; none of them looks at the chord */
 static void test_smart_map(void) {
@@ -1442,6 +1474,10 @@ static int harm_run(int style, int pad_note, int key, int *notes, int *offs) {
     e->lp.key = key; e->lp.scale = 0; e->lp.mode = VC_MODE_CUSTOM; e->dirty = 1;
     e->smart = SMART_SPLIT; e->smart_map = SMAP_RELATIVE; e->harmony = style;
     en_rebuild(e);
+    en_push_midi(e, 0, 0x90, (unsigned char)e->pad_base, 100);   /* a chord first: the smart pads wait for one */
+    count_note_ons(e);
+    en_push_midi(e, 0, 0x80, (unsigned char)e->pad_base, 0);
+    count_note_ons(e);
     en_push_midi(e, 0, 0x90, (unsigned char)pad_note, 100);
     int n = 0; *offs = 0;
     for (int b = 0; b < 6; b++) {
@@ -1746,6 +1782,7 @@ int main(void) {
     printf("scale detection...\n"); test_detect();
     printf("scale table...\n"); test_scale_table();
     printf("relative chords...\n"); test_relative();
+    printf("smart pads wait for a chord...\n"); test_smart_ready();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

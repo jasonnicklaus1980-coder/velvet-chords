@@ -116,7 +116,8 @@ void en_smart_update(Engine *e) {
     } else {
         e->smart_src = e->own_chord;
     }
-    if (!e->smart_src.valid) { /* nothing played yet: follow pad 1 of bank A */
+    e->smart_ready = e->smart_src.valid ? 1 : 0;
+    if (!e->smart_src.valid) { /* nothing played yet: the notes are worked out from pad 1 of bank A, but the pads stay silent */
         SmartChord sc;
         chord_from_pad(&sc, &e->pads[0]);
         sc.flats = engine_flats(e);
@@ -654,6 +655,7 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
     if (e->edit_follow && e->lp.mode == VC_MODE_CUSTOM) e->edit_pad_request = idx;
     int si = en_smart_index(e, idx);
     if (si >= 0) { /* Smart Scale pad: one note that fits the current chord */
+        if (!e->smart_ready) return;   /* no chord played yet: nothing to fit, so nothing sounds */
         OwnerRec *r = alloc_owner(e, frame);
         if (++e->next_owner <= 0) e->next_owner = 1;
         r->owner = e->next_owner;
