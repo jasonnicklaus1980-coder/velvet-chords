@@ -592,6 +592,27 @@ int main(int argc, char **argv) {
         d->dispatcher(d, effClose, 0, 0, 0, 0);
     }
 
+    /* a preset changes the notes the pads play: its voicing reaches the pads, not only the Voicing setting */
+    {
+        AEffect *v = open_fx();
+        int PRE = find_param(v, "Preset"), NOW = find_param(v, "Now playing");
+        float L[256], R[256];
+        EvBuf eb;
+        char base[160], cur[160];
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(v, &eb, 1);   /* pad 1: its chord notes show on Now playing */
+        block(v, L, R, 256);
+        display(v, NOW, base);
+        int changed = 0;
+        for (int k = 1; k <= 600 && !changed; k += 7) {
+            v->setParameter(v, PRE, (float)k / 600.f);
+            block(v, L, R, 256);
+            display(v, NOW, cur);
+            if (strcmp(cur, base)) changed = k;
+        }
+        CHECK(changed > 0, "a preset changes the notes of pad 1 (base '%s', changed at preset %d)", base, changed);
+        v->dispatcher(v, effClose, 0, 0, 0, 0);
+    }
+
     /* key sync, MIDI import through the plugin, imports saved with the project */
     {
         AEffect *a = open_fx(), *b = open_fx();
