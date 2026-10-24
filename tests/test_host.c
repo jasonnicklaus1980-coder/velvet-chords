@@ -1075,6 +1075,18 @@ int main(int argc, char **argv) {
         fx->setParameter(fx, P_PRE, 1.f / 600.f);
         display(fx, P_PRE, buf);
         CHECK(!strcmp(buf, "Neo-Soul Keys Late"), "preset 1 is shown by name (%s)", buf);
+        { /* a preset never turns the arpeggio on: it only sets one that is already running */
+            int P_ARPX = find_param(fx, "Arp"), bad = 0;
+            AEffect *q = open_fx();
+            for (int k = 0; k < 600; k += 37) {
+                q->setParameter(q, find_param(q, "Preset"), (float)k / 600.f);
+                char a[64]; display(q, P_ARPX, a);
+                if (strcmp(a, "Off")) bad++;
+            }
+            CHECK(bad == 0, "presets leave a fresh instance's arpeggio Off (%d presets were on)", bad);
+            q->dispatcher(q, effClose, 0, 0, 0, 0);
+            (void)P_ARPX;
+        }
         { /* a preset leaves your key and scale alone, whatever the genre's are */
             int P_KEY_ = find_param(fx, "Key"), P_SCALE_ = find_param(fx, "Scale");
             fx->setParameter(fx, P_KEY_, 7.f / 11.f);          /* G */
