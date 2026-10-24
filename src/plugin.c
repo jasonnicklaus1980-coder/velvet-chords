@@ -919,15 +919,21 @@ static int ends_with_mid(const char *n) {
     return (!strcmp(e, ".mid") || !strcmp(e, ".MID") || !strcmp(e, ".Mid") || !strcmp(e5, ".midi") || !strcmp(e5, ".MIDI"));
 }
 
-/* walks the Import folder and its subfolders (up to IMP_MAX_DEPTH levels) and lists every .mid file by its path from
- * Import, such as "Songs/blues.mid". Links and hidden entries are skipped. */
-static void scan_import_dir(Plugin *p, const char *rel, int depth) {
+/* walks the Import folder and its subfolders (up to IMP_MAX_DEPTH levels) and collects every .mid file by its path from
+ * Import, such as "Songs/blues.mid". Links and hidden entries are skipped. The folder order is arbitrary, so the walk
+ * collects up to IMP_SCAN_MAX files, then the list is sorted and the first 64 are kept: a big library never hides the
+ * files that sort first. */
+#define IMP_SCAN_MAX 512
+static char imp_scan[IMP_SCAN_MAX][IMP_NAME];
+static int imp_scan_n;
+
+static void scan_import_dir(const char *rel, int depth) {
     char path[600];
     if (rel[0]) snprintf(path, sizeof(path), "%s/%s", import_dir(), rel); else copy_str(path, import_dir(), sizeof(path));
     DIR *d = opendir(path);
     if (!d) return;
     struct dirent *de;
-    while ((de = readdir(d)) && p->nfiles < 64) {
+    while ((de = readdir(d)) && imp_scan_n < IMP_SCAN_MAX) {
         if (de->d_name[0] == '.') continue;
         char child_rel[IMP_NAME], child[600];
         if (rel[0]) snprintf(child_rel, sizeof(child_rel), "%s/%s", rel, de->d_name);
@@ -936,24 +942,22 @@ static void scan_import_dir(Plugin *p, const char *rel, int depth) {
         snprintf(child, sizeof(child), "%s/%s", import_dir(), child_rel);
         struct stat st;
         if (lstat(child, &st)) continue;
-        if (S_ISDIR(st.st_mode)) { if (depth < IMP_MAX_DEPTH) scan_import_dir(p, child_rel, depth + 1); }
-        else if (S_ISREG(st.st_mode) && ends_with_mid(de->d_name)) copy_str(p->imp_files[p->nfiles++], child_rel, IMP_NAME);
+        if (S_ISDIR(st.st_mode)) { if (depth < IMP_MAX_DEPTH) scan_import_dir(child_rel, depth + 1); }
+        else if (S_ISREG(st.st_mode) && ends_with_mid(de->d_name)) copy_str(imp_scan[imp_scan_n++], child_rel, IMP_NAME);
     }
     closedir(d);
 }
 
+static int cmp_import_names(const void *x, const void *y) { return strcmp((const char *)x, (const char *)y); }
+
 static void scan_import_files(Plugin *p) {
     mkdir(export_dir(), 0775);
     mkdir(import_dir(), 0775);
-    p->nfiles = 0;
-    scan_import_dir(p, "", 0);
-    for (int i = 1; i < p->nfiles; i++) { /* alphabetical, so a folder's files sit together */
-        char t[IMP_NAME];
-        copy_str(t, p->imp_files[i], IMP_NAME);
-        int j = i - 1;
-        while (j >= 0 && strcmp(p->imp_files[j], t) > 0) { copy_str(p->imp_files[j + 1], p->imp_files[j], IMP_NAME); j--; }
-        copy_str(p->imp_files[j + 1], t, IMP_NAME);
-    }
+    imp_scan_n = 0;
+    scan_import_dir("", 0);
+    qsort(imp_scan, (size_t)imp_scan_n, IMP_NAME, cmp_import_names); /* alphabetical, so a folder's files sit together */
+    p->nfiles = imp_scan_n < 64 ? imp_scan_n : 64;
+    for (int i = 0; i < p->nfiles; i++) copy_str(p->imp_files[i], imp_scan[i], IMP_NAME);
 }
 
 static void do_import(Plugin *p) {

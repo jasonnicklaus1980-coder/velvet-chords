@@ -818,6 +818,35 @@ int main(int argc, char **argv) {
         }
     }
 
+    /* a big library does not hide the files that sort first: the picker keeps the first 64 names in alphabetical order */
+    {
+        const char *edir = getenv("VC_EXPORT_DIR");
+        char p1[800];
+        if (edir) {
+            snprintf(p1, sizeof(p1), "rm -rf '%s/Import' && mkdir -p '%s/Import/big'", edir, edir);
+            system(p1);
+            for (int k = 0; k < 70; k++) {
+                snprintf(p1, sizeof(p1), "%s/Import/big/f%02d.mid", edir, k);
+                FILE *fp = fopen(p1, "wb");
+                if (fp) fclose(fp);
+            }
+            snprintf(p1, sizeof(p1), "%s/Import/zz.mid", edir);
+            FILE *fp = fopen(p1, "wb");
+            if (fp) fclose(fp);
+            AEffect *bg = open_fx();
+            int PF = find_param(bg, "Import file"), PN = find_param(bg, "Import next");
+            char name[160];
+            display(bg, PF, name);
+            CHECK(!strcmp(name, "big/f00.mid"), "the picker starts at the first name in order (%s)", name);
+            for (int k = 0; k < 63; k++) bg->setParameter(bg, PN, 1.f);
+            display(bg, PF, name);
+            CHECK(!strcmp(name, "big/f63.mid"), "the 64th name is big/f63.mid (%s)", name);
+            bg->dispatcher(bg, effClose, 0, 0, 0, 0);
+            snprintf(p1, sizeof(p1), "rm -rf '%s/Import'", edir);
+            system(p1);
+        }
+    }
+
     /* loading a project redraws the pads: the screen shows the loaded key and scale straight away */
     {
         AEffect *a = open_fx(), *b = open_fx();
