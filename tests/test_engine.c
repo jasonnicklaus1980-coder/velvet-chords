@@ -1382,13 +1382,15 @@ static void test_pattern_chance(void) {
 }
 
 /* bassline: with Progression play running, the bass follows the progression chord on the beat grid */
+/* phrase to play through bass_run (1..EN_NUM_PHRASES, 0 = none) */
+static int g_test_phrase = 0;
 static void bass_run(int style, int bars, int *nbass, int64_t *tbass, int *notebass, int *offs, int max) {
     static float L[512], R[512];
     Engine *e = v11_engine();
     e->lp.mode = VC_MODE_CUSTOM; e->lp.prog = 1; e->lp.key = 0; e->lp.scale = 0; e->lp.voicing = VC_VOICE_CLOSE;
     e->lp.inversion = 0; e->lp.octave = 1; /* chords from C4 up, so the bass (C1-B2) is easy to tell apart */
     e->dirty = 1;
-    e->prog_play = 1; e->bass_style = style;
+    e->prog_play = 1; e->bass_style = style; e->phrase = g_test_phrase;
     e->tempo = 120.0; e->playing = 1;
     int64_t pos = 0; *nbass = 0; *offs = 0;
     for (int b = 0; b < bars * 96000 / 512 + 8; b++) {
@@ -1432,6 +1434,17 @@ static void test_bassline(void) {
     /* Off: no bass */
     bass_run(BASS_OFF, 2, &n, t, note, &offs, 64);
     CHECK(n == 0, "bass Off plays nothing (%d)", n);
+
+    /* Phrases: Root pulse is eight eighth notes on the root in each bar; Hold is one root note per bar */
+    g_test_phrase = 1;                           /* Root pulse */
+    bass_run(BASS_OFF, 2, &n, t, note, &offs, 64);
+    int pulse = n >= 16 && note[0] == 36 && note[7] == 36 && note[8] == 43 && note[15] == 43;
+    CHECK(pulse, "Root pulse: eight notes per bar, roots C then G (%d notes)", n);
+    CHECK(n >= 3 && llabs((long long)(t[1] - t[0]) - 12000) < 4, "Root pulse steps are eighth notes (gap %lld frames)", (long long)(t[1] - t[0]));
+    g_test_phrase = 8;                           /* Hold */
+    bass_run(BASS_OFF, 2, &n, t, note, &offs, 64);
+    CHECK(n >= 2 && note[0] == 36 && note[1] == 43 && t[1] - t[0] == 96000, "Hold: one root note per bar (%d notes)", n);
+    g_test_phrase = 0;
 }
 
 /* harmony: each smart-pad note gets a second voice in the key's scale, released with it */
@@ -1641,6 +1654,28 @@ static void test_audio_analysis(void) {
 }
 
 /* Detect: the scale that holds the notes played, ranked by how many of them it holds */
+/* relative chords: C -> Am, Cmaj7 -> Am7, Am -> C, and none for chords without a partner */
+static void test_relative(void) {
+    ChordSpec c, r;
+    int q, ok;
+    q = vc_quality_find(""); c.root = 0; c.quality = q; c.bass = -1; c.ncustom = 0;
+    ok = vc_relative(&c, &r);
+    CHECK(ok && r.root == 9 && r.quality == vc_quality_find("m"), "C major -> A minor");
+    q = vc_quality_find("maj7"); c.root = 0; c.quality = q;
+    ok = vc_relative(&c, &r);
+    CHECK(ok && r.root == 9 && r.quality == vc_quality_find("m7"), "Cmaj7 -> Am7");
+    q = vc_quality_find("m"); c.root = 9; c.quality = q;
+    ok = vc_relative(&c, &r);
+    CHECK(ok && r.root == 0 && r.quality == vc_quality_find(""), "A minor -> C major");
+    q = vc_quality_find("m9"); c.root = 2; c.quality = q;
+    ok = vc_relative(&c, &r);
+    CHECK(ok && r.root == 5 && r.quality == vc_quality_find("maj9"), "Dm9 -> Fmaj9");
+    q = vc_quality_find("7"); c.root = 7; c.quality = q;
+    CHECK(!vc_relative(&c, &r), "G7 has no relative chord");
+    q = vc_quality_find("dim"); c.root = 11; c.quality = q;
+    CHECK(!vc_relative(&c, &r), "a diminished chord has no relative chord");
+}
+
 /* every scale has a name, a description that fits the Info line, and its own set of notes */
 static void test_scale_table(void) {
     int named = 1, short_desc = 1, distinct = 1, sized = 1;
@@ -1720,6 +1755,7 @@ int main(void) {
     printf("audio analysis...\n"); test_audio_analysis();
     printf("scale detection...\n"); test_detect();
     printf("scale table...\n"); test_scale_table();
+    printf("relative chords...\n"); test_relative();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

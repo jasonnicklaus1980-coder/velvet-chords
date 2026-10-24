@@ -61,6 +61,8 @@ enum {
     P_MIDI_LOG, P_REVERB, P_SOUND_X, P_HUMAN, P_DIRECT,
     /* Detect: the scale that fits the notes played, applied to Key and Scale */
     P_DET_INFO, P_DET_CLEAR, P_DET_APPLY,
+    /* Edit: the relative chord of the pad being edited; bass phrase library */
+    P_RELATIVE, P_PHRASE, P_PHR_PREV, P_PHR_NEXT,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -237,6 +239,10 @@ static void init_param_info(void) {
     P(P_DET_INFO, "Detected", 1, 0.f, 0)
     P(P_DET_CLEAR, "Clear detection", 2, 0.f, 1)
     P(P_DET_APPLY, "Use detected scale", 2, 0.f, 1)
+    P(P_RELATIVE, "Relative chord", 2, 0.f, 1)
+    P(P_PHRASE, "Bass phrase", EN_NUM_PHRASES + 1, 0.f, 0)
+    P(P_PHR_PREV, "Previous phrase", 2, 0.f, 1)
+    P(P_PHR_NEXT, "Next phrase", 2, 0.f, 1)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -488,6 +494,19 @@ static void apply_out_mode(Plugin *p, int mode) {
 
 /* move a stepped parameter one step (prev/next buttons on the screen) */
 static void set_param(Plugin *p, int i, float v, int from_host);
+/* Relative chord: the pad being edited becomes its relative chord (C -> Am, Am -> C); chords without one stay as they are */
+static void apply_relative(Plugin *p) {
+    ChordSpec c, r;
+    c.root = idx_of(p, P_EDIT_ROOT);
+    c.quality = idx_of(p, P_EDIT_TYPE) - 1;
+    c.bass = -1; c.ncustom = 0;
+    if (c.quality < 0 || !vc_relative(&c, &r)) return;
+    set_param(p, P_EDIT_ROOT, norm_of(P_EDIT_ROOT, r.root), 0);
+    set_param(p, P_EDIT_TYPE, norm_of(P_EDIT_TYPE, r.quality + 1), 0);
+    set_param(p, P_EDIT_BASS, norm_of(P_EDIT_BASS, 0), 0);   /* a relative chord has no slash bass */
+    refresh_host(p);
+}
+
 static int popcount_of(unsigned m) { int n = 0; for (m &= 0xFFF; m; m &= m - 1) n++; return n; }
 
 /* Detect: Key and Scale become the scale that holds every note played; if none holds them all, the one that holds most */
@@ -975,6 +994,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             if (i == P_FAV_TOGGLE) fav_toggle(p);
             if (i == P_DET_CLEAR) e->det_pcs = 0;
             if (i == P_DET_APPLY) apply_detected(p);
+            if (i == P_RELATIVE) apply_relative(p);
+            if (i == P_PHR_PREV || i == P_PHR_NEXT) step_param(p, P_PHRASE, i == P_PHR_NEXT ? 1 : -1, EN_NUM_PHRASES + 1);
             if (i == P_ANALYZE) analyze_sample(p, idx_of(p, P_UPROG_SLOT));
             if (i == P_UPROG_CLEAR) { int sl = idx_of(p, P_UPROG_SLOT); if (sl >= 0 && sl < VC_USER_PROGS) { p->lp_pending.un[sl] = 0; snprintf(p->ana_msg, sizeof(p->ana_msg), "Cleared progression %d", sl + 1); sync_layout(p); } }
             if (i == P_FAV_PREV) fav_step(p, -1);
@@ -1078,6 +1099,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_PAT_SYNC: e->pat_sync = idx_of(p, i); break;
     case P_SMART: e->smart = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_HOLD: e->hold = idx_of(p, i); break;
+    case P_PHRASE: e->phrase = idx_of(p, i); if (from_host) refresh_host(p); break;
     case P_REPEAT: e->repeat = idx_of(p, i); break;
     case P_MELODY: e->mel_mode = idx_of(p, i); break;
     case P_MEL_RATE: e->mel_rate = idx_of(p, i); break;
@@ -1265,6 +1287,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_NOTE_SEL: if (x == 0) copy_str(b, "Whole chord", sizeof(b)); else snprintf(b, sizeof(b), "Note %d", x + 1); break;
     case P_NOTE_IV: if (x == 0) copy_str(b, "Remove", sizeof(b)); else snprintf(b, sizeof(b), "%+d st", x - 13); break;
     case P_HOLD: case P_DIRECT: copy_str(b, x ? "On" : "Off", sizeof(b)); break;
+    case P_PHRASE: copy_str(b, x ? EN_PHRASES[x - 1].name : "Off", sizeof(b)); break;
     case P_REPEAT: { static const char *R[REP_COUNT] = {"Off", "1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"}; copy_str(b, R[x], sizeof(b)); break; }
     case P_MELODY: { static const char *M2[MEL_COUNT] = {"Off", "Simple", "Busy"}; copy_str(b, M2[x], sizeof(b)); break; }
     case P_MEL_RATE: { static const char *M3[MRATE_COUNT] = {"1/8", "1/8T", "1/16"}; copy_str(b, M3[x], sizeof(b)); break; }

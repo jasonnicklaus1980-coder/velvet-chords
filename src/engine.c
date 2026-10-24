@@ -899,6 +899,28 @@ static void prog_start(Engine *e, int bar, int frame) {
 /* ---------- bassline ---------- */
 static const char *BASS_PATTERN[BASS_COUNT] = {"----", "R---", "R-F-", "RORO", "RTFA"};
 
+/* Phrase library: one bar of eighth notes (8 steps). Tokens: R root, F fifth, O octave, T third, A approach note
+ * (a semitone below the next chord's root), - no new note (the last one rings on). */
+const EnPhrase EN_PHRASES[EN_NUM_PHRASES] = {
+    {"Root pulse", "RRRRRRRR", "Root on every eighth"},
+    {"Root and fifth", "R-F-R-F-", "Root and fifth, steady"},
+    {"Octave pump", "RORORORO", "Octaves, driving"},
+    {"Syncopated", "R--R-R--", "Syncopated root, room to breathe"},
+    {"Walking", "RTFTRTFA", "Walking line into the next chord"},
+    {"Lift", "R-T-F-O-", "Chord tones rising"},
+    {"Trap sub", "R-----R-", "Sub bass: long notes, sparse"},
+    {"Hold", "R-------", "One long note on the root"},
+    {"Soul", "R-TF-O-A", "Soul walk with an approach note"},
+    {"Staccato", "R-R---R-", "Short stabs on the root"},
+    {"Approach", "--R-A-R-", "Approach notes into the root"},
+    {"Pedal", "R-R-O-R-", "Root pedal with octave colour"},
+};
+
+/* the bassline is on when a style or a phrase is chosen */
+static int bass_on(const Engine *e) { return e->phrase > 0 || (e->bass_style > 0 && e->bass_style < BASS_COUNT); }
+/* steps per beat: a phrase has eighth notes, a style has one note per beat */
+static int bass_subdiv(const Engine *e) { return e->phrase > 0 ? 2 : 1; }
+
 static void bass_release(Engine *e, int frame) {
     OwnerRec *r = e->bass_owner ? find_owner(e, e->bass_owner) : 0;
     if (r) release_owner(e, r, frame);
@@ -913,11 +935,12 @@ static void bass_stop(Engine *e, int frame) {
 /* a new bass note for this beat (or hold the last one on a '-'); the chord is the progression step for the bar */
 static void bass_beat_start(Engine *e, int beat, int frame) {
     e->bass_beat = beat;
-    if (e->bass_style < 1 || e->bass_style >= BASS_COUNT) return;
+    if (!bass_on(e)) return;
     int n = vc_prog_length(&e->lp);
     if (n < 1) return;
-    int bar = beat / 4, step = beat % 4;
-    char tok = BASS_PATTERN[e->bass_style][step];
+    int per_bar = 4 * bass_subdiv(e);
+    int bar = beat / per_bar, step = beat % per_bar;
+    char tok = e->phrase > 0 ? EN_PHRASES[e->phrase - 1].steps[step] : BASS_PATTERN[e->bass_style][step];
     if (tok == '-') return;
     ChordSpec c, next;
     if (!vc_prog_step(&e->lp, bar % n, &c)) return;
@@ -946,10 +969,11 @@ static void bass_beat_start(Engine *e, int beat, int frame) {
     e->bass_owner = r->owner;
 }
 
-/* frames from this point in the block to the next beat */
+/* frames from this point in the block to the next bass step */
 static int bass_frames_to_beat(const Engine *e, int frame) {
     double b = prog_beats(e, frame);
-    double next_beat = vc_floor(b + 1e-9) + 1;
+    double sub = bass_subdiv(e);
+    double next_beat = (vc_floor(b * sub + 1e-9) + 1) / sub;
     return (int)vc_ceil((next_beat - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
 }
 
@@ -983,7 +1007,7 @@ void en_process(Engine *e, float *L, float *R, int n) {
     }
     if (e->pat_owner && e->pat_sync && e->playing) pat_align(e, 0, 0); /* follow the MPC's song position */
     if (e->prog_owner && (!e->prog_play || !e->playing || !e->lp.prog)) prog_stop(e, 0);
-    if ((e->bass_owner || e->bass_beat >= 0) && (!e->bass_style || !e->prog_play || !e->playing || !e->lp.prog)) bass_stop(e, 0);
+    if ((e->bass_owner || e->bass_beat >= 0) && (!bass_on(e) || !e->prog_play || !e->playing || !e->lp.prog)) bass_stop(e, 0);
     if (!e->playing && e->prog_bar >= 0) prog_stop(e, 0);
     if (e->smart == SMART_FOLLOW && g_vc_shared.version != e->shared_seen) { en_smart_update(e); e->events_changed = 1; }
     sort_in(e);
@@ -1039,13 +1063,13 @@ void en_process(Engine *e, float *L, float *R, int n) {
             int bar = (int)vc_floor((prog_beats(e, pos) + 1e-9) / PROG_BEATS_PER_BAR);
             if (bar != e->prog_bar) prog_start(e, bar, pos);
         }
-        if (e->bass_style && e->prog_play && e->playing && e->lp.prog > 0) { /* a beat reached at this frame */
-            int beat = (int)vc_floor(prog_beats(e, pos) + 1e-9);
+        if (bass_on(e) && e->prog_play && e->playing && e->lp.prog > 0) { /* a bass step reached at this frame */
+            int beat = (int)vc_floor(prog_beats(e, pos) * bass_subdiv(e) + 1e-9);
             if (beat >= 0 && beat != e->bass_beat) bass_beat_start(e, beat, pos);
         }
         int next = n;
         if (ii < e->nin && e->in[ii].frame < next) next = e->in[ii].frame;
-        if (e->bass_style && e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + bass_frames_to_beat(e, pos); if (d < next) next = d; }
+        if (bass_on(e) && e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + bass_frames_to_beat(e, pos); if (d < next) next = d; }
         if (e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + prog_frames_to_bar(e, pos); if (d < next) next = d; }
         for (int q = 0; q < e->nqueue; q++) {
             int64_t d = e->queue[q].when - e->now;

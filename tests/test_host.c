@@ -578,6 +578,26 @@ int main(int argc, char **argv) {
         d->dispatcher(d, effClose, 0, 0, 0, 0);
     }
 
+    /* Relative chord on the Edit page, and the bass phrase setting */
+    {
+        AEffect *d = open_fx();
+        int REL = find_param(d, "Relative chord"), PH = find_param(d, "Bass phrase"), ER = find_param(d, "Edit root"), ET = find_param(d, "Edit type");
+        char t1[64], t2[64];
+        CHECK(REL > 0 && PH > 0, "Relative chord and Bass phrase params exist");
+        d->setParameter(d, ER, 0.f);                                       /* C */
+        d->setParameter(d, ET, edit_type_of(""));                          /* Major */
+        d->setParameter(d, REL, 1.f);
+        display(d, ER, t1); display(d, ET, t2);
+        CHECK(!strcmp(t1, "A") && strstr(t2, "Minor") != NULL, "relative of C major is A minor (got %s %s)", t1, t2);
+        d->setParameter(d, PH, value_of(d, PH, "Root pulse"));
+        display(d, PH, t1);
+        CHECK(!strcmp(t1, "Root pulse"), "bass phrase shows its name (%s)", t1);
+        d->setParameter(d, PH, 0.f);
+        display(d, PH, t1);
+        CHECK(!strcmp(t1, "Off"), "bass phrase Off shows Off (%s)", t1);
+        d->dispatcher(d, effClose, 0, 0, 0, 0);
+    }
+
     /* key sync, MIDI import through the plugin, imports saved with the project */
     {
         AEffect *a = open_fx(), *b = open_fx();

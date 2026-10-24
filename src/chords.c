@@ -96,6 +96,30 @@ static const char *ALIASES[][2] = {
     {"maj7+5", "maj7#5"}, {"M7#5", "maj7#5"},
 };
 
+/* Relative chords: the minor chord that shares the notes of a major one, and the reverse. Only the major and minor
+ * families that have a clear partner are listed; everything else (dim, aug, sus, dominant, and so on) has none. */
+static const char *REL_PAIRS[][2] = {
+    {"", "m"}, {"6", "m6"}, {"add9", "madd9"}, {"maj7", "m7"}, {"maj9", "m9"}, {"maj13", "m13"},
+};
+
+int vc_relative(const ChordSpec *in, ChordSpec *out) {
+    if (in->quality < 0 || in->quality >= VC_NUM_QUALITIES) return 0;
+    const char *from = VC_QUALITIES[in->quality].suffix;
+    for (int i = 0; i < (int)(sizeof(REL_PAIRS) / sizeof(REL_PAIRS[0])); i++) {
+        int q_major = vc_quality_find(REL_PAIRS[i][0]), q_minor = vc_quality_find(REL_PAIRS[i][1]);
+        if (q_major < 0 || q_minor < 0) continue;
+        if (!strcmp(from, REL_PAIRS[i][0])) {       /* major -> relative minor: the root moves up 9 semitones (down a minor third) */
+            *out = *in; out->quality = q_minor; out->root = (in->root + 9) % 12; out->bass = -1; out->ncustom = 0;
+            return 1;
+        }
+        if (!strcmp(from, REL_PAIRS[i][1])) {       /* minor -> relative major: the root moves up 3 semitones */
+            *out = *in; out->quality = q_major; out->root = (in->root + 3) % 12; out->bass = -1; out->ncustom = 0;
+            return 1;
+        }
+    }
+    return 0;
+}
+
 int vc_quality_find(const char *suffix) {
     char norm[24];
     int k = 0;

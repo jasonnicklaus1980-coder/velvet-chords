@@ -34,7 +34,8 @@ typedef struct {
 int vc_pc_parse(const char *s, int *consumed); /* "Eb" -> 3, -1 on error */
 const char *vc_pc_name(int pc, int flats);
 void vc_note_name(int midi, int flats, char *buf, int len); /* MPC convention: 60 = C3 */
-int vc_quality_find(const char *suffix);       /* accepts aliases; -1 if unknown */
+int vc_quality_find(const char *suffix);
+int vc_relative(const ChordSpec *in, ChordSpec *out); /* 1 and the relative chord (C -> Am, Cmaj7 -> Am7), 0 if it has none */       /* accepts aliases; -1 if unknown */
 int vc_chord_parse(const char *sym, ChordSpec *out);
 void vc_chord_name(const ChordSpec *c, int flats, char *buf, int len);
 int vc_chord_intervals(const ChordSpec *c, int *iv); /* returns count */
