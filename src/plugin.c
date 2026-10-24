@@ -59,6 +59,8 @@ enum {
     P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS, P_ANALYZE, P_ANA_STATUS, P_UPROG_CLEAR,
     P_BANK_A, P_BANK_B, P_BANK_C, P_BANK_D, /* one button per screen bank, in place of the bank segments */
     P_MIDI_LOG, P_REVERB, P_SOUND_X, P_HUMAN, P_DIRECT,
+    /* Detect: the scale that fits the notes played, applied to Key and Scale */
+    P_DET_INFO, P_DET_CLEAR, P_DET_APPLY,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -74,7 +76,7 @@ static int lane_of(int i, const int *ids) {
 enum { OUT_OFF = 0, OUT_HOST = 1, OUT_PORT = 2, OUT_BOTH = 3 }; /* bit 0 host, bit 1 port */
 
 static int is_display_only(int i) {
-    return i == P_NOW || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || i == P_ANA_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
+    return i == P_NOW || i == P_DET_INFO || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || i == P_ANA_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
 }
 
 typedef struct { const char *name; int steps; float def; int trigger; } ParamInfo; /* steps 0 = continuous */
@@ -232,6 +234,9 @@ static void init_param_info(void) {
     P(P_SOUND_X, "Sound extra", 5, 0.f, 0)
     P(P_HUMAN, "Humanize", 0, 0.f, 0)
     P(P_DIRECT, "Direct", 2, 0.f, 0)
+    P(P_DET_INFO, "Detected", 1, 0.f, 0)
+    P(P_DET_CLEAR, "Clear detection", 2, 0.f, 1)
+    P(P_DET_APPLY, "Use detected scale", 2, 0.f, 1)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -474,6 +479,18 @@ static void apply_out_mode(Plugin *p, int mode) {
 
 /* move a stepped parameter one step (prev/next buttons on the screen) */
 static void set_param(Plugin *p, int i, float v, int from_host);
+static int popcount_of(unsigned m) { int n = 0; for (m &= 0xFFF; m; m &= m - 1) n++; return n; }
+
+/* Detect: Key and Scale become the scale that holds every note played; if none holds them all, the one that holds most */
+static void apply_detected(Plugin *p) {
+    DetectHit h[1];
+    if (!vc_detect(p->eng->det_pcs, 1, h, 1) && !vc_detect(p->eng->det_pcs, 0, h, 1)) return;
+    set_param(p, P_KEY, norm_of(P_KEY, h[0].key), 0);
+    set_param(p, P_SCALE, norm_of(P_SCALE, h[0].scale), 0);
+    set_param(p, P_MODE, norm_of(P_MODE, VC_MODE_KEY), 0);
+    refresh_host(p);
+}
+
 /* Direct: one tap silences the built-in sound and sends the chords out of the Velvet Chords Out port, for a track with
  * its own sound. Tapping it again puts back the sound and MIDI out that were set before. */
 static void apply_direct(Plugin *p, int on) {
@@ -943,6 +960,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             if (i == P_UPRE_IMPORT) import_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_UPRE_CLEAR) { int sl = idx_of(p, P_UPRE_SLOT); p->upre_ok[sl] = 0; snprintf(p->upre_msg, sizeof(p->upre_msg), "Cleared slot %d", sl + 1); }
             if (i == P_FAV_TOGGLE) fav_toggle(p);
+            if (i == P_DET_CLEAR) e->det_pcs = 0;
+            if (i == P_DET_APPLY) apply_detected(p);
             if (i == P_ANALYZE) analyze_sample(p, idx_of(p, P_UPROG_SLOT));
             if (i == P_UPROG_CLEAR) { int sl = idx_of(p, P_UPROG_SLOT); if (sl >= 0 && sl < VC_USER_PROGS) { p->lp_pending.un[sl] = 0; snprintf(p->ana_msg, sizeof(p->ana_msg), "Cleared progression %d", sl + 1); sync_layout(p); } }
             if (i == P_FAV_PREV) fav_step(p, -1);
@@ -1270,6 +1289,13 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_EDIT_BASS: if (x == 0) copy_str(b, "Root", sizeof(b)); else snprintf(b, sizeof(b), "/%s", KEYS[x - 1]); break;
     case P_COPY: copy_str(b, "Press to copy", sizeof(b)); break;
     case P_EXPORT: copy_str(b, p->export_msg[0] ? p->export_msg : "Press to save", sizeof(b)); break;
+    case P_DET_INFO: {
+        DetectHit h[1];
+        if (e->det_pcs == 0) { copy_str(b, "Play notes to detect a scale", sizeof(b)); break; }
+        if (!vc_detect(e->det_pcs, 0, h, 1)) { copy_str(b, "No scale fits these notes", sizeof(b)); break; }
+        snprintf(b, sizeof(b), "%s %s: %d of %d notes", vc_pc_name(h[0].key, 0), VC_SCALES[h[0].scale].name, h[0].matches, popcount_of(e->det_pcs));
+        break;
+    }
     case P_NOW: {
         if (e->learn_all > 0) { snprintf(b, sizeof(b), "Learning: hit MPC pad %d of 16", e->learn_all); break; }
         int k = e->last_pad;

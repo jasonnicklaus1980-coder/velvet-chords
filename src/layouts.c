@@ -25,6 +25,35 @@ const Scale VC_SCALES[] = {
 };
 const int VC_NUM_SCALES = (int)(sizeof(VC_SCALES) / sizeof(VC_SCALES[0]));
 
+static int popcount12(unsigned m) { int n = 0; for (; m; m &= m - 1) n++; return n; }
+
+/* a key and scale that fit the played pitch classes; the pitch-class mask has bit k for pitch class k (C = 0) */
+static int hit_better(const DetectHit *a, const DetectHit *b) {
+    if (a->matches != b->matches) return a->matches > b->matches;
+    if (a->scale != b->scale) return a->scale < b->scale;   /* the table lists the common scales first */
+    return a->key < b->key;
+}
+
+int vc_detect(unsigned pcmask, int containing, DetectHit *out, int max) {
+    pcmask &= 0xFFF;
+    int want = popcount12(pcmask), n = 0;
+    if (want == 0 || max <= 0) return 0;
+    for (int key = 0; key < 12; key++) {
+        for (int s = 0; s < VC_NUM_SCALES; s++) {
+            const Scale *sc = &VC_SCALES[s];
+            unsigned m = 0;
+            for (int i = 0; i < sc->n; i++) m |= 1u << (((key + sc->iv[i]) % 12 + 12) % 12);
+            DetectHit h = {key, s, popcount12(pcmask & m), sc->n};
+            if (h.matches == 0 || (containing && h.matches != want)) continue;
+            /* insertion into the best-first list, kept at most `max` long */
+            int at = n < max ? n : max;
+            while (at > 0 && hit_better(&h, &out[at - 1])) { if (at < max) out[at] = out[at - 1]; at--; }
+            if (at < max) { out[at] = h; if (n < max) n++; }
+        }
+    }
+    return n;
+}
+
 static int pcmod(int x) { x %= 12; return x < 0 ? x + 12 : x; }
 
 int vc_prefer_flats(int key, int minor) {

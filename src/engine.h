@@ -124,6 +124,7 @@ typedef struct Engine {
     int pat_chance;                /* % of pattern hits that play: 25, 50, 75 or 100 */
     int pat_seed;                  /* 1..4: picks which steps the chance skips */
     int hold, latched_note;        /* Hold: the latched pad's input note, -1 none */
+    unsigned det_pcs;              /* Detect: pitch classes played since Clear (bit k = pitch class k) */
     int repeat;                    /* REP_*: retrigger the chord at this rate */
     int mel_mode, mel_rate;        /* melody generator */
     int mel_owner, mel_parent, mel_prev;

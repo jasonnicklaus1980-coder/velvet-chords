@@ -746,7 +746,7 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
 
 static void handle_midi(Engine *e, const MidiMsg *m, int frame) {
     int st = m->d[0] & 0xF0;
-    if (st == 0x90 && m->d[2] > 0) pad_on(e, m->d[1] & 127, m->d[2], frame);
+    if (st == 0x90 && m->d[2] > 0) { e->det_pcs |= 1u << ((m->d[1] & 127) % 12); pad_on(e, m->d[1] & 127, m->d[2], frame); }
     else if (st == 0x80 || st == 0x90) pad_off(e, m->d[1] & 127, frame);
     else if (st == 0xB0) {
         int cc = m->d[1], val = m->d[2];

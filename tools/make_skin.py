@@ -588,7 +588,11 @@ class Skin:
         self.segments(c, bg, "mel", "Melody", ["Off", "Simple", "Busy"], L, 280, 196, caption="Melody generator")
         self.segments(c, bg, "melr", "Melody rate", ["1/8", "1/8T", "1/16"], L, 364, 196, caption="Melody rate")
         self.switch(c, bg, "Key sync", L, 448, "Key and scale: follow another copy")
-        self.readout(c, bg, "Now playing", L, 524, 588, 44, size=16, colour=ACCENT, caption="Now playing")
+        self.readout(c, bg, "Now playing", L, 524, 300, 44, size=16, colour=ACCENT, caption="Now playing")
+        # Detect: the scale that fits the notes played; Use scale sets Key and Scale to it
+        self.readout(c, bg, "Detected", L + 312, 524, 276, 44, size=13, caption="Detected")
+        self.action_button(c, bg, "det_use", "Use scale", "Use detected scale", L, 476, w=120, h=26)
+        self.action_button(c, bg, "det_clear", "Clear notes", "Clear detection", L + 128, 476, w=120, h=26)
         bg.panel((648, 64, 1268, 620))
         bg.a.label(R, 76, "MIDI import")
         self.stepper(c, bg, "Import file", "Import prev", "Import next", R, 116, 588, "File (Velvet Chords/Import)")

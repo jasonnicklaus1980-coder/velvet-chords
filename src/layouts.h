@@ -17,6 +17,11 @@ typedef struct { const char *name; int n; signed char iv[8]; } Scale;
 extern const Scale VC_SCALES[];
 extern const int VC_NUM_SCALES;
 
+/* Detect: a key and scale that fit the played pitch classes (bit k = pitch class k, C = 0), best first.
+ * containing != 0: only scales that hold every played pitch class. Returns how many were written to out. */
+typedef struct { int key, scale, matches, size; } DetectHit;
+int vc_detect(unsigned pcmask, int containing, DetectHit *out, int max);
+
 typedef struct {
     unsigned char valid, root, quality, bass; /* bass 255 = none */
     signed char inv, oct;

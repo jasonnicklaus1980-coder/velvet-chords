@@ -3,6 +3,7 @@
 #include "../src/presets.h"
 #include "../src/progression.h"
 #include "../src/audioanalysis.h"
+#include "../src/layouts.h"
 #include <math.h>
 #include "../src/vcmath.h"
 #include <stdio.h>
@@ -1639,6 +1640,34 @@ static void test_audio_analysis(void) {
     free(z);
 }
 
+/* Detect: the scale that holds the notes played, ranked by how many of them it holds */
+static void test_detect(void) {
+    DetectHit h[8];
+    unsigned white = 1u << 0 | 1u << 2 | 1u << 4 | 1u << 5 | 1u << 7 | 1u << 9 | 1u << 11;   /* C D E F G A B */
+    CHECK(vc_detect(0, 0, h, 8) == 0, "no notes, no detection");
+    int n = vc_detect(white, 1, h, 8);
+    CHECK(n > 0 && h[0].key == 0 && h[0].scale == 0 && h[0].matches == 7 && h[0].size == 7,
+          "the white keys detect as C Major (%d hits)", n);
+    n = vc_detect(1u << 0 | 1u << 4 | 1u << 7, 1, h, 8);            /* C E G: C Major is the first of the scales that hold all three */
+    CHECK(n >= 2 && h[0].key == 0 && h[0].scale == 0 && h[0].matches == 3, "C E G: C Major first");
+    DetectHit all[256];
+    int na = vc_detect(1u << 0 | 1u << 4 | 1u << 7, 1, all, 256);
+    int seen_major_pent = 0;
+    for (int i = 0; i < na; i++) if (all[i].scale == 9 && all[i].key == 0) seen_major_pent = 1;
+    CHECK(seen_major_pent, "C E G also fits C major pentatonic");
+    int ok = 1;
+    for (int i = 0; i < n; i++) if (h[i].matches != 3) ok = 0;
+    CHECK(ok, "containing: every hit holds all three notes");
+    n = vc_detect(white | 1u << 1, 0, h, 8);                          /* plus C# : no scale holds all eight */
+    CHECK(vc_detect(white | 1u << 1, 1, h, 8) == 0, "containing: nothing holds all eight notes");
+    CHECK(n == 8, "not containing: at most the list size, best first (%d)", n);
+    int sorted = 1;
+    for (int i = 1; i < n; i++) if (h[i].matches > h[i - 1].matches) sorted = 0;
+    CHECK(sorted, "hits sorted by matches");
+    CHECK(h[0].matches == 7 && h[0].key == 0 && h[0].scale == 0, "best fit of the eight notes: C Major (7 of 8)");
+    CHECK(vc_detect(white, 1, h, 1) == 1, "a list of one returns one hit");
+}
+
 int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
@@ -1669,6 +1698,7 @@ int main(void) {
     printf("bassline...\n"); test_bassline();
     printf("harmony...\n"); test_harmony();
     printf("audio analysis...\n"); test_audio_analysis();
+    printf("scale detection...\n"); test_detect();
     printf("%d checks, %d failures\n", checks, fails);
     return fails ? 1 : 0;
 }

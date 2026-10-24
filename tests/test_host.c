@@ -541,6 +541,32 @@ int main(int argc, char **argv) {
         d->dispatcher(d, effClose, 0, 0, 0, 0);
     }
 
+    /* Detect: notes played are read into a scale, Use detected scale sets Key and Scale, Clear empties it */
+    {
+        AEffect *d = open_fx();
+        int DET = find_param(d, "Detected"), CLR = find_param(d, "Clear detection"), APP = find_param(d, "Use detected scale");
+        int KEY = find_param(d, "Key"), SCL = find_param(d, "Scale");
+        float L[256], R[256];
+        char t[160];
+        CHECK(DET > 0 && CLR > 0 && APP > 0, "Detect params exist");
+        display(d, DET, t);
+        CHECK(strstr(t, "Play notes") != NULL, "Detected is empty at start ('%s')", t);
+        EvBuf eb;
+        midi(&eb.ev[0], 0, 0x90, 60, 100); midi(&eb.ev[1], 0, 0x90, 64, 100); midi(&eb.ev[2], 0, 0x90, 67, 100);
+        send(d, &eb, 3);
+        block(d, L, R, 256);
+        display(d, DET, t);
+        CHECK(strstr(t, "C Major") != NULL && strstr(t, "3 of 3") != NULL, "C E G detects as C Major ('%s')", t);
+        d->setParameter(d, APP, 1.f);
+        char kd[32], sd[64];
+        display(d, KEY, kd); display(d, SCL, sd);
+        CHECK(!strcmp(kd, "C") && !strcmp(sd, "Major"), "Use detected scale sets Key C and Scale Major (got '%s', '%s')", kd, sd);
+        d->setParameter(d, CLR, 1.f);
+        display(d, DET, t);
+        CHECK(strstr(t, "Play notes") != NULL, "Clear empties the detection ('%s')", t);
+        d->dispatcher(d, effClose, 0, 0, 0, 0);
+    }
+
     /* key sync, MIDI import through the plugin, imports saved with the project */
     {
         AEffect *a = open_fx(), *b = open_fx();
