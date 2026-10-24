@@ -772,11 +772,8 @@ static void apply_preset(Plugin *p, int x) {
         set_param(p, P_ARP4, 0.f, 0);
     }
     set_param(p, P_VEL, norm_of(P_VEL, s->vel), 0);
-    /* the genre's feel: its rhythm, rate, swing and gate (a preset replaces the pattern you were using) */
-    set_param(p, P_PATTERN, norm_of(P_PATTERN, s->pattern), 0);
-    set_param(p, P_PAT_RATE, norm_of(P_PAT_RATE, s->pat_rate), 0);
-    set_param(p, P_SWING, s->swing, 0);
-    set_param(p, P_GATE, (s->gate - 0.1f) / 0.9f, 0);
+    /* the rhythm is yours: a preset never switches a pattern on (it would play the chord as a run, like an arpeggio), so
+     * its pattern, rate, swing and gate (s->pattern, s->pat_rate, s->swing, s->gate) stay in the data for reference only */
     set_param(p, P_SMART, norm_of(P_SMART, s->smart), 0);
     set_param(p, P_SMART_MODE, norm_of(P_SMART_MODE, s->smart_mode), 0);
     set_param(p, P_SMART_OCT, norm_of(P_SMART_OCT, s->smart_oct + 2), 0);

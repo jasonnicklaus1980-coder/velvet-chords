@@ -9,7 +9,7 @@ It is a native MPC OS plugin (VST2 `.so`) loaded by MPC's built-in plugin host, 
 - **900 factory presets.** The presets are 90 genres with 10 variations each. The genres include trap, drill, phonk, G-Funk and Southern styles, plus house, soul, Latin, African, rock and more. The **Preset genre** and **Preset variation**
   knobs (Play page Q-Links) pick one: genre first, then the variation within it, so every preset is reachable by knob.
   **Preset** and Preset prev / next still step through all 900 in order. The top left of the Play page shows the preset in use, with prev / next beside it, and the MPC's own preset box lists Manual and all 900 presets, so you can pick one from there too. A preset sets the
-  tone, voicing, strum, Smart Scale pads, and its genre's feel: the rhythm pattern, its rate, swing and gate. A preset never picks the instrument or the riff: the Sound, Sound extra and riff you chose stay as they are. It never changes your song or your custom pads; the layout
+  tone, voicing, strum, key, scale and Smart Scale pads. A preset never picks the instrument, the riff or the rhythm: the Sound, Sound extra, riff, pattern, its rate, swing and gate, and the arpeggio stay as you set them. (A preset's rhythm would play the chord as a run, so it isn't switched on.) It never changes your song or your custom pads; the layout
   pads follow the new key and scale.
   Manual changes nothing.
   Nothing turns on by itself: a preset never replaces **Silent** and never turns the arpeggio on. It sets the arpeggio's

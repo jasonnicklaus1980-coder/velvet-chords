@@ -720,6 +720,34 @@ int main(int argc, char **argv) {
         m->dispatcher(m, effClose, 0, 0, 0, 0);
     }
 
+    /* a fresh instance plays a held chord as one chord: no arpeggio, pattern, riff, repeat or melody is on */
+    {
+        AEffect *f = open_fx();
+        float L[256], R[256];
+        EvBuf eb;
+        const char *names[] = {"Arp", "Arp 2", "Arp 3", "Arp 4", "Pattern", "Riff", "Repeat", "Melody", "Hold"};
+        char v[64];
+        int on = 0;
+        for (unsigned k = 0; k < sizeof(names) / sizeof(names[0]); k++) {
+            int p = find_param(f, names[k]);
+            display(f, p, v);
+            if (strcmp(v, "Off") && strcmp(v, "0") && strcmp(v, "-") && strcmp(v, "Manual")) { on++; printf("  %s is %s on a fresh instance\n", names[k], v); }
+        }
+        CHECK(on == 0, "a fresh instance has no arpeggio, pattern, riff, repeat, melody or hold on (%d on)", on);
+        f->setParameter(f, find_param(f, "MIDI out"), 1.f / 3.f); /* To MPC host, so the note-ons are visible */
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(f, &eb, 1);
+        int ons = 0;
+        for (int b = 0; b < 200; b++) {
+            memset(g_out_on, 0, sizeof(g_out_on));
+            block(f, L, R, 256);
+            for (int n = 0; n < 128; n++) ons += g_out_on[n];
+        }
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(f, &eb, 1);
+        block(f, L, R, 256);
+        CHECK(ons <= 8, "a held chord sounds once, not as a run of notes (%d note-ons in 200 blocks)", ons);
+        f->dispatcher(f, effClose, 0, 0, 0, 0);
+    }
+
     /* loading a project redraws the pads: the screen shows the loaded key and scale straight away */
     {
         AEffect *a = open_fx(), *b = open_fx();
@@ -1348,12 +1376,17 @@ int main(int argc, char **argv) {
             fx->setParameter(fx, P_SXN, 0.f);
             fx->setParameter(fx, P_SN, 1.f);   /* back to Silent, as the note tests below expect */
         }
-        /* a preset sets its genre's rhythm: the pattern its data names, or Off */
+        /* a preset never switches a rhythm on: Pattern stays as you set it, whatever the preset's genre */
         {
             int P_PATT = find_param(fx, "Pattern");
-            fx->setParameter(fx, P_PRE, 40.f / 900.f);
-            display(fx, P_PATT, buf);
-            CHECK(!strcmp(buf, "Gospel drive"), "a preset sets its rhythm (%s)", buf); /* Gospel Chords: Wide */
+            fx->setParameter(fx, P_PATT, 0.f);
+            int on = 0;
+            for (int k = 1; k <= 900; k++) {
+                fx->setParameter(fx, P_PRE, k / 900.f);
+                on += fx->getParameter(fx, P_PATT) != 0.f;
+            }
+            CHECK(on == 0, "no preset switches a pattern on (%d did)", on);
+            fx->setParameter(fx, P_PATT, 0.f);
         }
         /* the host's preset box: Manual plus all 900 presets, past the first hundred, and picking one sets the Preset knob */
         CHECK(fx->numPrograms == 901, "host preset box lists 901 programs (%d)", fx->numPrograms);
