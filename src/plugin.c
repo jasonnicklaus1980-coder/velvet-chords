@@ -63,6 +63,8 @@ enum {
     P_DET_INFO, P_DET_CLEAR, P_DET_APPLY,
     /* Edit: the relative chord of the pad being edited; bass phrase library */
     P_RELATIVE, P_PHRASE, P_PHR_PREV, P_PHR_NEXT,
+    /* Help: when on, the Info line says what the last control you touched does */
+    P_HELP,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -243,6 +245,7 @@ static void init_param_info(void) {
     P(P_PHRASE, "Bass phrase", EN_NUM_PHRASES + 1, 0.f, 0)
     P(P_PHR_PREV, "Previous phrase", 2, 0.f, 1)
     P(P_PHR_NEXT, "Next phrase", 2, 0.f, 1)
+    P(P_HELP, "Help", 2, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -309,6 +312,7 @@ typedef struct {
     VcReverb rv;                        /* room reverb on the built-in sound (Reverb parameter) */
     unsigned char port_defer[128];      /* a note-off held to the next block, because its note-on went out in this block */
     int direct_busy, direct_sound, direct_sound_x, direct_out; /* Direct: the sound and MIDI out to put back when it is switched off */
+    int help_on, last_touched;   /* Help: the switch, and the parameter the host or screen last changed */
 } Plugin;
 
 static int idx_of(const Plugin *p, int i) {
@@ -974,6 +978,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     if (i < 0 || i >= NUM_PARAMS) return;
     if (v < 0.f) v = 0.f;
     if (v > 1.f) v = 1.f;
+    if (from_host && i != P_INFO && i != P_HELP) p->last_touched = i;
     Engine *e = p->eng;
     if (PINFO[i].trigger) {
         /* a tap counts whether the host sends 1 again, or flips its cached 1 back to 0 (hosts that didn't re-read
@@ -1108,6 +1113,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_SMART: e->smart = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_HOLD: e->hold = idx_of(p, i); break;
     case P_PHRASE: e->phrase = idx_of(p, i); if (from_host) refresh_host(p); break;
+    case P_HELP: p->help_on = idx_of(p, i); break;
     case P_REPEAT: e->repeat = idx_of(p, i); break;
     case P_MELODY: e->mel_mode = idx_of(p, i); break;
     case P_MEL_RATE: e->mel_rate = idx_of(p, i); break;
@@ -1199,6 +1205,54 @@ static int getParameterValueInScale(const Plugin *p, int pc) {
 }
 
 static void pad_label(int idx, char *buf) { buf[0] = (char)('A' + idx / 16); buf[1] = (char)('0' + (idx % 16 + 1) / 10); buf[2] = (char)('0' + (idx % 16 + 1) % 10); buf[3] = 0; }
+
+/* Help: what each control does, in a few words. Keyed by the parameter's name; the host test checks every name exists. */
+static const struct { const char *name, *text; } HELP_TEXT[] = {
+    {"Help", "Shows here what the last control you touched does."},
+    {"Preset", "Factory presets: sound and performance settings. Never key or scale."},
+    {"Preset genre", "Picks a genre of presets. Preset variation picks one within it."},
+    {"Preset variation", "Picks a variation within the chosen genre."},
+    {"Mode", "Scale: chords from the key and scale. Types: one chord type per pad. Custom: your pads."},
+    {"Key", "The root note of the key. The chords and the scale follow it."},
+    {"Scale", "The scale, with its notes and a short description on this line."},
+    {"Smart pads", "Pads 9-16 play single notes that fit the last chord played on pads 1-8."},
+    {"Smart notes", "What the smart pads play: chord notes, scale notes or bass notes."},
+    {"Bassline", "The bass style. It plays while progression play is on."},
+    {"Progression play", "Plays the progression by itself, one chord per bar, while the host plays."},
+    {"Direct", "Silences the built-in sound and sends the chords to Velvet Chords Out."},
+    {"Relative chord", "Turns the edited pad into its relative chord (C to Am and back)."},
+    {"Use detected scale", "Sets Key and Scale to the scale that fits the notes you played."},
+    {"Clear detection", "Clears the notes recorded for scale detection."},
+    {"Bass phrase", "A bass phrase of eighth notes that follows the progression."},
+    {"Hold", "Keeps the chords sounding until you press another pad, or the same one again."},
+    {"Repeat", "Retriggers the chord in time with the MPC, at this rate."},
+    {"Melody", "Adds a melody line over the chord."},
+    {"Key sync", "Follows the key and scale of another copy of Velvet Chords."},
+    {"MIDI log", "Writes every MIDI event to MIDI log.txt, for diagnosis."},
+    {"Arp", "The arpeggio order: Off, Up, Down, Up-down, Random, Converge or Diverge."},
+    {"Strum", "Spreads the notes of a chord across time, in milliseconds."},
+    {"Voicing", "How the chord notes are spread across the octaves."},
+    {"Inversion", "Which chord note is in the bass: root, first, second or third inversion."},
+    {"Octave", "Moves the chord up or down in octaves."},
+    {"Sound", "The built-in sound. Silent sends MIDI only."},
+    {"Tone", "The brightness of the built-in sound."},
+    {"Release", "How long a sound rings after you let go of the pad."},
+    {"Volume", "The level of the built-in sound."},
+    {"Humanize", "Varies the velocity of each pad hit a little."},
+    {"Reverb", "Room reverb on the built-in sound."},
+    {"MIDI out", "Where the chords go: off, the MPC, Velvet Chords Out, or both."},
+    {"Edit root", "The root note of the chord on the pad being edited."},
+    {"Edit type", "The chord type of the pad being edited."},
+    {"Edit bass", "The bass note of the pad being edited. Root means no slash bass."},
+    {"Edit inversion", "The inversion of the pad being edited."},
+    {"Edit octave", "The octave of the pad being edited."},
+};
+
+static const char *help_text(int i) {
+    for (unsigned k = 0; k < sizeof(HELP_TEXT) / sizeof(HELP_TEXT[0]); k++)
+        if (i >= 0 && i < NUM_PARAMS && !strcmp(PINFO[i].name, HELP_TEXT[k].name)) return HELP_TEXT[k].text;
+    return "No help for this control yet.";
+}
 
 static void param_display(Plugin *p, int i, char *out, int max) {
     char b[160];
@@ -1294,7 +1348,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_RIFF_SLOT: copy_str(b, EN_RIFF_NAMES[x], sizeof(b)); break;
     case P_NOTE_SEL: if (x == 0) copy_str(b, "Whole chord", sizeof(b)); else snprintf(b, sizeof(b), "Note %d", x + 1); break;
     case P_NOTE_IV: if (x == 0) copy_str(b, "Remove", sizeof(b)); else snprintf(b, sizeof(b), "%+d st", x - 13); break;
-    case P_HOLD: case P_DIRECT: copy_str(b, x ? "On" : "Off", sizeof(b)); break;
+    case P_HOLD: case P_DIRECT: case P_HELP: copy_str(b, x ? "On" : "Off", sizeof(b)); break;
     case P_PHRASE: copy_str(b, x ? EN_PHRASES[x - 1].name : "Off", sizeof(b)); break;
     case P_REPEAT: { static const char *R[REP_COUNT] = {"Off", "1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"}; copy_str(b, R[x], sizeof(b)); break; }
     case P_MELODY: { static const char *M2[MEL_COUNT] = {"Off", "Simple", "Busy"}; copy_str(b, M2[x], sizeof(b)); break; }
@@ -1374,6 +1428,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_SONG_PREV: case P_SEC_PREV: case P_SCALE_PREV: case P_TYPE_PREV: case P_EPAD_PREV: copy_str(b, "<", sizeof(b)); break;
     case P_SONG_NEXT: case P_SEC_NEXT: case P_SCALE_NEXT: case P_TYPE_NEXT: case P_EPAD_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_INFO: {
+        if (p->help_on) { copy_str(b, help_text(p->last_touched), sizeof(b)); break; }
         if (lp->mode == VC_MODE_SONG) {
             const Song *s = &VC_SONGS[lp->song];
             if (!strcmp(s->status, "original")) snprintf(b, sizeof(b), "Original progression, %s, %d BPM", s->key, (int)(s->bpm + 0.5f));

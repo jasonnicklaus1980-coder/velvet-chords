@@ -230,7 +230,7 @@ class Background:
         a.line(212, 18, 212, 38, HAIRLINE)
         a.text(226, 28, page_title.upper(), 11, ACCENT, "Medium", anchor="lm", tracking=1.6)
         if info:
-            self.lcd(452, 14, 596, 28)   # live headline: the key and scale in use (see header_info)
+            self.lcd(452, 14, 472, 28)   # live headline: the key and scale in use (see header_info)
 
     @property
     def d(self):
@@ -500,9 +500,14 @@ class Skin:
             c.append(self.place(key, "Bank %s" % t, 1076 + i * 45, 10, 45, 36, [("Data", self.p("Bank %s" % t))],
                                 focus="Yes" if i == 0 else "No"))
 
+    def header_help(self, c, bg):
+        """the Help switch, on every page: when on, the Info line says what the last control you touched does"""
+        self.switch(c, bg, "Help", 940, 10)
+        bg.a.text(992, 28, "HELP", 10.5, LABEL, "Medium", anchor="lm", tracking=1.3)
+
     def header_info(self, c, bg):
         """the headline in the header: the key, scale and notes in use, on every page"""
-        self.value_field(c, bg, "Info", 452, 14, 596, 28, size=14, colour=LCD_TEXT, editable=False, box=False)
+        self.value_field(c, bg, "Info", 452, 14, 472, 28, size=14, colour=LCD_TEXT, editable=False, box=False)
 
     def build(self):
         voicings = ["Bass+upper", "Close", "Drop 2", "Spread", "Upper"]
@@ -511,6 +516,7 @@ class Skin:
         # ---------- Play
         bg = Background("Play", info=False)   # the mode buttons take the header; the Info bar below shows the scale
         c = []
+        self.header_help(c, bg)
         self.segments(c, bg, "mode", "Mode", ["Scale", "Types", "Custom"], 456, 12, 104, 32, ids=[1, 2, 3], ntotal=4)
         self.header_banks(c, bg, "bank")
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 10, 428, h=36)  # the factory preset in use, top left
@@ -537,6 +543,7 @@ class Skin:
         # ---------- Perform
         bg = Background("Perform")
         c = []
+        self.header_help(c, bg)
         self.header_info(c, bg)
         L, R = 28, 664
         rows = [100, 184, 268, 352, 436, 520]
@@ -577,6 +584,7 @@ class Skin:
         # ---------- Edit
         bg = Background("Edit pads", info=False)   # the header holds the pad picker and shift keys
         c = []
+        self.header_help(c, bg)
         bg.a.text(466, 28, "PAD", 10.5, LABEL, "Medium", anchor="rm", tracking=1.3)
         self.stepper(c, bg, "Edit pad", "Edit pad prev", "Edit pad next", 476, 10, 180)
         bg.a.text(866, 28, "TAP SELECTS", 10.5, LABEL, "Medium", anchor="rm", tracking=1.3)
@@ -604,6 +612,7 @@ class Skin:
         # ---------- Pattern
         bg = Background("Pattern")
         c = []
+        self.header_help(c, bg)
         self.header_info(c, bg)
         bg.panel((12, 64, 1268, 144))
         self.stepper(c, bg, "Pattern", "Pattern prev", "Pattern next", 28, 96, 420, "Pattern")
@@ -628,6 +637,7 @@ class Skin:
         # ---------- Tools: hold, repeat, melody, key sync, MIDI import
         bg = Background("Tools")
         c = []
+        self.header_help(c, bg)
         self.header_info(c, bg)
         L, R = 28, 664
         bg.panel((12, 64, 632, 620))
@@ -677,6 +687,7 @@ class Skin:
         # ---------- Lanes: presets, multi arp, melody riffs, note editor
         bg = Background("Lanes")
         c = []
+        self.header_help(c, bg)
         self.header_info(c, bg)
         bg.panel((12, 64, 1268, 144))
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 28, 96, 560, "Preset")
