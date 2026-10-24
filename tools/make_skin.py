@@ -484,7 +484,8 @@ class Skin:
         self.segments(c, bg, "smart", "Smart pads", ["Off", "Pads 9-16", "Follow"], 656, 390, 104, caption="Smart Scale pads")
         self.segments(c, bg, "smartn", "Smart notes", ["Chord", "Scale", "Bass"], 976, 390, 92, caption="Smart notes")
         self.segments(c, bg, "voicing1", "Voicing", voicings, 656, 458, 119, caption="Voicing")
-        self.readout(c, bg, "Now playing", 656, 526, 596, 44, size=17, colour=ACCENT, caption="Now playing")
+        self.readout(c, bg, "Now playing", 656, 526, 452, 44, size=17, colour=ACCENT, caption="Now playing")
+        self.action_button(c, bg, "direct", "Direct", "Direct", 1120, 526, w=132, h=44)  # on: silent built-in sound, chords to Velvet Chords Out
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 656, 580, 596)
         self.page("Play", 0, c, "vc_bg_play.png", bg)
 

@@ -58,7 +58,7 @@ enum {
     P_PRESET_GENRE, P_PRESET_VAR,
     P_SMART_MAP, P_PROG, P_PROG_PLAY, P_UPROG_SLOT, P_UPROG_SAVE, P_PAT_LEN, P_PAT_CHANCE, P_PAT_SEED, P_BASS, P_HARM, P_UPRE_SLOT, P_UPRE_SAVE, P_UPRE_LOAD, P_UPRE_EXPORT, P_UPRE_IMPORT, P_UPRE_STATUS, P_UPRE_CLEAR, P_FAV_TOGGLE, P_FAV_PREV, P_FAV_NEXT, P_FAV_STATUS, P_ANALYZE, P_ANA_STATUS, P_UPROG_CLEAR,
     P_BANK_A, P_BANK_B, P_BANK_C, P_BANK_D, /* one button per screen bank, in place of the bank segments */
-    P_MIDI_LOG, P_REVERB, P_SOUND_X, P_HUMAN,
+    P_MIDI_LOG, P_REVERB, P_SOUND_X, P_HUMAN, P_DIRECT,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -231,6 +231,7 @@ static void init_param_info(void) {
     P(P_REVERB, "Reverb", 0, 0.25f, 0)
     P(P_SOUND_X, "Sound extra", 5, 0.f, 0)
     P(P_HUMAN, "Humanize", 0, 0.f, 0)
+    P(P_DIRECT, "Direct", 2, 0.f, 0)
     {
         static char rifnames[EN_STEPS][16];
         for (int k = 0; k < EN_STEPS; k++) {
@@ -296,6 +297,7 @@ typedef struct {
     FILE *mlog_file;                    /* only the helper thread opens, writes and closes this */
     VcReverb rv;                        /* room reverb on the built-in sound (Reverb parameter) */
     unsigned char port_defer[128];      /* a note-off held to the next block, because its note-on went out in this block */
+    int direct_busy, direct_sound, direct_sound_x, direct_out; /* Direct: the sound and MIDI out to put back when it is switched off */
 } Plugin;
 
 static int idx_of(const Plugin *p, int i) {
@@ -472,6 +474,26 @@ static void apply_out_mode(Plugin *p, int mode) {
 
 /* move a stepped parameter one step (prev/next buttons on the screen) */
 static void set_param(Plugin *p, int i, float v, int from_host);
+/* Direct: one tap silences the built-in sound and sends the chords out of the Velvet Chords Out port, for a track with
+ * its own sound. Tapping it again puts back the sound and MIDI out that were set before. */
+static void apply_direct(Plugin *p, int on) {
+    p->direct_busy = 1;
+    if (on) {
+        p->direct_sound = idx_of(p, P_SOUND);
+        p->direct_sound_x = idx_of(p, P_SOUND_X);
+        p->direct_out = idx_of(p, P_MIDI_OUT);
+        set_param(p, P_SOUND_X, 0.f, 0);
+        set_param(p, P_SOUND, norm_of(P_SOUND, SY_SILENT), 0);
+        set_param(p, P_MIDI_OUT, norm_of(P_MIDI_OUT, OUT_PORT), 0);
+    } else {
+        set_param(p, P_SOUND, norm_of(P_SOUND, p->direct_sound), 0);
+        set_param(p, P_SOUND_X, norm_of(P_SOUND_X, p->direct_sound_x), 0);
+        set_param(p, P_MIDI_OUT, norm_of(P_MIDI_OUT, p->direct_out), 0);
+    }
+    p->direct_busy = 0;
+    refresh_host(p);
+}
+
 static void step_param(Plugin *p, int i, int dir, int count) {
     if (count < 1) count = 1;
     int x = idx_of(p, i) + dir;
@@ -977,6 +999,12 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     /* a preset overwrites the sound and everything else, so only a change of the knob applies it:
      * a host that re-sends its stored values (on a mode or song change, say) must not undo your edits */
     if ((i == P_PRESET || i == P_PRESET_GENRE || i == P_PRESET_VAR || i == P_PROG) && p->val[i] == v) return;
+    if (i == P_DIRECT) { /* acts on a change only: a host that re-sends the stored value must not switch again */
+        int on = v >= 0.5f;
+        if (on != (p->val[i] >= 0.5f)) apply_direct(p, on);
+    }
+    /* a manual change of the sound or MIDI out takes Direct off, so switching it off later can't undo that choice */
+    if ((i == P_SOUND || i == P_SOUND_X || i == P_MIDI_OUT) && !p->direct_busy && p->val[P_DIRECT] >= 0.5f) p->val[P_DIRECT] = 0.f;
     p->val[i] = v;
     switch (i) {
     case P_MIDI_LOG:
@@ -1204,7 +1232,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_RIFF_SLOT: copy_str(b, EN_RIFF_NAMES[x], sizeof(b)); break;
     case P_NOTE_SEL: if (x == 0) copy_str(b, "Whole chord", sizeof(b)); else snprintf(b, sizeof(b), "Note %d", x + 1); break;
     case P_NOTE_IV: if (x == 0) copy_str(b, "Remove", sizeof(b)); else snprintf(b, sizeof(b), "%+d st", x - 13); break;
-    case P_HOLD: copy_str(b, x ? "On" : "Off", sizeof(b)); break;
+    case P_HOLD: case P_DIRECT: copy_str(b, x ? "On" : "Off", sizeof(b)); break;
     case P_REPEAT: { static const char *R[REP_COUNT] = {"Off", "1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"}; copy_str(b, R[x], sizeof(b)); break; }
     case P_MELODY: { static const char *M2[MEL_COUNT] = {"Off", "Simple", "Busy"}; copy_str(b, M2[x], sizeof(b)); break; }
     case P_MEL_RATE: { static const char *M3[MRATE_COUNT] = {"1/8", "1/8T", "1/16"}; copy_str(b, M3[x], sizeof(b)); break; }

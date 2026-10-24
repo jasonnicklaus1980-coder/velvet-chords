@@ -514,6 +514,33 @@ int main(int argc, char **argv) {
         b->dispatcher(b, effClose, 0, 0, 0, 0);
     }
 
+    /* Direct: one switch silences the built-in sound and sends to the port; switching off puts both back */
+    {
+        AEffect *d = open_fx();
+        int DIR = find_param(d, "Direct"), SND = find_param(d, "Sound"), OUT = find_param(d, "MIDI out");
+        char before_snd[64], before_out[64], s1[64], o1[64];
+        CHECK(DIR > 0 && SND > 0 && OUT > 0, "Direct param exists");
+        d->setParameter(d, SND, 1.f / 3.f);                 /* a named built-in sound */
+        d->setParameter(d, OUT, 1.f / 3.f);                 /* MIDI out: To MPC */
+        display(d, SND, before_snd); display(d, OUT, before_out);
+        d->setParameter(d, DIR, 1.f);
+        display(d, SND, s1); display(d, OUT, o1);
+        CHECK(!strncmp(s1, "Silent", 6) && !strcmp(o1, "Virtual port"), "Direct on: sound '%s' and MIDI out '%s'", s1, o1);
+        display(d, DIR, s1);
+        CHECK(!strcmp(s1, "On"), "Direct shows On");
+        d->setParameter(d, DIR, 1.f);                        /* a host re-sending the same value changes nothing */
+        display(d, SND, s1);
+        CHECK(!strncmp(s1, "Silent", 6), "re-sent Direct on keeps the Silent sound");
+        d->setParameter(d, DIR, 0.f);
+        display(d, SND, s1); display(d, OUT, o1);
+        CHECK(!strcmp(s1, before_snd) && !strcmp(o1, before_out), "Direct off restores '%s' and '%s' (got '%s' and '%s')", before_snd, before_out, s1, o1);
+        d->setParameter(d, DIR, 1.f);
+        d->setParameter(d, SND, 0.f);                        /* a manual sound change takes Direct off */
+        display(d, DIR, s1);
+        CHECK(d->getParameter(d, DIR) == 0.f && !strcmp(s1, "Off"), "a manual sound change turns Direct off");
+        d->dispatcher(d, effClose, 0, 0, 0, 0);
+    }
+
     /* key sync, MIDI import through the plugin, imports saved with the project */
     {
         AEffect *a = open_fx(), *b = open_fx();
