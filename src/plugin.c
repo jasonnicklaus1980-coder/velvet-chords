@@ -718,7 +718,8 @@ static const char *preset_label(int x) { return x == 0 ? "Manual" : VC_PRESETS[x
 static void apply_preset(Plugin *p, int x) {
     if (x < 1 || x > VC_NUM_PRESETS) return;
     const VcPreset *s = &VC_PRESETS[x - 1];
-    /* the key and scale are yours: a preset never changes them (its key and scale are in the data for reference) */
+    set_param(p, P_KEY, norm_of(P_KEY, s->key), 0); /* the genre's key and scale; the layout follows, custom pads stay */
+    set_param(p, P_SCALE, norm_of(P_SCALE, s->scale), 0);
     /* a preset never changes the instrument: the Sound and Sound extra you chose stay as they are. The arpeggio stays
      * as it is unless you already have one running (then the preset sets its order, rate and octaves) */
     set_param(p, P_TONE, s->tone, 0);
