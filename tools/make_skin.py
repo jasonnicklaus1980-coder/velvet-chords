@@ -45,7 +45,7 @@ INK_ON_ACCENT = "#120e1f"
 TEXT = "#ececf3"
 TEXT_2 = "#a7a7b8"
 LABEL = "#70707f"
-KEY_WHITE = "#e4e3ec"; KEY_WHITE_EDGE = "#a6a4b6"; KEY_BLACK = "#1b1a24"
+KEY_WHITE = "#e4e3ec"; KEY_WHITE_EDGE = "#a6a4b6"; KEY_BLACK = "#0b0b10"; KEY_BLACK_EDGE = "#3a3a48"
 GOLD = ACCENT  # names used by older helpers
 ROSE = ACCENT
 BRIGHT = TEXT
@@ -134,7 +134,7 @@ class Images:
             a.rect(10, h - 7, w - 10, h - 4, 1.5, fill=ACCENT)
         else:
             a.rect(1, 1, w - 1, h - 1, 6, fill=CTRL, edge=CTRL_EDGE, width=1)
-        a.text(12, 10, "%02d" % n, 10.5, ACCENT if on else "#4d5159", "Medium", tracking=0.8)
+        a.text(12, 10, "%02d" % n, 10.5, ACCENT if on else "#6b6f7a", "Medium", tracking=0.8)
         return self.save("vc_pad_%d_%dx%d_%s.png" % (n, w, h, "on" if on else "off"), a.done())
 
     def key(self, pc, on, w, h):
@@ -146,7 +146,7 @@ class Images:
         names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
         a = Art(w, h)
         if black:
-            a.rect(0, 0, w, h, 3, fill=ACCENT if on else KEY_BLACK, edge="#08090a", corners=(False, False, True, True))
+            a.rect(0, 0, w, h, 3, fill=ACCENT if on else KEY_BLACK, edge=KEY_BLACK_EDGE, corners=(False, False, True, True))
         else:
             a.rect(0, 0, w, h, 3, fill=ACCENT if on else KEY_WHITE, edge=KEY_WHITE_EDGE if not on else ACCENT_DIM,
                    corners=(False, False, True, True))
