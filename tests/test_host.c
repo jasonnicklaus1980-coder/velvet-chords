@@ -818,6 +818,33 @@ int main(int argc, char **argv) {
         }
     }
 
+    /* the layout on the MPC: top-level files with spaces and apostrophes next to library folders */
+    {
+        const char *edir = getenv("VC_EXPORT_DIR");
+        char p1[900];
+        if (edir) {
+            snprintf(p1, sizeof(p1), "rm -rf '%s/Import' && mkdir -p '%s/Import/1960s' '%s/Import/originals-classic-soul'", edir, edir, edir);
+            system(p1);
+            const char *files[] = {"06 12-bar blues in C.mid", "2Pac - Hit'em Up.mid", "1960s/Soul (live).mid", "originals-classic-soul/loop 1.mid"};
+            for (unsigned k = 0; k < sizeof(files) / sizeof(files[0]); k++) {
+                snprintf(p1, sizeof(p1), "%s/Import/%s", edir, files[k]);
+                FILE *fp = fopen(p1, "wb");
+                if (fp) fclose(fp);
+            }
+            AEffect *dv = open_fx();
+            int PF = find_param(dv, "Import file"), PN = find_param(dv, "Import next");
+            char name[200];
+            display(dv, PF, name);
+            CHECK(strcmp(name, "No .mid files in Velvet Chords/Import") != 0, "the picker lists the MPC layout on open (%s)", name);
+            dv->setParameter(dv, PN, 1.f);
+            display(dv, PF, name);
+            printf("  after Import next: %s\n", name);
+            dv->dispatcher(dv, effClose, 0, 0, 0, 0);
+            snprintf(p1, sizeof(p1), "rm -rf '%s/Import'", edir);
+            system(p1);
+        }
+    }
+
     /* a big library does not hide the files that sort first: the picker keeps the first 64 names in alphabetical order */
     {
         const char *edir = getenv("VC_EXPORT_DIR");
