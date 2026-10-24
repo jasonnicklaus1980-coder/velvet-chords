@@ -485,15 +485,14 @@ class Skin:
         bg.panel((640, 152, 1268, 620))
         bg.caption(656, 166, "Key")
         bg.a.text(1252, 166, "DOTS MARK THE SCALE", 9.5, "#4d5159", "Medium", anchor="ra", tracking=1.0)
-        self.keyboard(c, "Key", 656, 186, 56, 100, 34, 60, dots=True)
-        self.segments(c, bg, "bassl", "Bassline", ["Off", "Root", "5th", "Octave", "Walk"], 920, 186, 66, 36, caption="Bassline")
-        self.stepper(c, bg, "Scale", "Scale prev", "Scale next", 656, 322, 596, "Scale")
-        self.segments(c, bg, "smart", "Smart pads", ["Off", "Pads 9-16", "Follow"], 656, 390, 104, caption="Smart Scale pads")
-        self.segments(c, bg, "smartn", "Smart notes", ["Chord", "Scale", "Bass"], 976, 390, 92, caption="Smart notes")
-        self.segments(c, bg, "voicing1", "Voicing", voicings, 656, 458, 119, caption="Voicing")
-        self.readout(c, bg, "Now playing", 656, 526, 452, 44, size=17, colour=ACCENT, caption="Now playing")
-        self.action_button(c, bg, "direct", "Direct", "Direct", 1120, 526, w=132, h=44)  # on: silent built-in sound, chords to Velvet Chords Out
-        self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 656, 580, 596)
+        self.keyboard(c, "Key", 656, 186, 85, 100, 50, 60, dots=True)   # seven white keys across the panel
+        self.segments(c, bg, "bassl", "Bassline", ["Off", "Root", "5th", "Octave", "Walk"], 656, 294, 119, 28)
+        self.stepper(c, bg, "Scale", "Scale prev", "Scale next", 656, 344, 596, "Scale")
+        self.segments(c, bg, "smart", "Smart pads", ["Off", "Pads 9-16", "Follow"], 656, 412, 104, caption="Smart Scale pads")
+        self.segments(c, bg, "smartn", "Smart notes", ["Chord", "Scale", "Bass"], 976, 412, 92, caption="Smart notes")
+        self.segments(c, bg, "voicing1", "Voicing", voicings, 656, 480, 119, caption="Voicing")
+        self.readout(c, bg, "Now playing", 656, 548, 452, 44, size=17, colour=ACCENT, caption="Now playing")
+        self.action_button(c, bg, "direct", "Direct", "Direct", 1120, 548, w=132, h=44)  # on: silent built-in sound, chords to Velvet Chords Out
         self.page("Play", 0, c, "vc_bg_play.png", bg)
 
         # ---------- Perform
