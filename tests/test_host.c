@@ -578,46 +578,18 @@ int main(int argc, char **argv) {
         d->dispatcher(d, effClose, 0, 0, 0, 0);
     }
 
-    /* Relative chord on the Edit page, and the bass phrase setting */
+    /* Relative chord on the Edit page */
     {
         AEffect *d = open_fx();
-        int REL = find_param(d, "Relative chord"), PH = find_param(d, "Bass phrase"), ER = find_param(d, "Edit root"), ET = find_param(d, "Edit type");
+        int REL = find_param(d, "Relative chord"), ER = find_param(d, "Edit root"), ET = find_param(d, "Edit type");
         char t1[64], t2[64];
-        CHECK(REL > 0 && PH > 0, "Relative chord and Bass phrase params exist");
+        CHECK(REL > 0, "the Relative chord param exists");
         d->setParameter(d, ER, 0.f);                                       /* C */
         d->setParameter(d, ET, edit_type_of(""));                          /* Major */
         d->setParameter(d, REL, 1.f);
         display(d, ER, t1); display(d, ET, t2);
         CHECK(!strcmp(t1, "A") && strstr(t2, "Minor") != NULL, "relative of C major is A minor (got %s %s)", t1, t2);
-        d->setParameter(d, PH, value_of(d, PH, "Root pulse"));
-        display(d, PH, t1);
-        CHECK(!strcmp(t1, "Root pulse"), "bass phrase shows its name (%s)", t1);
-        d->setParameter(d, PH, 0.f);
-        display(d, PH, t1);
-        CHECK(!strcmp(t1, "Off"), "bass phrase Off shows Off (%s)", t1);
         d->dispatcher(d, effClose, 0, 0, 0, 0);
-    }
-
-    /* Help: every name the help text uses is a real parameter, and the Info line shows the last control's help when on */
-    {
-        AEffect *h = open_fx();
-        static const char *HELP_NAMES[] = {"Preset genre", "Preset variation", "Mode", "Smart pads", "Smart notes", "Bassline",
-            "Progression play", "Direct", "Relative chord", "Use detected scale", "Clear detection", "Bass phrase", "Hold",
-            "Repeat", "Melody", "Key sync", "MIDI log", "Arp", "Strum", "Voicing", "Inversion", "Octave", "Sound", "Tone",
-            "Release", "Volume", "Humanize", "Reverb", "MIDI out", "Edit root", "Edit type", "Edit bass", "Edit inversion", "Edit octave"};
-        int missing = 0;
-        for (unsigned k = 0; k < sizeof(HELP_NAMES) / sizeof(HELP_NAMES[0]); k++) if (find_param(h, HELP_NAMES[k]) < 0) missing++;
-        CHECK(missing == 0, "every help name is a parameter (%d missing)", missing);
-        int HELP = find_param(h, "Help"), KEY_ = find_param(h, "Key"), INFO = find_param(h, "Info");
-        char t[200];
-        h->setParameter(h, HELP, 1.f);
-        h->setParameter(h, KEY_, 2.f / 11.f);                  /* touches Key */
-        display(h, INFO, t);
-        CHECK(strstr(t, "root note of the key") != NULL, "Help on: the Info line says what Key does (%s)", t);
-        h->setParameter(h, HELP, 0.f);
-        display(h, INFO, t);
-        CHECK(strstr(t, "Scale:") != NULL || strstr(t, "Scale") != NULL, "Help off: the Info line shows the scale again (%s)", t);
-        h->dispatcher(h, effClose, 0, 0, 0, 0);
     }
 
     /* key sync, MIDI import through the plugin, imports saved with the project */

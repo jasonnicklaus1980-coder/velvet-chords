@@ -106,11 +106,6 @@ replaces imported pads. Pads after the progression keep the layout. The Screen b
 each bar line, the previous chord released on the line, and nothing after the host stops. It assumes 4/4 and uses the host's
 tempo and position. The Voice lead Q-Link was replaced to make room; Voice lead is still on the Perform page.
 
-**Bassline** (Tools Q-Link) adds a bass line under Progression play, on the beat grid, following the progression's chord for each bar.
-Styles: **Root** (the root on beat 1, held for the bar), **Root + fifth** (root on beat 1, fifth on beat 3), **Octaves** (root, octave, root,
-octave) and **Walking** (root, third, fifth, then a semitone below the next chord's root). The bass sits in the low register (C1-B2), each
-note is released when the next starts, and it stops when the host stops. It needs Progression play on and a progression chosen.
-The Tone Q-Link on the Tools page was replaced by Bassline; Tone is still on the Perform page.
 
 **Harmony** (Tools Q-Link) adds a second voice to every note the smart pads play, in the key's scale: **Third up**, **Sixth up**, **Third down**
 or **Octave up**. It follows the key and scale you've chosen, so the extra note is always in key, and it is released with the note it

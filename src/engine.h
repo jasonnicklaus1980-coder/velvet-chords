@@ -22,10 +22,6 @@ enum { VEL_LINEAR, VEL_SOFT, VEL_HARD, VEL_FIXED, VEL_COUNT };
 enum { PRATE_8, PRATE_8T, PRATE_16, PRATE_16T, PRATE_32, PRATE_COUNT };
 typedef struct { const char *name; const char *steps; } PatternPreset;
 
-/* Bassline phrases: a bar of eighth notes, as tokens (see engine.c) */
-#define EN_NUM_PHRASES 12
-typedef struct { const char *name; const char *steps; const char *desc; } EnPhrase;
-extern const EnPhrase EN_PHRASES[EN_NUM_PHRASES];
 extern const PatternPreset EN_PATTERNS[];
 extern const int EN_NUM_PATTERNS;
 extern const char EN_STEP_CHARS[]; /* index -> step character, for editing */
@@ -151,7 +147,6 @@ typedef struct Engine {
     int prog_owner;  /* owner sounding the current bar's chord, 0 none */
     /* bassline: follows the progression chord on the beat grid while Progression play runs */
     int bass_style;  /* BASS_*: 0 = off */
-    int phrase;      /* phrase library: 0 = off, else 1..EN_NUM_PHRASES (see EN_PHRASES) */
     int bass_beat;   /* the beat a bass note last started on, -1 none */
     int bass_owner;  /* owner sounding the current bass note, 0 none */
     int sustain;

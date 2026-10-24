@@ -1382,15 +1382,13 @@ static void test_pattern_chance(void) {
 }
 
 /* bassline: with Progression play running, the bass follows the progression chord on the beat grid */
-/* phrase to play through bass_run (1..EN_NUM_PHRASES, 0 = none) */
-static int g_test_phrase = 0;
 static void bass_run(int style, int bars, int *nbass, int64_t *tbass, int *notebass, int *offs, int max) {
     static float L[512], R[512];
     Engine *e = v11_engine();
     e->lp.mode = VC_MODE_CUSTOM; e->lp.prog = 1; e->lp.key = 0; e->lp.scale = 0; e->lp.voicing = VC_VOICE_CLOSE;
     e->lp.inversion = 0; e->lp.octave = 1; /* chords from C4 up, so the bass (C1-B2) is easy to tell apart */
     e->dirty = 1;
-    e->prog_play = 1; e->bass_style = style; e->phrase = g_test_phrase;
+    e->prog_play = 1; e->bass_style = style;
     e->tempo = 120.0; e->playing = 1;
     int64_t pos = 0; *nbass = 0; *offs = 0;
     for (int b = 0; b < bars * 96000 / 512 + 8; b++) {
@@ -1435,16 +1433,6 @@ static void test_bassline(void) {
     bass_run(BASS_OFF, 2, &n, t, note, &offs, 64);
     CHECK(n == 0, "bass Off plays nothing (%d)", n);
 
-    /* Phrases: Root pulse is eight eighth notes on the root in each bar; Hold is one root note per bar */
-    g_test_phrase = 1;                           /* Root pulse */
-    bass_run(BASS_OFF, 2, &n, t, note, &offs, 64);
-    int pulse = n >= 16 && note[0] == 36 && note[7] == 36 && note[8] == 43 && note[15] == 43;
-    CHECK(pulse, "Root pulse: eight notes per bar, roots C then G (%d notes)", n);
-    CHECK(n >= 3 && llabs((long long)(t[1] - t[0]) - 12000) < 4, "Root pulse steps are eighth notes (gap %lld frames)", (long long)(t[1] - t[0]));
-    g_test_phrase = 8;                           /* Hold */
-    bass_run(BASS_OFF, 2, &n, t, note, &offs, 64);
-    CHECK(n >= 2 && note[0] == 36 && note[1] == 43 && t[1] - t[0] == 96000, "Hold: one root note per bar (%d notes)", n);
-    g_test_phrase = 0;
 }
 
 /* harmony: each smart-pad note gets a second voice in the key's scale, released with it */
