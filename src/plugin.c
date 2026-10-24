@@ -955,6 +955,12 @@ static void scan_import_files(Plugin *p) {
     mkdir(import_dir(), 0775);
     imp_scan_n = 0;
     scan_import_dir("", 0);
+    if (imp_scan_n == 0) { /* say where it looked, so an empty list can be traced */
+        DIR *d = opendir(import_dir());
+        int entries = 0;
+        if (d) { while (readdir(d)) entries++; closedir(d); }
+        snprintf(p->imp_status, sizeof(p->imp_status), "Checked %s: %d entries, no .mid", import_dir(), entries);
+    }
     qsort(imp_scan, (size_t)imp_scan_n, IMP_NAME, cmp_import_names); /* alphabetical, so a folder's files sit together */
     p->nfiles = imp_scan_n < 64 ? imp_scan_n : 64;
     for (int i = 0; i < p->nfiles; i++) copy_str(p->imp_files[i], imp_scan[i], IMP_NAME);
