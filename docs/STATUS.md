@@ -40,7 +40,7 @@ no test or device run covers it. Nothing here has been run on an MPC.
 | 9 bass/harmony | Harmony voice on smart-pad notes (third up/down, sixth up, octave) in the key's scale | Tested in all twelve keys |
 | 10 MIDI | MIDI file export of a pad bank; MIDI import with chord naming; host MIDI out and a virtual port | Tested against files and a fake ALSA; **not verified on an MPC** |
 | 10 MIDI | Recording generated MIDI, drag-and-drop export | Not built, and not claimed |
-| 11 presets | 600 factory presets (60 genres x 10 variations, including trap, G-Funk and Southern styles) setting tone, voicing, strum, smart pads, key and scale, and never the instrument | Tested. A preset never replaces Silent or turns the arpeggio on |
+| 11 presets | 900 factory presets (90 genres x 10 variations, including trap, drill, phonk, G-Funk and Southern styles) setting tone, voicing, strum, smart pads, key and scale, and never the instrument | Tested. A preset never replaces Silent or turns the arpeggio on |
 | 11 presets | Four user presets, saved with the project; export to and import from a versioned text file | Tested (see `docs/INSTALL.md` for the file format) |
 | 11 presets | Starred factory presets (star, previous and next starred), clearing a user preset slot | Tested |
 | 11 presets | Search, rename | Not built (the MPC screen has no text entry, so rename would need a different design) |
