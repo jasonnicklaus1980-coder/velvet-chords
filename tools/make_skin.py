@@ -486,6 +486,7 @@ class Skin:
         bg.caption(656, 166, "Key")
         bg.a.text(1252, 166, "DOTS MARK THE SCALE", 9.5, "#4d5159", "Medium", anchor="ra", tracking=1.0)
         self.keyboard(c, "Key", 656, 186, 34, 64, 23, 46, dots=True)
+        self.segments(c, bg, "bassl", "Bassline", ["Off", "Root", "5th", "Octave", "Walk"], 920, 186, 66, 36, caption="Bassline")
         self.stepper(c, bg, "Scale", "Scale prev", "Scale next", 656, 322, 596, "Scale")
         self.segments(c, bg, "smart", "Smart pads", ["Off", "Pads 9-16", "Follow"], 656, 390, 104, caption="Smart Scale pads")
         self.segments(c, bg, "smartn", "Smart notes", ["Chord", "Scale", "Bass"], 976, 390, 92, caption="Smart notes")
