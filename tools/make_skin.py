@@ -526,6 +526,7 @@ class Skin:
         self.keyboard(c, "Key", 656, 186, 85, 100, 50, 60, dots=True)   # seven white keys across the panel
         # progression play: the progression plays by itself while the host plays
         self.switch(c, bg, "Progression play", 656, 290)
+        self.stepper(c, bg, "Progression", "Progression prev", "Progression next", 976, 290, 276)  # the progression in use, beside the switch
         bg.a.text(704, 308, "PROGRESSION PLAY", 9.5, LABEL, "Medium", anchor="lm", tracking=1.0)
         self.stepper(c, bg, "Scale", "Scale prev", "Scale next", 656, 352, 596, "Scale")
         self.segments(c, bg, "smart", "Smart pads", ["Off", "Pads 9-16", "Follow"], 656, 420, 104, caption="Smart Scale pads")

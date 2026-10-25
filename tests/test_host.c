@@ -886,6 +886,22 @@ int main(int argc, char **argv) {
         sc->dispatcher(sc, effClose, 0, 0, 0, 0);
     }
 
+    /* the progression stepper on the Play page: next and previous move through Off and the progressions */
+    {
+        AEffect *pg = open_fx();
+        int PP = find_param(pg, "Progression"), PN = find_param(pg, "Progression next"), PV = find_param(pg, "Progression prev");
+        char nm[64], first[64];
+        CHECK(PP >= 0 && PN >= 0 && PV >= 0, "progression stepper params exist");
+        display(pg, PP, first);
+        pg->setParameter(pg, PN, 1.f);
+        display(pg, PP, nm);
+        CHECK(strcmp(nm, first) != 0, "progression next moves on from Off (%s -> %s)", first, nm);
+        pg->setParameter(pg, PV, 1.f);
+        display(pg, PP, nm);
+        CHECK(!strcmp(nm, first), "progression prev steps back to Off (%s)", nm);
+        pg->dispatcher(pg, effClose, 0, 0, 0, 0);
+    }
+
     /* loading a project redraws the pads: the screen shows the loaded key and scale straight away */
     {
         AEffect *a = open_fx(), *b = open_fx();

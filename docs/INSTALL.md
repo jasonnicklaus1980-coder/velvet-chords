@@ -107,6 +107,8 @@ Andalusian, Axis, Pop I-IV, Neo-soul ii-V-I or 12-bar blues. Pad 1 plays step 1,
 written as Roman numerals, so the same progression works in every key. Off puts the layout back, and choosing a progression
 replaces imported pads. Pads after the progression keep the layout. The Screen bank Q-Link was replaced; the bank buttons still work.
 
+The **Progression** field on the Play page, next to the Progression play switch, picks the progression with its < and > arrows (or the Progression Q-Link). Pads 1 onward then hold its chords.
+
 **Progression play** (Play page switch) steps through the progression on the pads: each press plays the next chord, in order, and wraps back to the first. The chord sounds until the next press. It doesn't need the MPC to be playing. The Voice lead Q-Link was replaced to make room; Voice lead is still on the Perform page.
 
 

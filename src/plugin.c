@@ -68,6 +68,8 @@ enum {
     P_RELATIVE,
     /* the notes each pad plays in the bank on screen, for the pads (display only) */
     P_PADNOTES0 = P_RELATIVE + 1, P_PADNOTES_END = P_PADNOTES0 + 15,
+    /* the Play page's progression stepper: previous and next (appended, so saved projects keep their places) */
+    P_PROG_PREV = P_PADNOTES_END + 1, P_PROG_NEXT,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -239,6 +241,8 @@ static void init_param_info(void) {
     P(P_ANALYZE, "Analyze sample", 2, 0.f, 1)
     P(P_ANA_STATUS, "Analysis status", 1, 0.f, 0)
     P(P_UPROG_CLEAR, "Clear progression", 2, 0.f, 1)
+    P(P_PROG_PREV, "Progression prev", 2, 0.f, 1)
+    P(P_PROG_NEXT, "Progression next", 2, 0.f, 1)
     P(P_BANK_A, "Bank A", 2, 1.f, 0)
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
@@ -1093,6 +1097,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
                 set_param(p, P_SECTION, norm_of(P_SECTION, cur), 0);
             }
             if (i == P_SCALE_PREV || i == P_SCALE_NEXT) step_param(p, P_SCALE, i == P_SCALE_NEXT ? 1 : -1, VC_NUM_SCALES);
+            if (i == P_PROG_PREV || i == P_PROG_NEXT) { step_param(p, P_PROG, i == P_PROG_NEXT ? 1 : -1, VC_NUM_PROGRESSIONS + VC_USER_PROGS + 1); p->val[P_IMP_PADS] = 0.f; sync_layout(p); e->prog_next = 0; }
             if (i == P_PAT_PREV || i == P_PAT_NEXT) step_param(p, P_PATTERN, i == P_PAT_NEXT ? 1 : -1, EN_NUM_PATTERNS + 2);
             if (i == P_IMP_PREV || i == P_IMP_NEXT) {
                 scan_import_files(p);
@@ -1195,6 +1200,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_PAT_CHANCE: e->pat_chance = (idx_of(p, i) + 1) * 25; e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_PAT_SEED: e->pat_seed = idx_of(p, i) + 1; e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_PROG: if (idx_of(p, i) != 0) p->val[P_IMP_PADS] = 0.f; /* choosing a progression replaces imported pads; Off doesn't */
+        e->prog_next = 0; /* the next press plays its first chord */
         sync_layout(p); if (from_host) refresh_host(p); break;
     case P_PRESET: apply_preset(p, idx_of(p, i)); sync_preset_knobs(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
     case P_PRESET_GENRE: case P_PRESET_VAR: preset_from_knobs(p, from_host); break;
@@ -1464,8 +1470,8 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     }
     case P_VIEW_BANK: b[0] = (char)('A' + x); b[1] = 0; break;
     case P_ACTIVE: if (x == 0) copy_str(b, "-", sizeof(b)); else { pad_label(idx_of(p, P_VIEW_BANK) * 16 + x - 1, b); } break;
-    case P_SONG_PREV: case P_SEC_PREV: case P_SCALE_PREV: case P_TYPE_PREV: case P_EPAD_PREV: copy_str(b, "<", sizeof(b)); break;
-    case P_SONG_NEXT: case P_SEC_NEXT: case P_SCALE_NEXT: case P_TYPE_NEXT: case P_EPAD_NEXT: copy_str(b, ">", sizeof(b)); break;
+    case P_SONG_PREV: case P_SEC_PREV: case P_SCALE_PREV: case P_TYPE_PREV: case P_EPAD_PREV: case P_PROG_PREV: copy_str(b, "<", sizeof(b)); break;
+    case P_SONG_NEXT: case P_SEC_NEXT: case P_SCALE_NEXT: case P_TYPE_NEXT: case P_EPAD_NEXT: case P_PROG_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_INFO: {
         if (lp->mode == VC_MODE_SONG) {
             const Song *s = &VC_SONGS[lp->song];
