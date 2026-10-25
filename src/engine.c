@@ -190,6 +190,7 @@ void en_set_sr(Engine *e, float sr) {
 void en_init(Engine *e, float sr) {
     memset(e, 0, sizeof(*e));
     e->prog_bar = -1;
+    e->prog_next = 0;
     e->bass_beat = -1;
     sy_init(&e->synth, sr);
     en_set_sr(e, sr);
@@ -631,6 +632,9 @@ static float humanize_vel(Engine *e, float v) {
     return v < 0.05f ? 0.05f : v > 1.f ? 1.f : v;
 }
 
+static int prog_stepping(const Engine *e);
+static void prog_press(Engine *e, int frame);
+
 static void pad_on(Engine *e, int note, int vel, int frame) {
     e->last_note_in = note;
     e->events_changed = 1;
@@ -655,6 +659,7 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
     }
     int idx = en_pad_index(e, note);
     if (idx < 0) return;
+    if (prog_stepping(e)) { prog_press(e, frame); e->last_pad = idx; return; } /* the progression steps on each press */
     if (e->hold && note == e->latched_note && en_smart_index(e, idx) < 0) { /* Hold: same pad again = off */
         OwnerRec *lr = find_owner(e, e->pad_owner[note]);
         e->latched_note = -1;
@@ -884,21 +889,22 @@ static void prog_stop(Engine *e, int frame) {
     e->prog_bar = -1;
 }
 
-/* the chord for this bar: the progression's step (bar modulo its length), voiced like the pads */
-static void prog_start(Engine *e, int bar, int frame) {
+/* the progression plays on the pads: while it is on, each press sounds its next chord, in order, and the chord sounds
+ * until the next press. The MPC's clock is not needed. */
+static int prog_stepping(const Engine *e) { return e->prog_play && e->lp.prog > 0; }
+
+static void prog_sound(Engine *e, int k, int frame) {
     prog_stop(e, frame);
-    e->prog_bar = bar;
-    int n = vc_prog_length(&e->lp);
-    if (n < 1) return;
+    e->prog_bar = k;
     ChordSpec c;
-    if (!vc_prog_step(&e->lp, bar % n, &c)) return;
+    if (!vc_prog_step(&e->lp, k, &c)) return;   /* an empty step is silence */
     Voicing v;
     vc_voice(&c, e->lp.voicing, e->lp.inversion, e->lp.octave, 0, &v);
     if (v.n == 0) return;
     OwnerRec *r = alloc_owner(e, frame);
     if (++e->next_owner <= 0) e->next_owner = 1;
     r->owner = e->next_owner;
-    r->held = 1;      /* sounds until the next bar or the host stops, not until a pad lets go */
+    r->held = 1;      /* sounds until the next press, not until a pad lets go */
     r->sustained = 0;
     r->n = v.n;
     memcpy(r->notes, v.notes, (size_t)v.n);
@@ -909,6 +915,14 @@ static void prog_start(Engine *e, int bar, int frame) {
     memcpy(r->base_notes, v.notes, (size_t)v.n);
     for (int s = 0; s < r->n; s++) note_on_slot(e, r, s, frame);
     e->prog_owner = r->owner;
+}
+
+static void prog_press(Engine *e, int frame) {
+    int n = vc_prog_length(&e->lp);
+    if (n < 1) return;
+    int k = e->prog_next % n;
+    e->prog_next = (k + 1) % n;
+    prog_sound(e, k, frame);
 }
 
 /* ---------- bassline ---------- */
@@ -972,11 +986,6 @@ static int bass_frames_to_beat(const Engine *e, int frame) {
 }
 
 /* frames from this point in the block to the next bar line */
-static int prog_frames_to_bar(const Engine *e, int frame) {
-    double b = prog_beats(e, frame);
-    double next_bar = (vc_floor(b / PROG_BEATS_PER_BAR + 1e-9) + 1) * PROG_BEATS_PER_BAR;
-    return (int)vc_ceil((next_bar - b) * 60.0 / prog_tempo(e) * e->sr - 1e-6);
-}
 
 void en_process(Engine *e, float *L, float *R, int n) {
     if (e->dirty) en_rebuild(e);
@@ -1000,9 +1009,9 @@ void en_process(Engine *e, float *L, float *R, int n) {
         e->pat_owner = 0;
     }
     if (e->pat_owner && e->pat_sync && e->playing) pat_align(e, 0, 0); /* follow the MPC's song position */
-    if (e->prog_owner && (!e->prog_play || !e->playing || !e->lp.prog)) prog_stop(e, 0);
+    if (e->prog_owner && !prog_stepping(e)) prog_stop(e, 0);
     if ((e->bass_owner || e->bass_beat >= 0) && (!bass_on(e) || !e->prog_play || !e->playing || !e->lp.prog)) bass_stop(e, 0);
-    if (!e->playing && e->prog_bar >= 0) prog_stop(e, 0);
+    if (!e->playing && e->prog_bar >= 0 && !prog_stepping(e)) prog_stop(e, 0);
     if (e->smart == SMART_FOLLOW && g_vc_shared.version != e->shared_seen) { en_smart_update(e); e->events_changed = 1; }
     sort_in(e);
     int ii = 0, pos = 0;
@@ -1053,10 +1062,6 @@ void en_process(Engine *e, float *L, float *R, int n) {
             }
         }
 
-        if (e->prog_play && e->playing && e->lp.prog > 0) { /* a bar line reached at this frame starts its chord */
-            int bar = (int)vc_floor((prog_beats(e, pos) + 1e-9) / PROG_BEATS_PER_BAR);
-            if (bar != e->prog_bar) prog_start(e, bar, pos);
-        }
         if (bass_on(e) && e->prog_play && e->playing && e->lp.prog > 0) { /* a beat reached at this frame */
             int beat = (int)vc_floor(prog_beats(e, pos) + 1e-9);
             if (beat >= 0 && beat != e->bass_beat) bass_beat_start(e, beat, pos);
@@ -1064,7 +1069,6 @@ void en_process(Engine *e, float *L, float *R, int n) {
         int next = n;
         if (ii < e->nin && e->in[ii].frame < next) next = e->in[ii].frame;
         if (bass_on(e) && e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + bass_frames_to_beat(e, pos); if (d < next) next = d; }
-        if (e->prog_play && e->playing && e->lp.prog > 0) { int d = pos + prog_frames_to_bar(e, pos); if (d < next) next = d; }
         for (int q = 0; q < e->nqueue; q++) {
             int64_t d = e->queue[q].when - e->now;
             if (d < next) next = (int)d;

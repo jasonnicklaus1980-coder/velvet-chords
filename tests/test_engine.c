@@ -1288,55 +1288,48 @@ static void test_progression_pads(void) {
 /* progression play: with the host playing, the progression's chord sounds once per bar, the previous chord is released
  * on the bar line, and stopping the host (or turning Off) makes no further chords */
 static void test_progression_play(void) {
+    /* progression play steps on presses: each press sounds the next chord (I-V-vi-IV in C: C, G, Am, F), the chord
+     * sounds until the next press, and the MPC's clock starts nothing */
     static float L[512], R[512];
     Engine *e = v11_engine();
     e->lp.mode = VC_MODE_CUSTOM; e->lp.prog = 1; e->lp.key = 0; e->lp.scale = 0; e->lp.voicing = VC_VOICE_CLOSE;
     e->lp.inversion = 0; e->lp.octave = 0;
     e->dirty = 1;
     e->prog_play = 1;
+    e->prog_next = 0;
     e->tempo = 120.0;
     e->playing = 1;
-    const int64_t bar_frames = 96000; /* 4 beats at 120 bpm */
-    int mask_on[4] = {0}, notes_on[4] = {0}, offs_at_line[4] = {0};
-    int ons_after_stop = 0;
-    int64_t pos_frames = 0;
-    for (int b = 0; b < 4 * (int)bar_frames / 512 + 40; b++) {
-        int64_t t0 = e->now;
-        if (pos_frames >= 4 * bar_frames + 4000) e->playing = 0; /* the host stops after four bars */
-        e->ppq = (double)pos_frames / 48000.0 * 120.0 / 60.0;
+    int silent_clock = 0;
+    for (int b = 0; b < 400; b++) { /* the MPC plays for a while with no presses: nothing sounds */
+        e->ppq = b * 512.0 / 48000.0 * 2.0;
+        en_process(e, L, R, 512);
+        for (int i = 0; i < e->nout; i++) if ((e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0) silent_clock++;
+        e->nout = 0;
+    }
+    CHECK(silent_clock == 0, "no chord sounds without a press, whatever the MPC's clock does (%d)", silent_clock);
+    static const int WANT[4] = {(1 << 0) | (1 << 4) | (1 << 7), (1 << 7) | (1 << 11) | (1 << 2), (1 << 9) | (1 << 0) | (1 << 4), (1 << 5) | (1 << 9) | (1 << 0)};
+    int ok = 1, releases = 0;
+    for (int press = 0; press < 5; press++) {
+        en_push_midi(e, 0, 0x90, (unsigned char)e->pad_base, 100);
+        int mask = 0, ons = 0;
         en_process(e, L, R, 512);
         for (int i = 0; i < e->nout; i++) {
-            int64_t t = t0 + e->out[i].frame;
             int on = (e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0;
-            int bar = (int)(t / bar_frames);
-            int64_t into = t - (int64_t)bar * bar_frames;
-            if (on && pos_frames >= 4 * bar_frames + 4000) ons_after_stop++;
-            if (bar >= 0 && bar < 4 && on && into < 2000) { mask_on[bar] |= 1 << (e->out[i].d[1] % 12); notes_on[bar]++; }
-            if (bar >= 1 && bar < 4 && !on && into < 2000) offs_at_line[bar]++;
+            if (on) { mask |= 1 << (e->out[i].d[1] % 12); ons++; }
+            if (!on && (e->out[i].d[0] & 0xF0) == 0x80) releases++;
         }
         e->nout = 0;
-        pos_frames += 512;
+        en_push_midi(e, 0, 0x80, (unsigned char)e->pad_base, 0);
+        if (press < 4 && mask != WANT[press % 4]) ok = 0;
+        if (press == 4 && (mask != WANT[0] || ons == 0)) ok = 0; /* the fifth press wraps to C */
     }
-    /* I-V-vi-IV in C: C, G, Am, F */
-    static const int WANT[4] = {(1 << 0) | (1 << 4) | (1 << 7), (1 << 7) | (1 << 11) | (1 << 2), (1 << 9) | (1 << 0) | (1 << 4), (1 << 5) | (1 << 9) | (1 << 0)};
-    for (int bar = 0; bar < 4; bar++)
-        CHECK(notes_on[bar] >= 3 && mask_on[bar] == WANT[bar], "bar %d sounds step %d's chord (mask %x want %x)", bar + 1, bar + 1, mask_on[bar], WANT[bar]);
-    for (int bar = 1; bar < 4; bar++) CHECK(offs_at_line[bar] >= 3, "the bar %d line releases the previous chord (%d offs)", bar + 1, offs_at_line[bar]);
-    CHECK(e->prog_owner == 0, "stopping the host releases the progression chord");
-    CHECK(ons_after_stop == 0, "no chords after the host stops (%d)", ons_after_stop);
-
-    /* Off: the host plays again, but nothing sounds */
-    e->prog_play = 0; e->playing = 1; int ons_off = 0;
-    for (int b = 0; b < 300; b++) {
-        e->ppq = 100.0 + (double)b * 512 / 48000.0 * 2.0;
-        en_process(e, L, R, 512);
-        for (int i = 0; i < e->nout; i++) if ((e->out[i].d[0] & 0xF0) == 0x90 && e->out[i].d[2] > 0) ons_off++;
-        e->nout = 0;
-    }
-    CHECK(ons_off == 0, "Progression play off: no chords (%d)", ons_off);
+    CHECK(ok, "each press sounds the next progression chord, and the fifth wraps to C");
+    CHECK(releases >= 3, "each new chord releases the one before (%d releases)", releases);
+    e->prog_play = 0;
+    en_process(e, L, R, 512);
+    e->nout = 0;
 }
 
-/* user progressions: saved chords come back on pads 1.. as they were saved, and empty steps keep the layout */
 static void test_user_progressions(void) {
     LayoutParams lp;
     memset(&lp, 0, sizeof(lp));

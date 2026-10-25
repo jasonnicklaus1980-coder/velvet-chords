@@ -142,7 +142,8 @@ typedef struct Engine {
     OwnerRec owners[EN_OWNERS];
     int next_owner;
     /* progression play: one chord per bar while the host plays (the Progression control picks the progression) */
-    int prog_play;   /* 1 = on */
+    int prog_play;   /* 1 = on: each pad press plays the next chord of the progression */
+    int prog_next;   /* the progression step the next press plays */
     int prog_bar;    /* the bar the progression chord started in, -1 none */
     int prog_owner;  /* owner sounding the current bar's chord, 0 none */
     /* bassline: follows the progression chord on the beat grid while Progression play runs */

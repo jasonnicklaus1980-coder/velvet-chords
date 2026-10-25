@@ -1188,7 +1188,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_SMART_MODE: e->smart_mode = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_OCT: e->smart_oct = idx_of(p, i) - 2; e->dirty = 1; if (from_host) refresh_host(p); break;
     case P_SMART_MAP: e->smart_map = idx_of(p, i); e->dirty = 1; if (from_host) refresh_host(p); break;
-    case P_PROG_PLAY: e->prog_play = idx_of(p, i); if (from_host) refresh_host(p); break;
+    case P_PROG_PLAY: e->prog_play = idx_of(p, i); e->prog_next = 0; if (from_host) refresh_host(p); break; /* on: the next press plays step 1 */
     case P_HARM: e->harmony = idx_of(p, i); if (from_host) refresh_host(p); break;
     case P_BASS: break;   /* the bassline style was removed; its slot stays so saved projects keep their place */
     case P_PAT_LEN: e->pat_len = (idx_of(p, i) + 1) * 4; e->dirty = 1; if (from_host) refresh_host(p); break;
