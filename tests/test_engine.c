@@ -144,36 +144,6 @@ static void test_voicings(void) {
     CHECK(maxmove <= 5, "voice-led top voice moves at most a 4th (moved %d)", maxmove);
 }
 
-static void test_songs(void) {
-    for (int s = 0; s < VC_NUM_SONGS; s++) {
-        const Song *so = &VC_SONGS[s];
-        CHECK(so->nsections > 0, "%s has sections", so->title);
-        CHECK(strcmp(so->status, "verified") != 0, "%s: nothing in the starter set is marked verified", so->title);
-        CHECK(!strcmp(so->confidence, "high") || !strcmp(so->confidence, "medium") || !strcmp(so->confidence, "low"), "confidence");
-        CHECK(!strcmp(so->status, "original") ? so->year == 0 && so->bpm > 0 : (so->year >= 1960 && so->year <= 2019), "%s year in range (originals: no year, own tempo)", so->title);
-        for (int t = 0; t < s; t++) CHECK(strcmp(VC_SONGS[t].id, so->id), "duplicate id %s", so->id);
-        float bar = so->ts_num * 4.f / so->ts_den;
-        for (int k = 0; k < so->nsections; k++) {
-            const SongSection *sec = &so->sections[k];
-            float total = 0;
-            for (int e = 0; e < sec->nev; e++) {
-                ChordSpec c;
-                CHECK(vc_chord_parse(sec->ev[e].chord, &c), "%s / %s: chord '%s' parses", so->title, sec->name, sec->ev[e].chord);
-                total += sec->ev[e].beats;
-            }
-            float bars = total / bar;
-            CHECK(bars == (float)(int)bars, "%s / %s: whole bars (%.2f)", so->title, sec->name, bars);
-        }
-    }
-    int seen_original = 0;
-    for (int s = 0; s < VC_NUM_SONGS; s++) { /* real songs first, so saved projects keep their song numbers */
-        int orig = !strcmp(VC_SONGS[s].status, "original");
-        CHECK(!(seen_original && !orig), "real songs listed before originals");
-        seen_original |= orig;
-    }
-    printf("  %d songs checked\n", VC_NUM_SONGS);
-}
-
 static void test_layouts(void) {
     LayoutParams lp;
     memset(&lp, 0, sizeof(lp));
@@ -202,27 +172,6 @@ static void test_layouts(void) {
             for (int j = 0; j < S->n; j++) smask |= 1 << pcm(key + S->iv[j]);
             for (int p = 0; p < 16; p++) if (pads[p].valid) CHECK((vc_chord_pcmask(&pads[p].spec) & ~smask) == 0, "scale %s key %d pad %d stays in scale", S->name, key, p);
         }
-    /* song mode maps sections to banks, collapses repeats */
-    for (int s = 0; s < VC_NUM_SONGS; s++) {
-        lp.mode = VC_MODE_SONG; lp.song = s; lp.section = 0; lp.transpose = 0;
-        vc_build_pads(&lp, custom, pads);
-        CHECK(pads[0].valid, "%s bank A pad 1", VC_SONGS[s].title);
-        if (VC_SONGS[s].nsections > 1) CHECK(pads[16].valid, "%s second section on bank B", VC_SONGS[s].title);
-        lp.transpose = 3;
-        static PadChord tp[VC_PADS];
-        vc_build_pads(&lp, custom, tp);
-        for (int p = 0; p < VC_PADS; p++) if (pads[p].valid) {
-            CHECK(tp[p].spec.quality == pads[p].spec.quality && tp[p].spec.root == pcm(pads[p].spec.root + 3), "transposed pad keeps quality");
-        }
-    }
-    /* Just the Two of Us pads */
-    for (int s = 0; s < VC_NUM_SONGS; s++) if (!strcmp(VC_SONGS[s].id, "just-the-two-of-us-1980")) {
-        lp.song = s; lp.transpose = 0;
-        vc_build_pads(&lp, custom, pads);
-        const char *exp[5] = {"Dbmaj7", "C7", "Fm7", "Ebm7", "Ab7"};
-        for (int i = 0; i < 5; i++) CHECK(!strcmp(pads[i].name, exp[i]), "JTTOU pad %d %s", i + 1, pads[i].name);
-        CHECK(!pads[5].valid, "JTTOU pad 6 empty");
-    }
 }
 
 /* ---- note handling ---- */
@@ -1998,7 +1947,6 @@ int main(void) {
     printf("chord qualities...\n"); test_qualities_against_spelled();
     printf("parser...\n"); test_parse();
     printf("voicings...\n"); test_voicings();
-    printf("song data...\n"); test_songs();
     printf("layouts...\n"); test_layouts();
     printf("note handling...\n"); test_note_handling();
     printf("pattern generator...\n"); test_patterns();

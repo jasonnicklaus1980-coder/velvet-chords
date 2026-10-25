@@ -19,7 +19,6 @@ depending on whether MPC routes MIDI *out* of plugins, which is unknown.
 | Transposition | Every type in all 12 keys keeps its interval shape; transposed song pads keep quality | Pass |
 | Voice leading | Top voice of a voice-led progression moves no more than a 4th | Pass |
 | Smart Scale | Diatonic chords for C major and A harmonic minor checked by name; all 223 scales x 12 keys stay in scale | Pass |
-| Song data | All chord symbols parse, whole bars only, no duplicate ids, none claims `verified` | Pass |
 | Note handling | 4,000 random blocks of overlapping notes, sustain, strum, arp, layout changes; then all off | No held chords, no stuck voices, MIDI out on/off balanced |
 | Retrigger, sustain | Double note-on with one note-off; pedal hold and release | Pass |
 | Timing | Strum gaps exact to the sample (2,400 at 50 ms); arp steps exact (6,000 samples at 120 BPM 1/16) | Pass |
@@ -51,16 +50,6 @@ same test host on the ARM build under the qemu emulator; that is the next level 
 10. Smart Scale with two instances on two tracks: that the second follows the first live (they share the chord inside the MPC program, which assumes MPC loads both from the same plugin file, as it should).
 11. Pattern timing against the MPC sequencer with Follow MPC, including swing and tempo changes.
 12. The skin: that MPC finds it under `/sdcard/Synths` by its folder name, that live text uses the MPC's Titillium Web font at the sizes chosen, that segment buttons set the right values, that the screen repaints when you hit a pad (the plugin asks the host to refresh), and that double-tapping a value field opens MPC's knob overlay.
-
-## Song library status
-
-15 songs, 17 sections, 1961-2013. **Verified: 0.** All are `unverified-analysis`: recalled common charts and harmonic
-analysis, with no licensed transcription consulted. Confidence: high 8, medium 6, low 1. Partial entries are noted in each
-song's notes (for example, My Girl's later modulations and Superstition's chorus are not included). No lyrics or
-notation are included.
-
-The 500-song goal is not met and shouldn't be met by guessing. Each new song needs checking against the recording
-before its status can be raised.
 
 ## Voicings
 

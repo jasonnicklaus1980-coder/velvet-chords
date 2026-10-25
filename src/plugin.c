@@ -1087,7 +1087,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
                 step_param(p, P_SONG, i == P_SONG_NEXT ? 1 : -1, VC_NUM_SONGS);
                 set_param(p, P_SECTION, 0.f, 0);
             }
-            if (i == P_SEC_PREV || i == P_SEC_NEXT) {
+            if ((i == P_SEC_PREV || i == P_SEC_NEXT) && VC_NUM_SONGS) {
                 int n = VC_SONGS[idx_of(p, P_SONG)].nsections;
                 int cur = idx_of(p, P_SECTION);
                 if (cur >= n) cur = n - 1;
@@ -1320,6 +1320,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     switch (i) {
     case P_MODE: copy_str(b, VC_MODE_NAMES[x], sizeof(b)); break;
     case P_SONG:
+        if (!VC_NUM_SONGS) break; /* no song data is shipped */
         if (!strcmp(VC_SONGS[x].status, "original")) { /* "Title - original (style)" with the style before " (original" */
             const char *g = VC_SONGS[x].genre, *cut = strstr(g, " (");
             snprintf(b, sizeof(b), "%s - original (%.*s)", VC_SONGS[x].title, cut ? (int)(cut - g) : (int)strlen(g), g);
@@ -1327,6 +1328,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         else snprintf(b, sizeof(b), "%s - %s (%d)", VC_SONGS[x].title, VC_SONGS[x].artist, VC_SONGS[x].year);
         break;
     case P_SECTION: {
+        if (lp->song >= VC_NUM_SONGS) break;
         const Song *s = &VC_SONGS[lp->song];
         int si = vc_song_section_index(lp, 0);
         if (si < 0) copy_str(b, "-", sizeof(b));
@@ -1460,7 +1462,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         if (!e->pads[k].valid) { snprintf(b, sizeof(b), "%s empty", lab); break; }
         int n = e->pads[k].roman[0] ? snprintf(b, sizeof(b), "%s %s (%s):", lab, e->pads[k].name, e->pads[k].roman)
                                      : snprintf(b, sizeof(b), "%s %s:", lab, e->pads[k].name);
-        int fl = lp->mode == VC_MODE_SONG ? vc_song_flats(&VC_SONGS[lp->song], lp->transpose) : vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
+        int fl = lp->mode == VC_MODE_SONG && lp->song < VC_NUM_SONGS ? vc_song_flats(&VC_SONGS[lp->song], lp->transpose) : vc_prefer_flats(lp->key, vc_scale_is_minor(lp->scale));
         for (int j = 0; j < e->voicings[k].n && n < (int)sizeof(b) - 6; j++) {
             char nn[8];
             vc_note_name(e->voicings[k].notes[j], fl, nn, sizeof(nn));
@@ -1473,7 +1475,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_SONG_PREV: case P_SEC_PREV: case P_SCALE_PREV: case P_TYPE_PREV: case P_EPAD_PREV: case P_PROG_PREV: copy_str(b, "<", sizeof(b)); break;
     case P_SONG_NEXT: case P_SEC_NEXT: case P_SCALE_NEXT: case P_TYPE_NEXT: case P_EPAD_NEXT: case P_PROG_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_INFO: {
-        if (lp->mode == VC_MODE_SONG) {
+        if (lp->mode == VC_MODE_SONG && lp->song < VC_NUM_SONGS) {
             const Song *s = &VC_SONGS[lp->song];
             if (!strcmp(s->status, "original")) snprintf(b, sizeof(b), "Original progression, %s, %d BPM", s->key, (int)(s->bpm + 0.5f));
             else snprintf(b, sizeof(b), "%s, confidence %s, key %s", s->status, s->confidence, s->key);

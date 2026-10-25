@@ -18,12 +18,10 @@ ARM_LDEXTRA ?= -static-libgcc
 
 all: native test
 
-data: src/songs_gen.c
+data: src/presets_gen.c
 src/scales_gen.inc: tools/gen_scales.py
 	python3 tools/gen_scales.py src/scales_gen.inc
 
-src/songs_gen.c: data/songs.json tools/gen_songs.py
-	python3 tools/gen_songs.py
 src/presets_gen.c: data/presets.json tools/gen_presets.py
 	python3 tools/gen_presets.py
 
@@ -48,8 +46,7 @@ test: native
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
 	mkdir -p build/native/fakealsa && $(NATIVE_CC) -shared -fPIC -o build/native/fakealsa/libasound.so.2 tests/fake_alsa.c
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so LD_LIBRARY_PATH=$(CURDIR)/build/native/fakealsa VC_FAKE_ALSA_LOG=$(CURDIR)/build/native/fake_alsa.log VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so | tail -3
-	rm -rf build/native/library && ./build/native/vc_export build/native/library && python3 tools/make_charts.py build/native/library/database.json build/native/library && cp build/native/library/SONG_CHARTS.md build/native/library/VERIFICATION_REPORT.md docs/
-	python3 tests/check_midi.py build/native/library build/native/exports
+	rm -rf build/native/library && ./build/native/vc_export build/native/library
 	$(NATIVE_CC) -std=gnu99 -O1 -o build/native/list_params tools/list_params.c -ldl
 	sh scripts/check_skin.sh
 

@@ -39,19 +39,9 @@ symbols; `scripts/check_so.sh` refuses builds that need anything newer than glib
 | `src/export.c` | Standard MIDI File and `.progression` writers |
 | `src/plugin.c` | VST2 interface: parameters, displays, project save/restore, export |
 | `src/vst2_abi.h` | independently written VST2 binary-interface declarations (no Steinberg SDK) |
-| `data/songs.json` | the song library, kept separate from code |
-| `tools/gen_songs.py` | turns `songs.json` into `src/songs_gen.c` |
 | `tools/export_cli.c` | writes all MIDI, `.progression`, `database.json` and `PAD_REFERENCE.md` |
 | `tests/` | engine tests, a VST2 test host, and an independent MIDI/progression validator |
 | `package/` | installer, uninstaller, plugin list entry |
 | `package/skin/` | the MPC screen skin (generated; `make skin` rebuilds it, `docs/skin-preview` shows it) |
 | `tools/make_skin.py`, `tools/preview_skin.py` | skin generator and offline preview renderer |
 
-## Adding or correcting a song
-
-Edit `data/songs.json`. Bars are separated by `|`; chords inside a bar split it evenly:
-
-    "progression": "Am7 | C7 | Fmaj7 | Bm7b5 E7"
-
-Set `status` honestly (`verified` only after checking the recording and a licensed source) and run `make`.
-The tests reject unknown chord symbols, duplicate songs and partial bars.

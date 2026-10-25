@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Turns data/presets.json into src/presets_gen.c (run by `make`, like tools/gen_songs.py)."""
+"""Turns data/presets.json into src/presets_gen.c (run by `make`)."""
 import json, os, sys
 
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")

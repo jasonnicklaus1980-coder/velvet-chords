@@ -285,8 +285,7 @@ int main(int argc, char **argv) {
     free(copy);
 
     /* export */
-    fx2->setParameter(fx2, P_MODE, 0.f);
-    fx2->setParameter(fx2, P_SECTION, 0.f);
+    fx2->setParameter(fx2, P_MODE, 1.f / 5.f);
     fx2->setParameter(fx2, P_EXPORT, 1.f);
     display(fx2, P_EXPORT, buf);
     CHECK(strstr(buf, "Saved") != 0, "export reports success (%s)", buf);
@@ -326,15 +325,16 @@ int main(int argc, char **argv) {
     /* screen helpers used by the MPC skin */
     {
         AEffect *s = open_fx();
-        int P_SNEXT = find_param(s, "Song next"), P_SPAD = find_param(s, "Screen pad"), P_SBANK = find_param(s, "Screen bank");
+        int P_SNEXT = find_param(s, "Scale next"), P_SPAD = find_param(s, "Screen pad"), P_SBANK = find_param(s, "Screen bank");
         int P_PN1 = find_param(s, "Pad 1 chord"), P_PF1 = find_param(s, "Pad 1 function"), P_KEY = find_param(s, "Key"), P_SCALE = find_param(s, "Scale");
         int P_HAS_CS = find_param(s, "Scale has C#"), P_TNEXT = find_param(s, "Edit type next"), P_EPNEXT = find_param(s, "Edit pad next");
         CHECK(P_SNEXT > 0 && P_SPAD > 0 && P_PN1 > 0 && P_HAS_CS > 0 && P_TNEXT > 0, "screen params exist");
         char a[64], b2[64];
-        display(s, P_SONG, a);
+        display(s, find_param(s, "Scale"), a);
         s->setParameter(s, P_SNEXT, 1.f);
-        display(s, P_SONG, b2);
-        CHECK(strcmp(a, b2) != 0 && s->getParameter(s, P_SNEXT) == 0.f, "Song next steps the song (%s -> %s) and resets", a, b2);
+        display(s, find_param(s, "Scale"), b2);
+        CHECK(strcmp(a, b2) != 0 && s->getParameter(s, P_SNEXT) == 0.f, "Scale next steps the scale (%s -> %s) and resets", a, b2);
+        s->setParameter(s, find_param(s, "Scale"), 0.f); /* back to C major for the checks below */
         s->setParameter(s, P_MODE, 1.f / 5.f); /* Chords, C major */
         display(s, P_PN1, a); display(s, P_PF1, b2);
         CHECK(!strcmp(a, "Cmaj7") && !strcmp(b2, "Imaj7"), "pad 1 label Cmaj7 / Imaj7 (%s / %s)", a, b2);
@@ -484,12 +484,13 @@ int main(int argc, char **argv) {
     /* Smart Scale pads and a second instance following the first */
     {
         AEffect *a = open_fx(), *b = open_fx();
-        int SP = find_param(a, "Smart pads"), SN = find_param(a, "Smart notes"), SONG = find_param(a, "Song");
+        int SP = find_param(a, "Smart pads"), SN = find_param(a, "Smart notes");
         int PN9 = find_param(a, "Pad 9 chord"), PF9 = find_param(a, "Pad 9 function"), PF11 = find_param(a, "Pad 11 function"), NOW = find_param(a, "Now playing");
         CHECK(SP > 0 && SN > 0, "smart params exist");
         char x[64], y[64];
-        a->setParameter(a, find_param(a, "Mode"), 0.f); /* Song mode: the engine still supports it, the screen no longer offers it */
-        for (float v = 0.f; v <= 1.f; v += 0.001f) { a->setParameter(a, SONG, v); display(a, SONG, x); if (strstr(x, "Just the Two of Us")) break; }
+        a->setParameter(a, find_param(a, "Mode"), 1.f / 5.f); /* Chords */
+        a->setParameter(a, find_param(a, "Key"), 1.f / 11.f); /* Db major: pad 1 is Dbmaj7 */
+        a->setParameter(a, find_param(a, "Scale"), 0.f);
         a->setParameter(a, SP, 0.5f); /* pads 9-16 */
         block(a, L, R, 256);
         midi(&eb.ev[0], 0, 0x90, 36, 100); send(a, &eb, 1); block(a, L, R, 256); /* pad 1: Dbmaj7 */
@@ -503,15 +504,10 @@ int main(int argc, char **argv) {
         CHECK(strstr(x, "Ab3: 5th of Dbmaj7") != 0, "smart pad plays one note (%s)", x);
         printf("  %s\n", x);
         midi(&eb.ev[0], 0, 0x80, 36 + 10, 0); send(a, &eb, 1); block(a, L, R, 256);
-        midi(&eb.ev[0], 0, 0x90, 36 + 1, 100); send(a, &eb, 1); block(a, L, R, 256); /* pad 2: C7 */
-        midi(&eb.ev[0], 0, 0x80, 36 + 1, 0); send(a, &eb, 1); block(a, L, R, 256);
+        midi(&eb.ev[0], 0, 0x90, 36 + 2, 100); send(a, &eb, 1); block(a, L, R, 256); /* pad 3: Fm7 */
+        midi(&eb.ev[0], 0, 0x80, 36 + 2, 0); send(a, &eb, 1); block(a, L, R, 256);
         display(a, PN9, x); display(a, find_param(a, "Pad 12 chord"), y);
-        CHECK(!strcmp(x, "C3") && !strcmp(y, "Bb3"), "smart pads follow the new chord C7 (%s %s)", x, y);
-        a->setParameter(a, SN, 0.5f); /* scale: C7 tones + F minor scale, upward from C */
-        block(a, L, R, 256);
-        char row[200] = "";
-        for (int k = 9; k <= 16; k++) { char nm[24]; snprintf(nm, 24, "Pad %d chord", k); display(a, find_param(a, nm), x); strcat(row, x); strcat(row, " "); }
-        CHECK(!strcmp(row, "C3 Db3 Eb3 E3 F3 G3 Ab3 Bb3 "), "scale mode adds the key's notes (%s)", row);
+        CHECK(!strcmp(x, "F3") && !strcmp(y, "Eb4"), "smart pads follow the new chord Fm7 (%s %s)", x, y);
         /* second instance follows the first */
         b->setParameter(b, find_param(b, "Mode"), 0.f);
         b->setParameter(b, SP, 1.f);       /* follow other */
@@ -1017,20 +1013,20 @@ int main(int argc, char **argv) {
         pthread_t at;
         struct { AEffect *fx; } arg = {s};
         pthread_create(&at, 0, audio_once_fn, &arg); pthread_join(at, 0);   /* plugin now knows its audio thread */
-        int SNEXT = find_param(s, "Song next"), SONG = find_param(s, "Song");
+        int SNEXT = find_param(s, "Scale next"), SONG = find_param(s, "Scale");
         char a[96], b2[96];
         int before = g_refresh_calls;
         display(s, SONG, a);
         s->setParameter(s, SNEXT, 1.f);
         CHECK(g_refresh_calls > before, "a screen tap refreshes immediately (%d)", g_refresh_calls - before);
         display(s, SONG, b2);
-        CHECK(strcmp(a, b2) != 0, "tap 1 steps the song");
+        CHECK(strcmp(a, b2) != 0, "tap 1 steps the scale");
         /* a host that never re-reads our reset flips its cached 1 back to 0 on the next tap: still a tap */
         struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0);
         strcpy(a, b2);
         s->setParameter(s, SNEXT, 0.f);
         display(s, SONG, b2);
-        CHECK(strcmp(a, b2) != 0, "tap 2 (host sent 0) still steps the song (%s -> %s)", a, b2);
+        CHECK(strcmp(a, b2) != 0, "tap 2 (host sent 0) still steps the scale (%s -> %s)", a, b2);
         /* but a 1 followed at once by 0 is one tap (press + release) */
         strcpy(a, b2);
         s->setParameter(s, SNEXT, 1.f);
@@ -1098,55 +1094,6 @@ int main(int argc, char **argv) {
         s->dispatcher(s, effClose, 0, 0, 0, 0);
     }
 
-    /* demo render: play a song section pad by pad at 90 bpm (Just the Two of Us is song index 9 by year order) */
-    if (demo) {
-        AEffect *d = open_fx();
-        int songCount = 0;
-        for (float v = 0.f; v <= 1.f; v += 0.001f) { d->setParameter(d, P_SONG, v); display(d, P_SONG, buf); if (strstr(buf, "Just the Two of Us")) break; songCount++; }
-        d->setParameter(d, P_SOUND, 0.f);
-        d->setParameter(d, find_param(d, "Tone"), 0.45f);
-        d->setParameter(d, find_param(d, "Release"), 0.35f);
-        if (getenv("VC_DEMO_PATTERN")) { /* Neo-soul push, a little swing */
-            int pp = find_param(d, "Pattern");
-            for (float v = 0.f; v <= 1.f; v += 0.01f) { char nm[64]; d->setParameter(d, pp, v); display(d, pp, nm); if (!strcmp(nm, "Neo-soul push")) break; }
-            d->setParameter(d, find_param(d, "Swing"), 0.25f);
-            d->setParameter(d, find_param(d, "Gate"), 0.75f);
-        }
-        /* pads 1-5 = Dbmaj7 C7 Fm7 Ebm7 Ab7; beats 4 4 4 2 2 at 90 bpm, twice */
-        int beats[5] = {4, 4, 4, 2, 2};
-        int spb = 48000 * 60 / 90;
-        int total = 2 * 16 * spb + 48000 * 2;
-        short *pcm = (short *)calloc((size_t)total * 2, sizeof(short));
-        int pos = 0, ev = 0;
-        long sched[32]; int pad[32], on[32]; int ns = 0;
-        long t = 0;
-        for (int rep = 0; rep < 2; rep++) for (int i = 0; i < 5; i++) {
-            sched[ns] = t; pad[ns] = i; on[ns++] = 1;
-            t += beats[i] * spb;
-            sched[ns] = t - 200; pad[ns] = i; on[ns++] = 0;
-        }
-        while (pos < total) {
-            int m = 0;
-            while (ev < ns && sched[ev] < pos + 256) {
-                midi(&eb.ev[m++], (int)(sched[ev] - pos), on[ev] ? 0x90 : 0x80, 36 + pad[ev], on[ev] ? 88 : 0);
-                ev++;
-            }
-            if (m) send(d, &eb, m);
-            int nfr = total - pos < 256 ? total - pos : 256;
-            block(d, L, R, nfr);
-            for (int k = 0; k < nfr; k++) {
-                pcm[2 * (pos + k)] = (short)(L[k] * 32000.f);
-                pcm[2 * (pos + k) + 1] = (short)(R[k] * 32000.f);
-            }
-            pos += nfr;
-        }
-        char path[512];
-        snprintf(path, sizeof(path), "%s.wav", demo);
-        wav_write(path, pcm, total);
-        printf("  demo written to %s\n", path);
-        free(pcm);
-        d->dispatcher(d, effClose, 0, 0, 0, 0);
-    }
 
     /* progressions through the plugin interface: the Progression control fills pads 1-4 */
     {

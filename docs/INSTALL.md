@@ -267,4 +267,3 @@ decides which tracks hear them.
 
 ## Song data (removed from the screen)
 
-Song mode is no longer on the screen. The song data stays in the source for reference. None of the songs is marked verified. Every entry is labeled `unverified-analysis` with a confidence level: the chord functions are well known, but extensions, bar placement and exact keys still need checking against the recordings. Pad voicings are generated performance voicings, not transcriptions of the records. To correct or add songs, edit `data/songs.json` in the source and rebuild.
