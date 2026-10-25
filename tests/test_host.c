@@ -874,6 +874,18 @@ int main(int argc, char **argv) {
         }
     }
 
+    /* the Scale stepper goes through the scales in order: Major, Natural minor, Harmonic minor... */
+    {
+        AEffect *sc = open_fx();
+        int PS = find_param(sc, "Scale"), PN = find_param(sc, "Scale next");
+        char nm[64];
+        display(sc, PS, nm);
+        printf("  scale steps:");
+        for (int k = 0; k < 4; k++) { printf(" [%s]", nm); sc->setParameter(sc, PN, 1.f); display(sc, PS, nm); }
+        printf("\n");
+        sc->dispatcher(sc, effClose, 0, 0, 0, 0);
+    }
+
     /* loading a project redraws the pads: the screen shows the loaded key and scale straight away */
     {
         AEffect *a = open_fx(), *b = open_fx();
