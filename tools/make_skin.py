@@ -49,6 +49,9 @@ LCD_BG = "#07110f"        # read-only displays: dark glass
 LCD_EDGE = "#1d3a35"
 LCD_TEXT = "#8fe6d8"      # teal-green display text
 KEY_WHITE = "#e4e3ec"; KEY_WHITE_EDGE = "#a6a4b6"; KEY_BLACK = "#0b0b10"; KEY_BLACK_EDGE = "#3a3a48"
+BAR = "#1b1b25"           # panel title bars
+SCALE_ON_WHITE = "#d4900f"  # scale dots: amber on the white keys, yellow on the black keys
+SCALE_ON_BLACK = "#f2c14e"
 GOLD = ACCENT  # names used by older helpers
 ROSE = ACCENT
 BRIGHT = TEXT
@@ -114,6 +117,10 @@ class Art:
         """section/control label: small, uppercase, tracked"""
         self.text(x, y, txt.upper(), 10.5, LABEL, "Medium", tracking=1.3)
 
+    def text_width(self, txt, size, weight="Medium", tracking=0.0):
+        f = font(weight, size * SS)
+        return (sum(self.d.textlength(c, font=f) for c in txt) + tracking * SS * (len(txt) - 1)) / SS
+
     def done(self):
         return self.im.resize((self.w, self.h), Image.LANCZOS)
 
@@ -164,7 +171,7 @@ class Images:
 
     def dot(self, on_black):
         a = Art(14, 14)
-        a.d.ellipse(a.s(3, 3, 11, 11), fill="#c9ccd2" if on_black else "#26282c")
+        a.d.ellipse(a.s(3, 3, 11, 11), fill=SCALE_ON_BLACK if on_black else SCALE_ON_WHITE)
         return self.save("vc_dot_%s.png" % ("b" if on_black else "w"), a.done())
 
     def blank(self, w, h):
@@ -245,10 +252,25 @@ class Background:
         x0, y0, x1, y1 = box
         self.a.rect(x0, y0, x1, y1, 6, fill=SURFACE, edge=HAIRLINE)
         if title:
-            self.a.label(x0 + 16, y0 + 12, title)
+            self.bar(box, title)
+
+    def bar(self, box, title, right=None):
+        """panel title bar: a darker strip across the top of the panel, with its title in tracked capitals"""
+        x0, y0, x1, _ = box
+        self.a.rect(x0 + 1, y0 + 1, x1 - 1, y0 + 27, 5, fill=BAR, corners=(True, True, False, False))
+        self.a.line(x0 + 1, y0 + 27, x1 - 1, y0 + 27, HAIRLINE)
+        self.a.text(x0 + 16, y0 + 14, title.upper(), 10.5, TEXT_2, "Medium", anchor="lm", tracking=1.6)
+        if right:
+            self.a.text(x1 - 16, y0 + 14, right.upper(), 9.5, LABEL, "Medium", anchor="rm", tracking=1.0)
 
     def field(self, x, y, w, h):
         self.a.rect(x, y, x + w, y + h, 5, fill=FIELD, edge=FIELD_EDGE)
+
+    def tab(self, x, y, txt):
+        """a boxed label: the caption sits in a small tab on the top edge of the field below it (y is that edge)"""
+        w = self.a.text_width(txt.upper(), 10.5, "Medium", 1.3) + 14
+        self.a.rect(x + 8, y - 7, x + 8 + w, y + 7, 3, fill=SURFACE)
+        self.a.text(x + 15, y, txt.upper(), 10.5, LABEL, "Medium", anchor="lm", tracking=1.3)
 
     def lcd(self, x, y, w, h):
         self.a.rect(x, y, x + w, y + h, 5, fill=LCD_BG, edge=LCD_EDGE)
@@ -354,7 +376,9 @@ class Skin:
     def value_field(self, comps, bg, param, x, y, w, h=CH, size=18, colour=TEXT, editable=True, caption=None, box=True, lcd=False):
         if box:
             bg.lcd(x, y, w, h) if lcd else bg.field(x, y, w, h)
-        if caption:
+        if caption and box:
+            bg.tab(x, y, caption)
+        elif caption:
             bg.caption(x + 1, y - 17, caption)
         key = "vcField_%dx%d_%d_%s_%s" % (w, h, size, colour.lstrip("#"), "e" if editable else "r")
         comps_def = ([focus_sub(w, h)] if editable else []) + [label_sub("Value", "Data", 10, 0, w - 20, h, size, colour)]
@@ -376,7 +400,7 @@ class Skin:
             comps.append(self.place(key, "next" if is_next else "prev", px, y, h, h, [("Data", self.p(trig))]))
         self.value_field(comps, bg, param, x + h, y, w - 2 * h, h, size=18, box=False)
         if caption:
-            bg.caption(x + 1, y - 17, caption)
+            bg.tab(x, y, caption)
 
     def segments(self, comps, bg, group, param, labels, x, y, w, h=CH, caption=None, ids=None, ntotal=None):
         """joined segmented control; ids/ntotal let one parameter's options span several rows"""
@@ -531,8 +555,7 @@ class Skin:
         bg.panel((12, 152, 632, 620))
         self.pad_grid(c, 20, 162)
         bg.panel((640, 152, 1268, 620))
-        bg.caption(656, 166, "Key")
-        bg.a.text(1252, 166, "DOTS MARK THE SCALE", 9.5, "#4d5159", "Medium", anchor="ra", tracking=1.0)
+        bg.bar((640, 152, 1268, 620), "Key", right="Dots mark the scale")
         self.keyboard(c, "Key", 656, 186, 85, 100, 50, 60, dots=True)   # seven white keys across the panel
         # progression play: the progression plays by itself while the host plays
         self.switch(c, bg, "Progression play", 656, 290)
@@ -594,11 +617,10 @@ class Skin:
         bg.a.text(866, 28, "TAP SELECTS", 10.5, LABEL, "Medium", anchor="rm", tracking=1.3)
         self.switch(c, bg, "Edit follows pad", 876, 16)
         self.header_banks(c, bg, "bank3")
-        bg.panel((12, 64, 632, 620))
+        bg.panel((12, 64, 632, 620), "Pads")
         self.pad_grid(c, 20, 110)
-        bg.a.text(28, 84, "TAP A PAD TO EDIT IT", 10.5, LABEL, "Medium", tracking=1.3)
-        bg.panel((640, 64, 1268, 620))
-        bg.a.label(656, 78, "Chord")   # section heading: root, bass, type, inversion and octave belong to the chord
+        bg.a.text(616, 77, "TAP A PAD TO EDIT IT", 9.5, LABEL, "Medium", anchor="rm", tracking=1.0)
+        bg.panel((640, 64, 1268, 620), "Chord")   # section heading: root, bass, type, inversion and octave belong to the chord
         self.keyboard(c, "Edit root", 656, 98, 48, 86, 30, 52)
         self.segments(c, bg, "bass", "Edit bass", ["Root"] + notes, 656, 222, 46, caption="Bass note")
         self.stepper(c, bg, "Edit type", "Edit type prev", "Edit type next", 656, 296, 596, "Chord type")
@@ -642,8 +664,7 @@ class Skin:
         c = []
         self.header_info(c, bg)
         L, R = 28, 664
-        bg.panel((12, 64, 632, 620))
-        bg.a.label(L, 76, "Playing")
+        bg.panel((12, 64, 632, 620), "Playing")
         self.switch(c, bg, "Hold", L, 110, "Hold: chords keep playing")
         bg.a.text(L + 60, 128, "PRESS ANOTHER PAD TO CHANGE, SAME PAD TO STOP", 9.5, "#4d5159", "Medium", anchor="lm", tracking=1.0)
         self.segments(c, bg, "rep", "Repeat", ["Off", "1/4", "1/8", "1/8T", "1/16", "1/16T", "1/32"], L, 176, 84, caption="Repeat (in time with the MPC)")
@@ -655,8 +676,7 @@ class Skin:
         self.readout(c, bg, "Detected", L + 312, 534, 276, 40, size=13, caption="Detected")
         self.action_button(c, bg, "det_use", "Use scale", "Use detected scale", L, 464, w=120, h=36)
         self.action_button(c, bg, "det_clear", "Clear notes", "Clear detection", L + 128, 464, w=120, h=36)
-        bg.panel((648, 64, 1268, 620))
-        bg.a.label(R, 76, "MIDI import")
+        bg.panel((648, 64, 1268, 620), "MIDI import")
         self.stepper(c, bg, "Import file", "Import prev", "Import next", R, 116, 588, "File (Velvet Chords/Import)")
         self.action_button(c, bg, "imp", "Load chords", "Import load", R, 184, w=280)
         self.segments(c, bg, "imppads", "Pads play", ["Layout", "Imported"], R + 296, 184, 146, caption="")
