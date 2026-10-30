@@ -40,7 +40,7 @@ build/native build/arm:
 
 native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
-test: native vhost-test sample-meta-test
+test: native vhost-test sample-meta-test keygroup-test
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
@@ -57,6 +57,18 @@ build/native/test_sample_meta: tests/test_sample_meta.c src/sample_meta.c src/sa
 sample-meta-test: build/native/test_sample_meta
 	./build/native/test_sample_meta
 .PHONY: sample-meta-test
+
+# keygroup (XPM) reading: XML reader and the program reader built from docs/XPM_FORMAT.md
+build/native/test_xml_min: tests/test_xml_min.c src/xml_min.c src/xml_min.h | build/native
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_xml_min.c src/xml_min.c
+
+build/native/test_xpm_read: tests/test_xpm_read.c src/xpm_read.c src/xpm_read.h src/xml_min.c src/xml_min.h | build/native
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_xpm_read.c src/xpm_read.c src/xml_min.c -lm
+
+keygroup-test: build/native/test_xml_min build/native/test_xpm_read
+	./build/native/test_xml_min
+	./build/native/test_xpm_read
+.PHONY: keygroup-test
 
 # VST2 host (hosts a plugin inside Velvet Chords). The host is plain C; the test loads a small test instrument and
 # Velvet Chords itself (which must be refused). Both .so files go in one folder, which the host scans.
