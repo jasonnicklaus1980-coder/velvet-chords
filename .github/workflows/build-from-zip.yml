@@ -1,4 +1,4 @@
-# Builds the MPC plugin from velvet-chords-repo.zip (upload that zip to the top level of the repo).
+# Builds the MPC plugin from the commit that was pushed (or the branch chosen for a manual run).
 name: Build from zip
 
 on:
@@ -12,12 +12,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Unzip the project
+      - name: Use the checked-out project
         run: |
-          unzip -q velvet-chords-repo.zip -d work
-          d=$(dirname "$(find work -maxdepth 3 -name Makefile | head -1)")
-          echo "PROJECT=$PWD/$d" >> "$GITHUB_ENV"
-          ls "$d"
+          echo "PROJECT=$GITHUB_WORKSPACE" >> "$GITHUB_ENV"
+          ls "$GITHUB_WORKSPACE"
 
       - name: Download Zig
         run: |
