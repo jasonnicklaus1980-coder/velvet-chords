@@ -542,32 +542,31 @@ static void host_add(Plugin *p, int *found, const char *path, const char *name) 
     snprintf(p->host_names[k], VH_NAME_LEN, "%s", name);
 }
 
+/* probes a plugin file and adds it if it's an instrument. Files already in the list aren't loaded again. */
+static void host_probe_add(Plugin *p, int *found, const char *path) {
+    for (int k = 0; k < *found; k++) if (!strcmp(p->host_paths[k], path)) return;
+    VhInfo info;
+    if (vh_probe(path, &info) == 0 && info.is_instrument) host_add(p, found, path, info.name);
+}
+
 static void host_scan(Plugin *p) {
-    const char *dir = getenv("VC_PLUGIN_DIR");   /* test hook: a folder of plugins instead of the MPC's list */
+    const char *dir = getenv("VC_PLUGIN_DIR");   /* test hook: a folder of plugins instead of the MPC's folders */
+    const char *exp = getenv("VC_EXPANSIONS_DIR");   /* test hook */
     char settings[300];
     int found = 0;
     p->host_top = 0;
-    /* 1. the MPC's own plugin list, in the MPC's order; without a settings file, the plugin folder */
-    int listed = 0;
+    /* 1. the MPC's own plugin list, in the MPC's order */
     if (!dir && mpc_settings_find(settings, sizeof settings) == 0) {
         MpcPlugin list[HOST_MAX];
         int n = mpc_plugin_list(settings, list, HOST_MAX);
         for (int i = 0; i >= 0 && i < n; i++) host_add(p, &found, list[i].path, list[i].name);
-        listed = n >= 0;
     }
-    if (!listed) {
-        int n = vh_list(dir ? dir : HOST_DIR, p->host_scan_paths, HOST_SCAN_MAX);
-        for (int i = 0; i < n; i++) {
-            VhInfo info;
-            if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, &found, p->host_scan_paths[i], info.name);
-        }
-    }
-    /* 2. the MPC's expansions folder and its subfolders */
-    const char *exp = getenv("VC_EXPANSIONS_DIR");   /* test hook */
-    int n = mpc_walk_plugins(exp ? exp : MPC_EXPANSIONS_DIR, p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
-    for (int i = 0; i >= 0 && i < n; i++) {
-        VhInfo info;
-        if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, &found, p->host_scan_paths[i], info.name);
+    /* 2. every plugin in the plugin folder and in the expansions folder, subfolders included, so plugins the list
+     * doesn't name are still found */
+    const char *folders[2] = {dir ? dir : HOST_DIR, exp ? exp : MPC_EXPANSIONS_DIR};
+    for (int f = 0; f < 2; f++) {
+        int n = mpc_walk_plugins(folders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
+        for (int i = 0; i >= 0 && i < n; i++) host_probe_add(p, &found, p->host_scan_paths[i]);
     }
     /* publish the finished list: the names are in place before the count that makes them visible */
     __atomic_store_n(&p->host_count, found, __ATOMIC_RELEASE);
