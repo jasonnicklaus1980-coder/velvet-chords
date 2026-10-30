@@ -561,10 +561,11 @@ static void host_scan(Plugin *p) {
         int n = mpc_plugin_list(settings, list, HOST_MAX);
         for (int i = 0; i >= 0 && i < n; i++) host_add(p, &found, list[i].path, list[i].name);
     }
-    /* 2. every plugin in the plugin folder and in the expansions folder, subfolders included, so plugins the list
-     * doesn't name are still found */
-    const char *folders[2] = {dir ? dir : HOST_DIR, exp ? exp : MPC_EXPANSIONS_DIR};
-    for (int f = 0; f < 2; f++) {
+    /* 2. every plugin in the plugin folder, the expansions folder and the SD card, subfolders included, so plugins the
+     * list doesn't name are still found. The SD card is walked last, so the folders above keep their order. */
+    const char *folders[3] = {dir ? dir : HOST_DIR, exp ? exp : MPC_EXPANSIONS_DIR, dir ? NULL : MPC_SD_DIR};
+    for (int f = 0; f < 3; f++) {
+        if (!folders[f]) continue;
         int n = mpc_walk_plugins(folders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
         for (int i = 0; i >= 0 && i < n; i++) host_probe_add(p, &found, p->host_scan_paths[i]);
     }
