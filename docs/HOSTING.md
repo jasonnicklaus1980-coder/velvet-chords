@@ -20,5 +20,8 @@ The built-in sound and the hosted instrument play together unless you silence th
 - **Plugin windows:** a hosted plugin's own editor window is not shown. Its parameters are not on the Velvet Chords screen yet.
 - **Keygroups:** MPC keygroup programs are not supported. A plugin has no way to load one, and their file format is not documented here.
 - **MIDI out from the hosted plugin** is not routed anywhere.
-- **Tested here:** the hosting code runs against a test instrument on the computer and under ARM emulation. It has not been
-  tested with a real plugin on an MPC.
+- **Tested here:** the hosting code runs against a test instrument on the computer and under ARM emulation.
+  Six real MPC plugins (ARMv7 builds from this repo's history) were loaded under emulation with `tools/vhost_run.c`:
+  all six load and report their names and parameter counts. Da Sample Lab is the only instrument among them and
+  made no sound on A4 with no sample loaded. The other five are effects in their own metadata (audio in and out),
+  so the Scan list leaves them out. Hosting effects is not built yet. None of this has run on an MPC.
