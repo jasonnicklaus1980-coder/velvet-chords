@@ -227,6 +227,12 @@ class Images:
             a.rect(0, 0, w, h, 3, fill=CTRL, edge=CTRL_EDGE)
         return self.save("vc_cell_%d_%s.png" % (row, "on" if on else "off"), a.done())
 
+    def host_row(self, on, w, h):
+        """one instrument on the Host page: a bar, lit while it's pressed; its name is a live label on top"""
+        a = Art(w, h)
+        a.rect(0, 0, w, h, 5, fill=CTRL_SEL if on else CTRL, edge=ACCENT_DIM if on else CTRL_EDGE)
+        return self.save("vc_hostrow_%s_%dx%d.png" % ("on" if on else "off", w, h), a.done())
+
 
 class Background:
     """Full-page art: header, panels, field frames and labels; live text sits on top."""
@@ -736,6 +742,29 @@ class Skin:
             bg.a.text(x + 36, 544, "%d" % (i + 1), 9.5, LABEL, "Medium", anchor="ma")
             self.value_field(c, bg, "Riff step %d" % (i + 1), x, 558, 72, size=14)
         self.page("Lanes", 5, c, "vc_bg_lanes.png", bg)
+
+        # ---------- Host: the MPC's plugin list and the expansions folder, eight instruments at a time
+        bg = Background("Host")
+        c = []
+        self.header_info(c, bg)
+        bg.panel((12, 64, 1268, 144))
+        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 28, 96, 560, "Instrument")
+        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 604, 96, w=100, h=CH)
+        self.action_button(c, bg, "host_up", "Page up", "Host page up", 716, 96, w=140, h=CH)
+        self.action_button(c, bg, "host_down", "Page down", "Host page down", 868, 96, w=140, h=CH)
+        self.value_field(c, bg, "Host volume", 1020, 96, 240, caption="Host volume")
+        bg.panel((12, 152, 1268, 620))
+        bg.bar((12, 152, 1268, 620), "MPC plugin list and Expansions", right="Subfolder in brackets")
+        for k in range(8):
+            on, off = self.img.host_row(True, 1224, 40), self.img.host_row(False, 1224, 40)
+            key = self.define("vcHostRow", definition([A_QLINK], [
+                button_sub(on, off, k, 8, 1224, 40),
+                label_sub("Name", "Name", 14, 0, 1196, 40, 15, TEXT),
+            ]))
+            comps_y = 192 + k * 48
+            c.append(self.place(key, "Host row %d" % (k + 1), 28, comps_y, 1224, 40,
+                                [("Data", self.p("Host row")), ("Name", self.p("Host row %d" % (k + 1)))]))
+        self.page("Host", 6, c, "vc_bg_host.png", bg)
 
     def tui(self):
         return {"pageData": {"version": 1, "componentDefinitions": {"version": 2, "importFiles": [

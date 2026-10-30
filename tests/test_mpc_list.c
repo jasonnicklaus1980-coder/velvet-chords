@@ -1,5 +1,7 @@
 /* Tests the reader for the MPC's plugin list. Usage: test_mpc_list <scratch file> */
 #include "mpc_list.h"
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -66,6 +68,40 @@ int main(int argc, char **argv) {
 
     CHECK(write_text(path, "<PROPERTIES><VALUE name=\"pluginList-arm\"><KNOWNPLUGINS>") == 0, "broken file written");
     CHECK(mpc_plugin_list(path, list, 8) == -1, "a file that isn't well-formed gives -1");
+
+    /* the expansions folder: .so files at the top and in a subfolder, a non-plugin file, and a folder too deep to search */
+    const char *root = "build/native/mpc_exp_test";
+    char deep[300];
+    mkdir(root, 0775);
+    mkdir("build/native/mpc_exp_test/pads", 0775);
+    mkdir("build/native/mpc_exp_test/a", 0775);
+    mkdir("build/native/mpc_exp_test/a/b", 0775);
+    mkdir("build/native/mpc_exp_test/a/b/c", 0775);
+    mkdir("build/native/mpc_exp_test/a/b/c/d", 0775);
+    mkdir("build/native/mpc_exp_test/a/b/c/d/e", 0775);   /* one level below the search: its plugin must be left out */
+    write_text("build/native/mpc_exp_test/top.so", "");
+    write_text("build/native/mpc_exp_test/readme.txt", "");
+    write_text("build/native/mpc_exp_test/pads/warm.so", "");
+    snprintf(deep, sizeof deep, "%s/a/b/c/d/e/deep.so", root);
+    write_text(deep, "");
+    char walked[8][VH_PATH_LEN];
+    int w = mpc_walk_plugins(root, walked, 8, MPC_WALK_DEPTH);
+    if (w != 2) printf("  (the walk returned %d)\n", w);
+    CHECK(w == 2, "the walk finds the .so files at the top and in a subfolder, not the text file or the too-deep one");
+    CHECK(w == 2 && strstr(walked[0], "top.so") != NULL, "the top-level plugin is found");
+    CHECK(w == 2 && strstr(walked[1], "pads/warm.so") != NULL, "the subfolder plugin is found");
+    CHECK(mpc_walk_plugins("/nonexistent/expansions", walked, 8, MPC_WALK_DEPTH) == -1, "a missing expansions folder gives -1");
+    remove("build/native/mpc_exp_test/top.so");
+    remove("build/native/mpc_exp_test/readme.txt");
+    remove("build/native/mpc_exp_test/pads/warm.so");
+    remove(deep);
+    rmdir("build/native/mpc_exp_test/a/b/c/d/e");
+    rmdir("build/native/mpc_exp_test/a/b/c/d");
+    rmdir("build/native/mpc_exp_test/a/b/c");
+    rmdir("build/native/mpc_exp_test/a/b");
+    rmdir("build/native/mpc_exp_test/a");
+    rmdir("build/native/mpc_exp_test/pads");
+    rmdir(root);
 
     setenv("VC_SETTINGS_FILE", path, 1);
     char found[300];

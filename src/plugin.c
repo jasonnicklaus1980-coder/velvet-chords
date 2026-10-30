@@ -32,6 +32,7 @@
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 #define HOST_MAX 64       /* hosted instruments you can pick from the MPC's plugin list */
+#define HOST_ROWS 8       /* instruments the Host page shows at a time */
 #define HOST_SCAN_MAX 64  /* files looked at in the plugin folder */
 #define HOST_BLOCK 512    /* block size a hosted instrument is opened with */
 #define HOST_MIX_MAX 4096 /* frames rendered per call into the mix buffers */
@@ -79,6 +80,9 @@ enum {
     P_PROG_PREV = P_PADNOTES_END + 1, P_PROG_NEXT,
     /* hosted VST2 instrument (appended: older projects keep their places) */
     P_HOST_SLOT, P_HOST_SCAN, P_HOST_VOL, P_HOST_PREV, P_HOST_NEXT,
+    /* the Host page: page up and down through the list, a row to pick (0..HOST_ROWS-1), and the name of each row */
+    P_HOST_UP, P_HOST_DOWN, P_HOST_PICK,
+    P_HOST_ROW0, P_HOST_ROW_END = P_HOST_ROW0 + HOST_ROWS - 1,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -94,7 +98,7 @@ static int lane_of(int i, const int *ids) {
 enum { OUT_OFF = 0, OUT_HOST = 1, OUT_PORT = 2, OUT_BOTH = 3 }; /* bit 0 host, bit 1 port */
 
 static int is_display_only(int i) {
-    return (i >= P_PADNOTES0 && i <= P_PADNOTES_END) || i == P_NOW || i == P_DET_INFO || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || i == P_ANA_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
+    return (i >= P_PADNOTES0 && i <= P_PADNOTES_END) || (i >= P_HOST_ROW0 && i <= P_HOST_ROW_END) || i == P_NOW || i == P_DET_INFO || i == P_INFO || i == P_PORT_STATUS || i == P_IMP_STATUS || i == P_UPRE_STATUS || i == P_FAV_STATUS || i == P_ANA_STATUS || (i >= P_PADNAME0 && i < P_SCALENOTE0 + 12);
 }
 
 typedef struct { const char *name; int steps; float def; int trigger; } ParamInfo; /* steps 0 = continuous */
@@ -252,11 +256,21 @@ static void init_param_info(void) {
     P(P_UPROG_CLEAR, "Clear progression", 2, 0.f, 1)
     P(P_PROG_PREV, "Progression prev", 2, 0.f, 1)
     P(P_PROG_NEXT, "Progression next", 2, 0.f, 1)
-    P(P_HOST_SLOT, "Host plugin", 17, 0.f, 0)
+    P(P_HOST_SLOT, "Host plugin", HOST_MAX + 1, 0.f, 0)
     P(P_HOST_SCAN, "Scan plugins", 2, 0.f, 1)
     P(P_HOST_VOL, "Host volume", 0, 0.8f, 0)
     P(P_HOST_PREV, "Host prev", 2, 0.f, 1)
     P(P_HOST_NEXT, "Host next", 2, 0.f, 1)
+    P(P_HOST_UP, "Host page up", 2, 0.f, 1)
+    P(P_HOST_DOWN, "Host page down", 2, 0.f, 1)
+    P(P_HOST_PICK, "Host row", HOST_ROWS, 0.f, 0)
+    {
+        static char hnames[HOST_ROWS][20];
+        for (int k = 0; k < HOST_ROWS; k++) {
+            snprintf(hnames[k], 20, "Host row %d", k + 1);
+            P(P_HOST_ROW0 + k, hnames[k], 1, 0.f, 0)
+        }
+    }
     P(P_BANK_A, "Bank A", 2, 1.f, 0)
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
@@ -318,6 +332,7 @@ typedef struct {
     /* hosted VST2 instrument: scanned and loaded on the background thread; the audio thread reads host */
     VHost *hosted;
     volatile int host_want, host_pending, host_scan_req, host_slot, host_count, host_scanned;
+    int host_top;                                  /* the first instrument the Host page shows */
     char host_paths[HOST_MAX][VH_PATH_LEN];
     char host_names[HOST_MAX][VH_NAME_LEN];
     char host_scan_paths[HOST_SCAN_MAX][VH_PATH_LEN];
@@ -503,31 +518,55 @@ static void mlog_service(Plugin *p) {
  * thread (or on the control thread when no background thread runs). The audio thread only reads the loaded instance and
  * renders it; it never loads, scans or allocates. Loading an unknown plugin runs its code, so a plugin that crashes can
  * take the MPC with it. */
+/* the folder a hosted plugin sits in, relative to the plugin folder: "" at the top, "pad" for /sdcard/vst/pad/x.so */
+static void host_folder(const char *path, char *out, size_t len) {
+    static const char *roots[] = {"/sdcard/vst/", MPC_EXPANSIONS_DIR "/"};
+    const char *rel = path;
+    for (size_t r = 0; r < sizeof roots / sizeof roots[0]; r++) {
+        if (strncmp(path, roots[r], strlen(roots[r])) == 0) { rel = path + strlen(roots[r]); break; }
+    }
+    const char *slash = strrchr(rel, '/');
+    size_t n = slash ? (size_t)(slash - rel) : 0;
+    if (n >= len) n = len - 1;
+    memcpy(out, rel, n);
+    out[n] = 0;
+}
+
+/* adds an instrument to the picker unless it's already there */
+static void host_add(Plugin *p, const char *path, const char *name) {
+    if (p->host_count >= HOST_MAX) return;
+    for (int k = 0; k < p->host_count; k++) if (!strcmp(p->host_paths[k], path)) return;
+    int k = p->host_count++;
+    snprintf(p->host_paths[k], VH_PATH_LEN, "%s", path);
+    snprintf(p->host_names[k], VH_NAME_LEN, "%s", name);
+}
+
 static void host_scan(Plugin *p) {
     const char *dir = getenv("VC_PLUGIN_DIR");   /* test hook: a folder of plugins instead of the MPC's list */
     char settings[300];
     p->host_count = 0;
+    p->host_top = 0;
+    /* 1. the MPC's own plugin list, in the MPC's order; without a settings file, the plugin folder */
+    int listed = 0;
     if (!dir && mpc_settings_find(settings, sizeof settings) == 0) {
         MpcPlugin list[HOST_MAX];
         int n = mpc_plugin_list(settings, list, HOST_MAX);
-        if (n >= 0) {
-            for (int i = 0; i < n; i++) {
-                memcpy(p->host_paths[i], list[i].path, VH_PATH_LEN);   /* both fixed size and always terminated */
-                memcpy(p->host_names[i], list[i].name, VH_NAME_LEN);
-            }
-            p->host_count = n;
-            p->host_scanned = 1;
-            return;
+        for (int i = 0; i >= 0 && i < n; i++) host_add(p, list[i].path, list[i].name);
+        listed = n >= 0;
+    }
+    if (!listed) {
+        int n = vh_list(dir ? dir : HOST_DIR, p->host_scan_paths, HOST_SCAN_MAX);
+        for (int i = 0; i < n; i++) {
+            VhInfo info;
+            if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, p->host_scan_paths[i], info.name);
         }
     }
-    if (!dir) dir = HOST_DIR;
-    int n = vh_list(dir, p->host_scan_paths, HOST_SCAN_MAX);
-    for (int i = 0; i < n && p->host_count < HOST_MAX; i++) {
+    /* 2. the MPC's expansions folder and its subfolders */
+    const char *exp = getenv("VC_EXPANSIONS_DIR");   /* test hook */
+    int n = mpc_walk_plugins(exp ? exp : MPC_EXPANSIONS_DIR, p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
+    for (int i = 0; i >= 0 && i < n; i++) {
         VhInfo info;
-        if (vh_probe(p->host_scan_paths[i], &info) != 0 || !info.is_instrument) continue;
-        int k = p->host_count++;
-        snprintf(p->host_paths[k], VH_PATH_LEN, "%s", p->host_scan_paths[i]);
-        snprintf(p->host_names[k], VH_NAME_LEN, "%s", info.name);
+        if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, p->host_scan_paths[i], info.name);
     }
     p->host_scanned = 1;
 }
@@ -1198,6 +1237,12 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             }
             if (i == P_COPY) do_copy_to_custom(p);
         if (i == P_HOST_SCAN) { p->host_scan_req = 1; host_kick(p); return; }
+        if (i == P_HOST_UP || i == P_HOST_DOWN) {    /* the Host page shows HOST_ROWS instruments at a time */
+            int top = p->host_top + (i == P_HOST_DOWN ? HOST_ROWS : -HOST_ROWS);
+            int last = p->host_count - HOST_ROWS > 0 ? p->host_count - HOST_ROWS : 0;
+            p->host_top = top < 0 ? 0 : top > last ? last : top;
+            return;
+        }
         if (i == P_HOST_PREV || i == P_HOST_NEXT) {   /* steps Host plugin through None and the scanned instruments */
             int cycle = p->host_count + 1, want = p->host_want + (i == P_HOST_NEXT ? 1 : -1);
             if (want < 0) want = cycle - 1;
@@ -1317,6 +1362,16 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_PAD_BASE: e->pad_base = idx_of(p, i); break;
     case P_MIDI_OUT: apply_out_mode(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
     case P_HOST_SLOT: p->host_want = idx_of(p, i); host_kick(p); break;
+    case P_HOST_PICK: {   /* a row on the Host page: the instrument at that row of the page */
+        int want = p->host_top + idx_of(p, i) + 1;
+        if (want <= p->host_count) {
+            p->host_want = want;
+            p->val[P_HOST_SLOT] = norm_of(P_HOST_SLOT, want);
+            refresh_host(p);
+            host_kick(p);
+        }
+        break;
+    }
     case P_MIDI_CH: e->out_channel = idx_of(p, i); break;
     case P_PATTERN: apply_pattern(p); if (from_host) refresh_host(p); break;
     case P_PAT_RATE: e->pat_rate = idx_of(p, i); break;
@@ -1425,6 +1480,17 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     b[0] = 0;
     int x = idx_of(p, i);
     Engine *e = p->eng;
+    if (i >= P_HOST_ROW0 && i <= P_HOST_ROW_END) {   /* a row of the Host page: the instrument, and its folder if it has one */
+        int k = p->host_top + (i - P_HOST_ROW0);
+        if (k < p->host_count) {
+            char folder[96];
+            host_folder(p->host_paths[k], folder, sizeof folder);
+            if (folder[0]) snprintf(b, sizeof b, "%s   (%s)", p->host_names[k], folder);
+            else copy_str(b, p->host_names[k], sizeof b);
+        }
+        copy_str(out, b, max);
+        return;
+    }
     if (i >= P_PADNOTES0 && i <= P_PADNOTES_END) { /* the notes this pad plays, from the layout the screen shows */
         static Voicing v[VC_PADS];
         int k = view_bank_of(p) * 16 + (i - P_PADNOTES0);

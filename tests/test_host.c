@@ -1606,14 +1606,14 @@ int main(int argc, char **argv) {
         hfx->setParameter(hfx, pScan, 1.f); hfx->setParameter(hfx, pScan, 0.f);      /* press Scan */
         int ready = 0;
         for (int t = 0; t < 300 && !ready; t++) {                                     /* wait for the background scan */
-            hfx->setParameter(hfx, pSlot, 1.f / 16.f);
+            hfx->setParameter(hfx, pSlot, 1.f / 64.f);   /* slot 1 of HOST_MAX + 1 steps */
             display(hfx, pSlot, d);
             if (!strcmp(d, "Fake Sine")) ready = 1;
             else { struct timespec ts = {0, 20 * 1000000L}; nanosleep(&ts, 0); }
         }
         CHECK(ready, "the scan finds the test instrument and the picker shows its name");
         display(hfx, pSlot + 0, d);
-        hfx->setParameter(hfx, pSlot, 2.f / 16.f);
+        hfx->setParameter(hfx, pSlot, 2.f / 64.f);
         display(hfx, pSlot, d);
         CHECK(!strcmp(d, "-"), "Velvet Chords itself is not listed as a second instrument (slot 2 is empty: %s)", d);
         int pNext = find_param(hfx, "Host next");
@@ -1623,7 +1623,7 @@ int main(int argc, char **argv) {
         { struct timespec ts = {0, 200 * 1000000L}; nanosleep(&ts, 0); }
         display(hfx, pSlot, d);
         CHECK(!strcmp(d, "Fake Sine"), "Host next picks the first scanned instrument (%s)", d);
-        hfx->setParameter(hfx, pSlot, 1.f / 16.f);
+        hfx->setParameter(hfx, pSlot, 1.f / 64.f);
         { struct timespec ts = {0, 200 * 1000000L}; nanosleep(&ts, 0); }            /* let the load finish */
 
         EvBuf eb; memset(&eb, 0, sizeof eb);
@@ -1677,6 +1677,54 @@ int main(int argc, char **argv) {
         display(lfx, pSlot, d);
         CHECK(!strcmp(d, "None"), "Velvet Chords itself is not in the MPC's list, so the picker wraps to None after one instrument (%s)", d);
         lfx->dispatcher(lfx, effClose, 0, 0, 0, 0);
+        unsetenv("VC_SETTINGS_FILE");
+        remove(settings);
+    }
+    /* the Host page: 10 instruments, 8 rows at a time, one of them in a subfolder. The files don't have to load here:
+     * the page shows names and folders, and paging moves through the list. */
+    {
+        const char *settings = "build/native/mpc_page_test.xml";
+        FILE *sf = fopen(settings, "w");
+        if (sf) {
+            fprintf(sf, "<PROPERTIES><VALUE name=\"pluginList-arm\"><KNOWNPLUGINS>");
+            for (int k = 1; k <= 10; k++)
+                fprintf(sf, "<PLUGIN name=\"Inst %02d\" file=\"%s/inst%02d.so\" uid=\"4a4b4b4b\" isInstrument=\"1\"/>",
+                        k, k == 9 ? "/sdcard/vst/pad" : "/sdcard/vst", k);
+            fprintf(sf, "</KNOWNPLUGINS></VALUE></PROPERTIES>");
+            fclose(sf);
+        }
+        unsetenv("VC_PLUGIN_DIR");
+        setenv("VC_SETTINGS_FILE", settings, 1);
+        AEffect *pfx = open_fx();
+        int pScan = find_param(pfx, "Scan plugins"), pDown = find_param(pfx, "Host page down");
+        int pUp = find_param(pfx, "Host page up"), pPick = find_param(pfx, "Host row");
+        int pRow1 = find_param(pfx, "Host row 1"), pRow3 = find_param(pfx, "Host row 3");
+        int pRow7 = find_param(pfx, "Host row 7"), pRow8 = find_param(pfx, "Host row 8");
+        int pSlot = find_param(pfx, "Host plugin");
+        char d[160];
+        pfx->setParameter(pfx, pScan, 1.f); pfx->setParameter(pfx, pScan, 0.f);
+        { struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0); }
+        display(pfx, pRow1, d);
+        CHECK(!strcmp(d, "Inst 01"), "row 1 of the Host page shows the first instrument (%s)", d);
+        display(pfx, pRow3, d);
+        CHECK(!strcmp(d, "Inst 03"), "row 3 shows the third instrument (%s)", d);
+        pfx->setParameter(pfx, pDown, 1.f); pfx->setParameter(pfx, pDown, 0.f);     /* page down: the last page is full, so it shows 3 to 10 */
+        display(pfx, pRow1, d);
+        CHECK(!strcmp(d, "Inst 03"), "page down goes to the last full page, starting at the third instrument (%s)", d);
+        display(pfx, pRow8, d);
+        CHECK(!strcmp(d, "Inst 10"), "row 8 shows the last instrument (%s)", d);
+        display(pfx, pRow7, d);
+        CHECK(!strcmp(d, "Inst 09   (pad)"), "the 9th instrument shows its subfolder (%s)", d);
+        pfx->setParameter(pfx, pDown, 1.f); pfx->setParameter(pfx, pDown, 0.f);     /* already on the last page: stays put */
+        display(pfx, pRow1, d);
+        CHECK(!strcmp(d, "Inst 03"), "paging down past the last page stays on it (%s)", d);
+        pfx->setParameter(pfx, pUp, 1.f); pfx->setParameter(pfx, pUp, 0.f);
+        display(pfx, pRow1, d);
+        CHECK(!strcmp(d, "Inst 01"), "page up goes back to the first page (%s)", d);
+        pfx->setParameter(pfx, pPick, 1.f);                                        /* pick row 8 (the last of 8 steps) */
+        display(pfx, pSlot, d);
+        CHECK(!strcmp(d, "Inst 08"), "picking a row selects that instrument (%s)", d);
+        pfx->dispatcher(pfx, effClose, 0, 0, 0, 0);
         unsetenv("VC_SETTINGS_FILE");
         remove(settings);
     }

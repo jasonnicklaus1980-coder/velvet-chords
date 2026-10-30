@@ -19,4 +19,13 @@ int mpc_settings_find(char *buf, size_t len);
  * or isn't well-formed XML. */
 int mpc_plugin_list(const char *settings_path, MpcPlugin *out, int max);
 
+/* The MPC's expansions folder, as given by the user (not yet checked on a device). The VC_EXPANSIONS_DIR environment
+ * variable overrides it (test hook). */
+#define MPC_EXPANSIONS_DIR "/media/az01-internal/Expansions"
+#define MPC_WALK_DEPTH 4   /* how many subfolder levels below the expansions folder are searched */
+
+/* Writes the path of every .so file in dir and its subfolders (up to depth levels down) into paths, up to max.
+ * Returns the count, or -1 if dir can't be read. Nothing is loaded. */
+int mpc_walk_plugins(const char *dir, char paths[][VH_PATH_LEN], int max, int depth);
+
 #endif
