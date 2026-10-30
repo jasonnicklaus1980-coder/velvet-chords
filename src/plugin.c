@@ -8,6 +8,7 @@
 #include "audioanalysis.h"
 #include "fx.h"
 #include "midiimport.h"
+#include "vhost.h"
 #include <dirent.h>
 #include <strings.h>
 #include <unistd.h>
@@ -29,6 +30,11 @@
 #define CHUNK_VERSION 12 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts) */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
+#define HOST_MAX 16       /* hosted instruments you can pick from the scanned plugins */
+#define HOST_SCAN_MAX 64  /* files looked at in the plugin folder */
+#define HOST_BLOCK 512    /* block size a hosted instrument is opened with */
+#define HOST_MIX_MAX 4096 /* frames rendered per call into the mix buffers */
+#define HOST_DIR "/sdcard/vst"
 
 enum {
     P_MODE, P_SONG, P_SECTION, P_KEY, P_SCALE, P_TRANSPOSE, P_VOICING, P_INVERSION, P_OCTAVE, P_VL,
@@ -70,6 +76,8 @@ enum {
     P_PADNOTES0 = P_RELATIVE + 1, P_PADNOTES_END = P_PADNOTES0 + 15,
     /* the Play page's progression stepper: previous and next (appended, so saved projects keep their places) */
     P_PROG_PREV = P_PADNOTES_END + 1, P_PROG_NEXT,
+    /* hosted VST2 instrument (appended: older projects keep their places) */
+    P_HOST_SLOT, P_HOST_SCAN, P_HOST_VOL,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -243,6 +251,9 @@ static void init_param_info(void) {
     P(P_UPROG_CLEAR, "Clear progression", 2, 0.f, 1)
     P(P_PROG_PREV, "Progression prev", 2, 0.f, 1)
     P(P_PROG_NEXT, "Progression next", 2, 0.f, 1)
+    P(P_HOST_SLOT, "Host plugin", 17, 0.f, 0)
+    P(P_HOST_SCAN, "Scan plugins", 2, 0.f, 1)
+    P(P_HOST_VOL, "Host volume", 0, 0.8f, 0)
     P(P_BANK_A, "Bank A", 2, 1.f, 0)
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
@@ -301,6 +312,13 @@ typedef struct {
     int out_mode, flush_routes;
     int riff_sel, note_sel;     /* riff slot shown by the Riff step parameters; note shown by Edit note */
     volatile int refresh_req, refresh_quit;
+    /* hosted VST2 instrument: scanned and loaded on the background thread; the audio thread reads host */
+    VHost *hosted;
+    volatile int host_want, host_pending, host_scan_req, host_slot, host_count, host_scanned;
+    char host_paths[HOST_MAX][VH_PATH_LEN];
+    char host_names[HOST_MAX][VH_NAME_LEN];
+    char host_scan_paths[HOST_SCAN_MAX][VH_PATH_LEN];
+    float hostL[HOST_MIX_MAX], hostR[HOST_MIX_MAX];
     volatile int have_audio_thread, opened;
     pthread_t audio_thread;
     float trig_last[NUM_PARAMS];
@@ -476,6 +494,97 @@ static void mlog_service(Plugin *p) {
     if (!p->midi_log_on) { fclose(f); p->mlog_file = 0; }
 }
 
+/* ---------- hosted VST2 instrument (src/vhost.c) ----------
+ * The plugin folder is scanned and the chosen instrument loaded on the background thread (or on the control thread
+ * when no background thread runs). The audio thread only reads the loaded instance and renders it; it never loads,
+ * scans or allocates. Loading an unknown plugin runs its code, so a plugin that crashes can take the MPC with it. */
+static void host_scan(Plugin *p) {
+    const char *dir = getenv("VC_PLUGIN_DIR");   /* test hook */
+    if (!dir) dir = HOST_DIR;
+    int n = vh_list(dir, p->host_scan_paths, HOST_SCAN_MAX);
+    p->host_count = 0;
+    for (int i = 0; i < n && p->host_count < HOST_MAX; i++) {
+        VhInfo info;
+        if (vh_probe(p->host_scan_paths[i], &info) != 0 || !info.is_instrument) continue;
+        int k = p->host_count++;
+        snprintf(p->host_paths[k], VH_PATH_LEN, "%s", p->host_scan_paths[i]);
+        snprintf(p->host_names[k], VH_NAME_LEN, "%s", info.name);
+    }
+    p->host_scanned = 1;
+}
+
+static void host_apply(Plugin *p) {
+    int want = p->host_want;
+    if (want < 0 || want > p->host_count) want = 0;
+    VHost *old = __atomic_load_n(&p->hosted, __ATOMIC_ACQUIRE);
+    VHost *next = want > 0 ? vh_open(p->host_paths[want - 1], p->eng->sr, HOST_BLOCK) : NULL;
+    p->host_slot = next ? want : 0;
+    __atomic_store_n(&p->eng->host_tap, next ? 1 : 0, __ATOMIC_RELEASE);
+    __atomic_store_n(&p->hosted, next, __ATOMIC_RELEASE);
+    if (old) {
+        /* the audio thread may still be rendering the old instance: give it time to leave before closing */
+        struct timespec ts = {0, 60 * 1000000L};
+        nanosleep(&ts, 0);
+        vh_close(old);
+    }
+}
+
+static void host_service(Plugin *p) {
+    if (p->host_scan_req) { p->host_scan_req = 0; host_scan(p); p->host_pending = 1; }
+    if (p->host_pending) { p->host_pending = 0; host_apply(p); }
+}
+
+static void host_kick(Plugin *p) {
+    p->host_pending = 1;
+    if (!p->refresh_running) host_service(p);
+}
+
+static void host_close(Plugin *p) {
+    __atomic_store_n(&p->eng->host_tap, 0, __ATOMIC_RELEASE);
+    VHost *h = __atomic_exchange_n(&p->hosted, NULL, __ATOMIC_ACQ_REL);
+    if (h) vh_close(h);
+}
+
+/* Plays the notes the built-in engine queued this block through the hosted instrument, and mixes its output in. */
+static void host_render(Plugin *p, int n) {
+    Engine *e = p->eng;
+    VHost *h = __atomic_load_n(&p->hosted, __ATOMIC_ACQUIRE);
+    int nq = e->nhq > EN_HOST_EV ? EN_HOST_EV : e->nhq;
+    if (!h) { e->nhq = 0; return; }
+    for (int i = 0; i < nq; i++) {                       /* keep the notes in time order (the queue is short) */
+        HostEv x = e->hq[i];
+        int j = i;
+        while (j > 0 && e->hq[j - 1].frame > x.frame) { e->hq[j] = e->hq[j - 1]; j--; }
+        e->hq[j] = x;
+    }
+    float vol = p->val[P_HOST_VOL];
+    for (int pos = 0; pos < n; pos += HOST_MIX_MAX) {
+        int len = n - pos < HOST_MIX_MAX ? n - pos : HOST_MIX_MAX;
+        VhMidi ev[EN_HOST_EV];
+        int ne = 0;
+        for (int i = 0; i < nq; i++) {
+            int f = e->hq[i].frame;
+            if (f < 0) f = 0;
+            if (f > n - 1) f = n - 1;                    /* notes stamped past the block play at its end */
+            if (f < pos || f >= pos + len) continue;
+            VhMidi *m = &ev[ne++];
+            m->frame = f - pos;
+            if (e->hq[i].kind == 2) { m->status = 0xB0; m->data1 = 123; m->data2 = 0; }   /* all notes off */
+            else {
+                m->status = (unsigned char)(e->hq[i].kind ? 0x90 : 0x80);
+                m->data1 = e->hq[i].note;
+                m->data2 = e->hq[i].vel;
+            }
+        }
+        vh_process(h, ev, ne, p->hostL, p->hostR, len);
+        for (int k = 0; k < len; k++) {
+            p->scratchL[pos + k] += vol * p->hostL[k];
+            p->scratchR[pos + k] += vol * p->hostR[k];
+        }
+    }
+    e->nhq = 0;
+}
+
 typedef int (*pthread_create_fn)(pthread_t *, const pthread_attr_t *, void *(*)(void *), void *);
 typedef int (*pthread_join_fn)(pthread_t, void **);
 
@@ -485,6 +594,7 @@ static void *refresh_loop(void *arg) {
         struct timespec ts = {0, 40 * 1000000L};
         nanosleep(&ts, 0);
         mlog_service(p);
+        host_service(p);
         if (p->refresh_req && !p->refresh_quit) {
             p->refresh_req = 0;
             if (p->host) p->host(&p->fx, audioMasterUpdateDisplay, 0, 0, 0, 0.f);
@@ -1068,6 +1178,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
                 return;
             }
             if (i == P_COPY) do_copy_to_custom(p);
+        if (i == P_HOST_SCAN) { p->host_scan_req = 1; host_kick(p); return; }
             if (i == P_UPROG_SAVE) save_user_prog(p, idx_of(p, P_UPROG_SLOT));
             if (i == P_UPRE_SAVE) save_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_UPRE_LOAD) load_user_preset(p, idx_of(p, P_UPRE_SLOT));
@@ -1176,6 +1287,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_VOLUME: e->synth.volume = v; break;
     case P_PAD_BASE: e->pad_base = idx_of(p, i); break;
     case P_MIDI_OUT: apply_out_mode(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
+    case P_HOST_SLOT: p->host_want = idx_of(p, i); host_kick(p); break;
     case P_MIDI_CH: e->out_channel = idx_of(p, i); break;
     case P_PATTERN: apply_pattern(p); if (from_host) refresh_host(p); break;
     case P_PAT_RATE: e->pat_rate = idx_of(p, i); break;
@@ -1414,6 +1526,12 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_ARP_RATE: copy_str(b, RATES[x], sizeof(b)); break;
     case P_VEL: copy_str(b, VELS[x], sizeof(b)); break;
     case P_SOUND: copy_str(b, SY_SOUND_NAMES[x], sizeof(b)); break;
+    case P_HOST_SLOT:
+        if (x == 0) copy_str(b, "None", sizeof(b));
+        else if (x <= p->host_count) copy_str(b, p->host_names[x - 1], sizeof(b));
+        else copy_str(b, p->host_scanned ? "-" : "Scan first", sizeof(b));
+        break;
+    case P_HOST_SCAN: copy_str(b, "Scan", sizeof(b)); break;
     case P_SOUND_X: copy_str(b, x == 0 ? "-" : SY_SOUND_NAMES[SY_SILENT + x], sizeof(b)); break;
     case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
     case P_PAD_BASE:
@@ -1776,6 +1894,7 @@ static void render(Plugin *p, float **out, int n, int accumulate) {
         if (p->audition_left <= 0) { en_push_midi(e, 0, 0x80, (unsigned char)p->audition_note, 0); p->audition_note = -1; }
     }
     en_process(e, p->scratchL, p->scratchR, n);
+    host_render(p, n);
     fx_reverb(&p->rv, p->scratchL, p->scratchR, n, p->val[P_REVERB]);
     apply_shift(p);
     if (e->events_changed && e->last_pad >= 0) { /* screen follows the played pad */
@@ -1829,6 +1948,7 @@ static void flush_port_now(Plugin *p) {
 
 static void destroy(Plugin *p) {
     stop_refresh_thread(p);
+    host_close(p);
     flush_port_now(p);
     vc_port_close(&p->port);
     free(p->scratchL); free(p->scratchR); free(p->chunk); free(p->outEvents); free(p->eng); free(p);
@@ -1839,7 +1959,9 @@ static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t valu
     switch (op) {
     case effOpen: p->opened = 1; if (!p->refresh_running) start_refresh_thread(p); scan_import_files(p); return 0; /* host knows us now */
     case effClose: destroy(p); return 0;
-    case effSetSampleRate: en_set_sr(p->eng, opt); fx_reverb_init(&p->rv, p->eng->sr); return 0;
+    case effSetSampleRate: en_set_sr(p->eng, opt); fx_reverb_init(&p->rv, p->eng->sr);
+        if (p->host_want > 0) host_kick(p);                 /* the hosted instrument reopens at the new rate */
+        return 0;
     case effSetBlockSize: ensure_scratch(p, (int)value); return 0;
     case effMainsChanged: {
         unsigned char mv[3] = {(unsigned char)(value != 0), 0, 0};

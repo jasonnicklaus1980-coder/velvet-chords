@@ -1,3 +1,5 @@
+#include <time.h>
+#include <unistd.h>
 /* Minimal VST2 host used to test velvetchords.so through its binary interface:
  * load, enumerate parameters, play pads, check audio/stuck notes, save/restore the chunk,
  * trigger Export MIDI, and render a demo WAV of a song section. Runs natively or under qemu-arm. */
@@ -1589,6 +1591,55 @@ int main(int argc, char **argv) {
             int hanging = 0;
             for (int c2 = 0; c2 < 16; c2++) for (int k = 0; k < 128; k++) if (all[c2][k] > 0) hanging++;
             CHECK(hanging == 0, "no instance leaves notes hanging on the port, even when closed mid-chord (%d)", hanging);
+    }
+    /* hosted VST2 instrument: scanned from VC_PLUGIN_DIR (the folder holds the test instrument and Velvet Chords
+     * itself, which must not be listed), loaded on the background thread, and played through the plugin */
+    {
+        setenv("VC_PLUGIN_DIR", "build/native/vhdir", 1);
+        AEffect *hfx = open_fx();
+        int pSlot = find_param(hfx, "Host plugin"), pScan = find_param(hfx, "Scan plugins");
+        int pVol = find_param(hfx, "Host volume"), pSound = find_param(hfx, "Sound");
+        CHECK(pSlot >= 0 && pScan >= 0 && pVol >= 0, "the hosted-instrument parameters exist");
+        char d[96];
+        float L[512], R[512];
+        hfx->setParameter(hfx, pSound, value_of(hfx, pSound, "Silent (MIDI only)"));   /* only the hosted sound may be heard */
+        hfx->setParameter(hfx, pScan, 1.f); hfx->setParameter(hfx, pScan, 0.f);      /* press Scan */
+        int ready = 0;
+        for (int t = 0; t < 300 && !ready; t++) {                                     /* wait for the background scan */
+            hfx->setParameter(hfx, pSlot, 1.f / 16.f);
+            display(hfx, pSlot, d);
+            if (!strcmp(d, "Fake Sine")) ready = 1;
+            else { struct timespec ts = {0, 20 * 1000000L}; nanosleep(&ts, 0); }
+        }
+        CHECK(ready, "the scan finds the test instrument and the picker shows its name");
+        display(hfx, pSlot + 0, d);
+        hfx->setParameter(hfx, pSlot, 2.f / 16.f);
+        display(hfx, pSlot, d);
+        CHECK(!strcmp(d, "-"), "Velvet Chords itself is not listed as a second instrument (slot 2 is empty: %s)", d);
+        hfx->setParameter(hfx, pSlot, 1.f / 16.f);
+        { struct timespec ts = {0, 200 * 1000000L}; nanosleep(&ts, 0); }            /* let the load finish */
+
+        EvBuf eb; memset(&eb, 0, sizeof eb);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(hfx, &eb, 1);                     /* pad 1: a chord */
+        double heard = 0;
+        for (int k = 0; k < 4; k++) heard += block(hfx, L, R, 512);
+        CHECK(heard > 0.01, "the hosted instrument sounds through the plugin (energy %.4f)", heard);
+
+        hfx->setParameter(hfx, pVol, 0.f);
+        double muted = 0;
+        for (int k = 0; k < 2; k++) muted += block(hfx, L, R, 512);
+        CHECK(muted < 1e-9, "Host volume 0 silences the hosted instrument");
+        hfx->setParameter(hfx, pVol, 0.8f);
+
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(hfx, &eb, 1);
+        hfx->setParameter(hfx, pSlot, 0.f);                                        /* unload */
+        { struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0); }
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(hfx, &eb, 1);
+        double after = 0;
+        for (int k = 0; k < 4; k++) after += block(hfx, L, R, 512);
+        CHECK(after < 1e-9, "with None selected, the built-in sound is silent and nothing else plays (%.6f)", after);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(hfx, &eb, 1);
+        hfx->dispatcher(hfx, effClose, 0, 0, 0, 0);
     }
     if (g_probe_count) CHECK(*g_probe_count == 0, "no heap allocation or free inside processReplacing or effProcessEvents (%ld calls in %ld blocks)", *g_probe_count, g_probe_blocks);
     else printf("  (allocation probe not loaded: run through make test to check heap use on the audio path)\n");

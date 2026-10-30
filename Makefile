@@ -5,7 +5,7 @@
 #   make release    package dist/VelvetChords-<ver>.zip from the ARM build
 
 VERSION := 1.0.0
-SRC := src/vcmath.c src/chords.c src/layouts.c src/songs_gen.c src/presets_gen.c src/synth.c src/fx.c src/engine.c src/export.c src/midiport.c src/midiimport.c src/progression.c src/audioanalysis.c
+SRC := src/vhost.c src/vcmath.c src/chords.c src/layouts.c src/songs_gen.c src/presets_gen.c src/synth.c src/fx.c src/engine.c src/export.c src/midiport.c src/midiimport.c src/progression.c src/audioanalysis.c
 WARN := -Wall -Wextra -Wno-unused-parameter
 COMMON := -std=gnu99 -O2 $(WARN) -fPIC -fvisibility=hidden -fno-strict-aliasing
 
