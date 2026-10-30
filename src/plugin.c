@@ -532,11 +532,12 @@ static void host_folder(const char *path, char *out, size_t len) {
     out[n] = 0;
 }
 
-/* adds an instrument to the picker unless it's already there */
-static void host_add(Plugin *p, const char *path, const char *name) {
-    if (p->host_count >= HOST_MAX) return;
-    for (int k = 0; k < p->host_count; k++) if (!strcmp(p->host_paths[k], path)) return;
-    int k = p->host_count++;
+/* adds an instrument to the list being built, unless it's already there. The list is filled in place but counted in
+ * *found, and host_count isn't touched until the scan ends, so the picker never reads a half-built list. */
+static void host_add(Plugin *p, int *found, const char *path, const char *name) {
+    if (*found >= HOST_MAX) return;
+    for (int k = 0; k < *found; k++) if (!strcmp(p->host_paths[k], path)) return;
+    int k = (*found)++;
     snprintf(p->host_paths[k], VH_PATH_LEN, "%s", path);
     snprintf(p->host_names[k], VH_NAME_LEN, "%s", name);
 }
@@ -544,21 +545,21 @@ static void host_add(Plugin *p, const char *path, const char *name) {
 static void host_scan(Plugin *p) {
     const char *dir = getenv("VC_PLUGIN_DIR");   /* test hook: a folder of plugins instead of the MPC's list */
     char settings[300];
-    p->host_count = 0;
+    int found = 0;
     p->host_top = 0;
     /* 1. the MPC's own plugin list, in the MPC's order; without a settings file, the plugin folder */
     int listed = 0;
     if (!dir && mpc_settings_find(settings, sizeof settings) == 0) {
         MpcPlugin list[HOST_MAX];
         int n = mpc_plugin_list(settings, list, HOST_MAX);
-        for (int i = 0; i >= 0 && i < n; i++) host_add(p, list[i].path, list[i].name);
+        for (int i = 0; i >= 0 && i < n; i++) host_add(p, &found, list[i].path, list[i].name);
         listed = n >= 0;
     }
     if (!listed) {
         int n = vh_list(dir ? dir : HOST_DIR, p->host_scan_paths, HOST_SCAN_MAX);
         for (int i = 0; i < n; i++) {
             VhInfo info;
-            if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, p->host_scan_paths[i], info.name);
+            if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, &found, p->host_scan_paths[i], info.name);
         }
     }
     /* 2. the MPC's expansions folder and its subfolders */
@@ -566,9 +567,11 @@ static void host_scan(Plugin *p) {
     int n = mpc_walk_plugins(exp ? exp : MPC_EXPANSIONS_DIR, p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
     for (int i = 0; i >= 0 && i < n; i++) {
         VhInfo info;
-        if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, p->host_scan_paths[i], info.name);
+        if (vh_probe(p->host_scan_paths[i], &info) == 0 && info.is_instrument) host_add(p, &found, p->host_scan_paths[i], info.name);
     }
-    p->host_scanned = 1;
+    /* publish the finished list: the names are in place before the count that makes them visible */
+    __atomic_store_n(&p->host_count, found, __ATOMIC_RELEASE);
+    __atomic_store_n(&p->host_scanned, 1, __ATOMIC_RELEASE);
 }
 
 static void host_apply(Plugin *p) {
