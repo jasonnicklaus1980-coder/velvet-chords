@@ -22,7 +22,6 @@ int mpc_plugin_list(const char *settings_path, MpcPlugin *out, int max);
 /* The MPC's expansions folder, as given by the user (not yet checked on a device). The VC_EXPANSIONS_DIR environment
  * variable overrides it (test hook). */
 #define MPC_EXPANSIONS_DIR "/media/az01-internal/Expansions"
-#define MPC_SD_DIR "/sdcard"   /* the SD card, where the plugin folder and the expansions can also be */
 #define MPC_WALK_DEPTH 4   /* how many subfolder levels below each plugin folder are searched */
 
 /* Writes the path of every .so file in dir and its subfolders (up to depth levels down) into paths, up to max.
