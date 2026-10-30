@@ -150,9 +150,14 @@ class Images:
         a = Art(w, h)
         if black:
             a.rect(0, 0, w, h, 3, fill=ACCENT if on else KEY_BLACK, edge=KEY_BLACK_EDGE, corners=(False, False, True, True))
+            # a bevelled front: a lit lip along the top and a dark foot, so the key reads as set into the panel
+            a.line(2, 1, w - 2, 1, ACCENT_DIM if on else "#3a3d44")
+            a.line(2, h - 2, w - 2, h - 2, "#000000")
         else:
             a.rect(0, 0, w, h, 3, fill=ACCENT if on else KEY_WHITE, edge=KEY_WHITE_EDGE if not on else ACCENT_DIM,
                    corners=(False, False, True, True))
+            # the shadow the black keys cast onto the white keys below them
+            a.rect(0, 0, w, 5, 0, fill="#00000033" if not on else "#06121f55")
             yy = h - 38
             a.text_center(0, yy, w, yy + 14, names[pc], 11 if w >= 52 else 10, INK_ON_ACCENT if on else "#55575c", "Medium")
         return a.done()
