@@ -13,7 +13,7 @@ int mpc_walk_plugins(const char *dir, char paths[][VH_PATH_LEN], int max, int de
     struct dirent *de;
     while (count < max && (de = readdir(d)) != NULL) {
         if (de->d_name[0] == '.') continue;
-        char path[VH_PATH_LEN];
+        char path[2 * VH_PATH_LEN];   /* a directory path plus a file name can be longer than one entry */
         snprintf(path, sizeof path, "%s/%s", dir, de->d_name);
         size_t len = strlen(de->d_name);
         if (len >= 4 && strcmp(de->d_name + len - 3, ".so") == 0) {

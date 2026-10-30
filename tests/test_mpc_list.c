@@ -88,8 +88,14 @@ int main(int argc, char **argv) {
     int w = mpc_walk_plugins(root, walked, 8, MPC_WALK_DEPTH);
     if (w != 2) printf("  (the walk returned %d)\n", w);
     CHECK(w == 2, "the walk finds the .so files at the top and in a subfolder, not the text file or the too-deep one");
-    CHECK(w == 2 && strstr(walked[0], "top.so") != NULL, "the top-level plugin is found");
-    CHECK(w == 2 && strstr(walked[1], "pads/warm.so") != NULL, "the subfolder plugin is found");
+    /* readdir order differs between systems, so look for each file rather than assuming a position */
+    int top = 0, sub = 0;
+    for (int i = 0; i < w; i++) {
+        if (strstr(walked[i], "/top.so") != NULL) top = 1;
+        if (strstr(walked[i], "pads/warm.so") != NULL) sub = 1;
+    }
+    CHECK(top, "the top-level plugin is found");
+    CHECK(sub, "the subfolder plugin is found");
     CHECK(mpc_walk_plugins("/nonexistent/expansions", walked, 8, MPC_WALK_DEPTH) == -1, "a missing expansions folder gives -1");
     remove("build/native/mpc_exp_test/top.so");
     remove("build/native/mpc_exp_test/readme.txt");
