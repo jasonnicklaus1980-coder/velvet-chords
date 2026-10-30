@@ -40,7 +40,7 @@ build/native build/arm:
 
 native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
-test: native vhost-test
+test: native vhost-test sample-meta-test
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
@@ -49,6 +49,14 @@ test: native vhost-test
 	rm -rf build/native/library && ./build/native/vc_export build/native/library
 	$(NATIVE_CC) -std=gnu99 -O1 -o build/native/list_params tools/list_params.c -ldl
 	sh scripts/check_skin.sh
+
+# sample metadata for keygroups (WAV format, root note, loops)
+build/native/test_sample_meta: tests/test_sample_meta.c src/sample_meta.c src/sample_meta.h | build/native
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_sample_meta.c src/sample_meta.c
+
+sample-meta-test: build/native/test_sample_meta
+	./build/native/test_sample_meta
+.PHONY: sample-meta-test
 
 # VST2 host (hosts a plugin inside Velvet Chords). The host is plain C; the test loads a small test instrument and
 # Velvet Chords itself (which must be refused). Both .so files go in one folder, which the host scans.
