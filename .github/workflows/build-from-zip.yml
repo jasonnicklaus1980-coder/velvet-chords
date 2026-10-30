@@ -3,7 +3,7 @@ name: Build from zip
 
 on:
   push:
-    branches: [main]
+    branches: [main, keygroups-prep]
   workflow_dispatch:
 
 jobs:
