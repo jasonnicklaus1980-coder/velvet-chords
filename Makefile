@@ -40,7 +40,7 @@ build/native build/arm:
 
 native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
-test: native
+test: native vhost-test
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
@@ -49,6 +49,20 @@ test: native
 	rm -rf build/native/library && ./build/native/vc_export build/native/library
 	$(NATIVE_CC) -std=gnu99 -O1 -o build/native/list_params tools/list_params.c -ldl
 	sh scripts/check_skin.sh
+
+# VST2 host (hosts a plugin inside Velvet Chords). The host is plain C; the test loads a small test instrument and
+# Velvet Chords itself (which must be refused). Both .so files go in one folder, which the host scans.
+build/native/vhost_test: tests/vhost_test.c src/vhost.c src/vhost.h src/vst2_abi.h | build/native
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/vhost_test.c src/vhost.c -ldl -lm
+
+build/native/vhdir/fake_synth.so: tests/fake_synth.c src/vst2_abi.h | build/native
+	mkdir -p build/native/vhdir
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -fPIC -Isrc -shared -o $@ tests/fake_synth.c -lm
+
+vhost-test: native build/native/vhost_test build/native/vhdir/fake_synth.so
+	cp build/native/velvetchords.so build/native/vhdir/velvetchords.so
+	./build/native/vhost_test build/native/vhdir/fake_synth.so build/native/vhdir/velvetchords.so build/native/vhdir
+.PHONY: vhost-test
 
 # regenerate the screen skin (needs python3-pil and the Poppins font); the result is committed in package/skin
 skin: native
