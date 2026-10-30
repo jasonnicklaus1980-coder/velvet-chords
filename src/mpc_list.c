@@ -4,34 +4,40 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <strings.h>
 
-int mpc_walk_plugins(const char *dir, char paths[][VH_PATH_LEN], int max, int depth) {
-    if (!dir || !paths || max <= 0) return -1;
+int mpc_walk_files(const char *dir, char paths[][VH_PATH_LEN], int max, int depth, const char *ext) {
+    if (!dir || !paths || !ext || max <= 0) return -1;
     DIR *d = opendir(dir);
     if (!d) return -1;
     int count = 0;
+    size_t elen = strlen(ext);
     struct dirent *de;
     while (count < max && (de = readdir(d)) != NULL) {
         if (de->d_name[0] == '.') continue;
         char path[2 * VH_PATH_LEN];   /* a directory path plus a file name can be longer than one entry */
         snprintf(path, sizeof path, "%s/%s", dir, de->d_name);
         size_t len = strlen(de->d_name);
-        if (len >= 4 && strcmp(de->d_name + len - 3, ".so") == 0) {
+        if (len > elen && strcasecmp(de->d_name + len - elen, ext) == 0) {
             snprintf(paths[count++], VH_PATH_LEN, "%s", path);
             continue;
         }
-        /* not a plugin: search it if it's a folder (opendir succeeds only on folders; stat() would need a newer glibc) */
+        /* not a match: search it if it's a folder (opendir succeeds only on folders; stat() would need a newer glibc) */
         if (depth > 0) {
             DIR *sub = opendir(path);
             if (sub) {
                 closedir(sub);
-                int got = mpc_walk_plugins(path, paths + count, max - count, depth - 1);
+                int got = mpc_walk_files(path, paths + count, max - count, depth - 1, ext);
                 if (got > 0) count += got;
             }
         }
     }
     closedir(d);
     return count;
+}
+
+int mpc_walk_plugins(const char *dir, char paths[][VH_PATH_LEN], int max, int depth) {
+    return mpc_walk_files(dir, paths, max, depth, ".so");
 }
 
 #define MPC_SETTINGS_DIR "/media/az01-internal/Settings"

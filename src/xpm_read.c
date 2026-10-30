@@ -76,7 +76,9 @@ int xpm_read(const char *xml, size_t len, XpmProgram *out) {
     const char *type = xml_attr(prog, "type");
     out->is_drum = type && strcmp(type, "Drum") == 0;
     if (type && strcmp(type, "Drum") != 0 && strcmp(type, "Keygroup") != 0) { xml_free(root); return -1; }
-    const char *name = xml_child_text(prog, "ProgramName");
+    /* MPC-V saves the name as Name; older notes call it ProgramName */
+    const char *name = xml_child_text(prog, "Name");
+    if (!name) name = xml_child_text(prog, "ProgramName");
     if (name) snprintf(out->name, sizeof out->name, "%s", name);
     out->num_keygroups = (int)num(prog, "KeygroupNumKeygroups", 128);
     out->pitchbend_octaves = num(prog, "KeygroupPitchBendRange", 0);

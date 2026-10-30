@@ -748,11 +748,12 @@ class Skin:
         c = []
         self.header_info(c, bg)
         bg.panel((12, 64, 1268, 144))
-        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 28, 96, 560, "Instrument")
-        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 604, 96, w=100, h=CH)
-        self.action_button(c, bg, "host_up", "Page up", "Host page up", 716, 96, w=140, h=CH)
-        self.action_button(c, bg, "host_down", "Page down", "Host page down", 868, 96, w=140, h=CH)
-        self.value_field(c, bg, "Host volume", 1020, 96, 240, caption="Host volume")
+        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 28, 96, 340, "Instrument")
+        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 384, 96, w=76, h=CH)
+        self.action_button(c, bg, "host_up", "Page up", "Host page up", 472, 96, w=116, h=CH)
+        self.action_button(c, bg, "host_down", "Page down", "Host page down", 600, 96, w=116, h=CH)
+        self.stepper(c, bg, "Kit", "Kit prev", "Kit next", 728, 96, 300, "Drum kit")
+        self.value_field(c, bg, "Host volume", 1040, 96, 212, caption="Host volume")
         bg.panel((12, 152, 1268, 620))
         bg.bar((12, 152, 1268, 620), "MPC plugin list and Expansions", right="Subfolder in brackets")
         for k in range(8):

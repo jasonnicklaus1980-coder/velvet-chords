@@ -28,4 +28,7 @@ int mpc_plugin_list(const char *settings_path, MpcPlugin *out, int max);
  * Returns the count, or -1 if dir can't be read. Nothing is loaded. */
 int mpc_walk_plugins(const char *dir, char paths[][VH_PATH_LEN], int max, int depth);
 
+/* The same walk for any file extension (case-insensitive, such as ".xpm"). */
+int mpc_walk_files(const char *dir, char paths[][VH_PATH_LEN], int max, int depth, const char *ext);
+
 #endif

@@ -1648,6 +1648,41 @@ int main(int argc, char **argv) {
         midi(&eb.ev[0], 0, 0x80, 36, 0); send(hfx, &eb, 1);
         hfx->dispatcher(hfx, effClose, 0, 0, 0, 0);
     }
+    /* the drum kit: Scan finds the kit in VC_KIT_DIR, Kit next loads it on the worker, its pad notes (36 and up) sound
+     * through the plugin with the built-in sound silenced, and Kit prev back to None silences it again */
+    {
+        setenv("VC_KIT_DIR", "build/native/kit_test", 1);
+        AEffect *kfx = open_fx();
+        int pKit = find_param(kfx, "Kit"), pKitNext = find_param(kfx, "Kit next"), pKitPrev = find_param(kfx, "Kit prev");
+        int pScan = find_param(kfx, "Scan plugins"), pSound = find_param(kfx, "Sound");
+        CHECK(pKit >= 0 && pKitNext >= 0 && pKitPrev >= 0, "the kit picker parameters exist");
+        char d[96];
+        float L[512], R[512];
+        kfx->setParameter(kfx, pSound, value_of(kfx, pSound, "Silent (MIDI only)"));
+        kfx->setParameter(kfx, pScan, 1.f); kfx->setParameter(kfx, pScan, 0.f);
+        { struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0); }
+        kfx->setParameter(kfx, pKitNext, 1.f); kfx->setParameter(kfx, pKitNext, 0.f);
+        display(kfx, pKit, d);
+        CHECK(!strcmp(d, "kit"), "the picker shows the kit by its file name (%s)", d);
+        { struct timespec ts = {0, 800 * 1000000L}; nanosleep(&ts, 0); }   /* the worker loads the samples */
+
+        EvBuf eb; memset(&eb, 0, sizeof eb);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(kfx, &eb, 1);                /* pad 1 at velocity 100: the snare layer */
+        double heard = 0;
+        for (int k = 0; k < 4; k++) heard += block(kfx, L, R, 512);
+        CHECK(heard > 0.01, "a pad note plays the kit's sample through the plugin (energy %.4f)", heard);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(kfx, &eb, 1);
+
+        kfx->setParameter(kfx, pKitPrev, 1.f); kfx->setParameter(kfx, pKitPrev, 0.f);   /* back to None */
+        { struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0); }
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(kfx, &eb, 1);
+        double after = 0;
+        for (int k = 0; k < 4; k++) after += block(kfx, L, R, 512);
+        CHECK(after < 1e-9, "with Kit None, the pad note is silent (%.6f)", after);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(kfx, &eb, 1);
+        kfx->dispatcher(kfx, effClose, 0, 0, 0, 0);
+        unsetenv("VC_KIT_DIR");
+    }
     /* the MPC's own plugin list: with a settings file present, the picker lists the instruments in its pluginList-arm
      * entries (here the test instrument and Velvet Chords itself, which must be left out), not the plugin folder */
     {
