@@ -9,6 +9,7 @@
 #include "fx.h"
 #include "midiimport.h"
 #include "vhost.h"
+#include "mpc_list.h"
 #include <dirent.h>
 #include <strings.h>
 #include <unistd.h>
@@ -30,7 +31,7 @@
 #define CHUNK_VERSION 12 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts) */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
-#define HOST_MAX 16       /* hosted instruments you can pick from the scanned plugins */
+#define HOST_MAX 64       /* hosted instruments you can pick from the MPC's plugin list */
 #define HOST_SCAN_MAX 64  /* files looked at in the plugin folder */
 #define HOST_BLOCK 512    /* block size a hosted instrument is opened with */
 #define HOST_MIX_MAX 4096 /* frames rendered per call into the mix buffers */
@@ -497,14 +498,30 @@ static void mlog_service(Plugin *p) {
 }
 
 /* ---------- hosted VST2 instrument (src/vhost.c) ----------
- * The plugin folder is scanned and the chosen instrument loaded on the background thread (or on the control thread
- * when no background thread runs). The audio thread only reads the loaded instance and renders it; it never loads,
- * scans or allocates. Loading an unknown plugin runs its code, so a plugin that crashes can take the MPC with it. */
+ * The picker lists the instruments in the MPC's own plugin list (MPC.settings), the same ones the MPC shows. Without a
+ * settings file (on a desktop) it scans the plugin folder instead. The chosen instrument is loaded on the background
+ * thread (or on the control thread when no background thread runs). The audio thread only reads the loaded instance and
+ * renders it; it never loads, scans or allocates. Loading an unknown plugin runs its code, so a plugin that crashes can
+ * take the MPC with it. */
 static void host_scan(Plugin *p) {
-    const char *dir = getenv("VC_PLUGIN_DIR");   /* test hook */
+    const char *dir = getenv("VC_PLUGIN_DIR");   /* test hook: a folder of plugins instead of the MPC's list */
+    char settings[300];
+    p->host_count = 0;
+    if (!dir && mpc_settings_find(settings, sizeof settings) == 0) {
+        MpcPlugin list[HOST_MAX];
+        int n = mpc_plugin_list(settings, list, HOST_MAX);
+        if (n >= 0) {
+            for (int i = 0; i < n; i++) {
+                memcpy(p->host_paths[i], list[i].path, VH_PATH_LEN);   /* both fixed size and always terminated */
+                memcpy(p->host_names[i], list[i].name, VH_NAME_LEN);
+            }
+            p->host_count = n;
+            p->host_scanned = 1;
+            return;
+        }
+    }
     if (!dir) dir = HOST_DIR;
     int n = vh_list(dir, p->host_scan_paths, HOST_SCAN_MAX);
-    p->host_count = 0;
     for (int i = 0; i < n && p->host_count < HOST_MAX; i++) {
         VhInfo info;
         if (vh_probe(p->host_scan_paths[i], &info) != 0 || !info.is_instrument) continue;

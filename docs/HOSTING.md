@@ -3,9 +3,9 @@
 Velvet Chords can load a VST2 instrument from the MPC's plugin folder and play it with its chords.
 
 ## Using it
-1. Put the instrument's `.so` file in `/sdcard/vst` (the same place as other plugins).
-2. Press **Scan plugins**. Velvet Chords lists the instruments it finds (VST2 instruments only; effects and Velvet Chords itself are not listed).
-3. Pick the instrument with **Host plugin** (1 to 16). **None** unloads it.
+1. Add the instrument to the MPC's plugin list as you would any plugin (its `.so` file in `/sdcard/vst`).
+2. Press **Scan plugins**. Velvet Chords reads the MPC's own plugin list (`MPC.settings`) and lists the VST2 instruments in it, in the same order the MPC shows them. Effects and Velvet Chords itself are not listed.
+3. Pick the instrument with **Host plugin**; Host prev and Host next step through the list, and **None** unloads it.
 4. Set **Host volume**. This level is on top of the built-in sound.
 5. To hear only the hosted instrument, set **Sound** to **Silent (MIDI only)**. The chords and notes still go to it.
 
@@ -13,7 +13,8 @@ The built-in sound and the hosted instrument play together unless you silence th
 
 ## Limits (read before relying on it)
 - **Crashes:** a hosted plugin runs inside Velvet Chords. If it crashes, the MPC's plugin process can crash with it.
-  Scanning loads every plugin in the folder once, so a bad plugin can crash during a scan.
+  Choosing an instrument loads it, so a bad plugin can crash on selection.
+  Without an MPC settings file (on a computer), Scan falls back to listing the plugin folder.
 - **Saved projects:** the project saves the Host plugin number, not the file name. After reopening a project, press
   **Scan plugins** first, so the number points at the same instrument.
 - **Plugin state:** a hosted plugin's own settings and presets are not saved in the project yet.

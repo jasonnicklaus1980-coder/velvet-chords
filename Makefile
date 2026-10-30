@@ -5,7 +5,7 @@
 #   make release    package dist/VelvetChords-<ver>.zip from the ARM build
 
 VERSION := 1.0.0
-SRC := src/vhost.c src/vcmath.c src/chords.c src/layouts.c src/songs_gen.c src/presets_gen.c src/synth.c src/fx.c src/engine.c src/export.c src/midiport.c src/midiimport.c src/progression.c src/audioanalysis.c
+SRC := src/vhost.c src/vcmath.c src/chords.c src/layouts.c src/songs_gen.c src/presets_gen.c src/synth.c src/fx.c src/engine.c src/export.c src/midiport.c src/midiimport.c src/progression.c src/audioanalysis.c src/xml_min.c src/mpc_list.c
 WARN := -Wall -Wextra -Wno-unused-parameter
 COMMON := -std=gnu99 -O2 $(WARN) -fPIC -fvisibility=hidden -fno-strict-aliasing
 
@@ -40,7 +40,7 @@ build/native build/arm:
 
 native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
-test: native vhost-test sample-meta-test keygroup-test
+test: native vhost-test sample-meta-test keygroup-test mpc-list-test
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
@@ -83,6 +83,14 @@ vhost-test: native build/native/vhost_test build/native/vhdir/fake_synth.so
 	cp build/native/velvetchords.so build/native/vhdir/velvetchords.so
 	./build/native/vhost_test build/native/vhdir/fake_synth.so build/native/vhdir/velvetchords.so build/native/vhdir
 .PHONY: vhost-test
+
+# the MPC's own plugin list (MPC.settings), which the host picker cycles through
+build/native/test_mpc_list: tests/test_mpc_list.c src/mpc_list.c src/mpc_list.h src/xml_min.c src/xml_min.h src/vhost.h | build/native
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_mpc_list.c src/mpc_list.c src/xml_min.c
+
+mpc-list-test: build/native/test_mpc_list
+	./build/native/test_mpc_list build/native/mpc_settings_test.xml
+.PHONY: mpc-list-test
 
 # regenerate the screen skin (needs python3-pil and the Poppins font); the result is committed in package/skin
 skin: native

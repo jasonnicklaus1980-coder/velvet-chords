@@ -1648,6 +1648,38 @@ int main(int argc, char **argv) {
         midi(&eb.ev[0], 0, 0x80, 36, 0); send(hfx, &eb, 1);
         hfx->dispatcher(hfx, effClose, 0, 0, 0, 0);
     }
+    /* the MPC's own plugin list: with a settings file present, the picker lists the instruments in its pluginList-arm
+     * entries (here the test instrument and Velvet Chords itself, which must be left out), not the plugin folder */
+    {
+        const char *settings = "build/native/mpc_list_test.xml";
+        FILE *sf = fopen(settings, "w");
+        if (sf) {
+            fprintf(sf, "<PROPERTIES><VALUE name=\"pluginList-arm\"><KNOWNPLUGINS>"
+                        "<PLUGIN name=\"Fake Sine\" file=\"build/native/vhdir/fake_synth.so\" uid=\"46616b65\" isInstrument=\"1\"/>"
+                        "<PLUGIN name=\"Velvet Chords\" file=\"build/native/vhdir/velvetchords.so\" uid=\"566c7643\" isInstrument=\"1\"/>"
+                        "</KNOWNPLUGINS></VALUE></PROPERTIES>");
+            fclose(sf);
+        }
+        unsetenv("VC_PLUGIN_DIR");
+        setenv("VC_SETTINGS_FILE", settings, 1);
+        AEffect *lfx = open_fx();
+        int pScan = find_param(lfx, "Scan plugins"), pNext = find_param(lfx, "Host next");
+        char d[96];
+        lfx->setParameter(lfx, pScan, 1.f); lfx->setParameter(lfx, pScan, 0.f);      /* press Scan: reads the MPC's list */
+        { struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0); }
+        int pSlot = find_param(lfx, "Host plugin");
+        lfx->setParameter(lfx, pNext, 1.f); lfx->setParameter(lfx, pNext, 0.f);   /* None -> first instrument in the list */
+        { struct timespec ts = {0, 200 * 1000000L}; nanosleep(&ts, 0); }
+        display(lfx, pSlot, d);
+        CHECK(!strcmp(d, "Fake Sine"), "the picker lists the instrument from the MPC's plugin list (%s)", d);
+        lfx->setParameter(lfx, pNext, 1.f); lfx->setParameter(lfx, pNext, 0.f);   /* next: only one instrument, so it wraps to None */
+        { struct timespec ts = {0, 200 * 1000000L}; nanosleep(&ts, 0); }
+        display(lfx, pSlot, d);
+        CHECK(!strcmp(d, "None"), "Velvet Chords itself is not in the MPC's list, so the picker wraps to None after one instrument (%s)", d);
+        lfx->dispatcher(lfx, effClose, 0, 0, 0, 0);
+        unsetenv("VC_SETTINGS_FILE");
+        remove(settings);
+    }
     if (g_probe_count) CHECK(*g_probe_count == 0, "no heap allocation or free inside processReplacing or effProcessEvents (%ld calls in %ld blocks)", *g_probe_count, g_probe_blocks);
     else printf("  (allocation probe not loaded: run through make test to check heap use on the audio path)\n");
     printf("%d checks, %d failures\n", checks, fails);
