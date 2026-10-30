@@ -517,7 +517,10 @@ class Skin:
         self.header_banks(c, bg, "bank")
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 10, 428, h=36)  # the factory preset in use, top left
         bg.panel((12, 64, 1268, 144))
-        self.readout(c, bg, "Info", 28, 88, 1224, 36, size=16, colour=TEXT_2)  # the scale's notes in the key, across the top
+        self.readout(c, bg, "Info", 28, 88, 990, 36, size=16, colour=TEXT_2)  # the scale's notes in the key, across the top
+        # hosted VST2 instrument: the picker (None, then the scanned instruments) and Scan, at the right of the Info bar
+        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 1030, 88, 150, h=36)
+        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 1190, 88, w=62, h=36)
         bg.panel((12, 152, 632, 620))
         self.pad_grid(c, 20, 162)
         bg.panel((640, 152, 1268, 620))

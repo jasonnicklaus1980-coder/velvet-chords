@@ -77,7 +77,7 @@ enum {
     /* the Play page's progression stepper: previous and next (appended, so saved projects keep their places) */
     P_PROG_PREV = P_PADNOTES_END + 1, P_PROG_NEXT,
     /* hosted VST2 instrument (appended: older projects keep their places) */
-    P_HOST_SLOT, P_HOST_SCAN, P_HOST_VOL,
+    P_HOST_SLOT, P_HOST_SCAN, P_HOST_VOL, P_HOST_PREV, P_HOST_NEXT,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -254,6 +254,8 @@ static void init_param_info(void) {
     P(P_HOST_SLOT, "Host plugin", 17, 0.f, 0)
     P(P_HOST_SCAN, "Scan plugins", 2, 0.f, 1)
     P(P_HOST_VOL, "Host volume", 0, 0.8f, 0)
+    P(P_HOST_PREV, "Host prev", 2, 0.f, 1)
+    P(P_HOST_NEXT, "Host next", 2, 0.f, 1)
     P(P_BANK_A, "Bank A", 2, 1.f, 0)
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
@@ -1179,6 +1181,16 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             }
             if (i == P_COPY) do_copy_to_custom(p);
         if (i == P_HOST_SCAN) { p->host_scan_req = 1; host_kick(p); return; }
+        if (i == P_HOST_PREV || i == P_HOST_NEXT) {   /* steps Host plugin through None and the scanned instruments */
+            int cycle = p->host_count + 1, want = p->host_want + (i == P_HOST_NEXT ? 1 : -1);
+            if (want < 0) want = cycle - 1;
+            if (want >= cycle) want = 0;
+            p->host_want = want;
+            p->val[P_HOST_SLOT] = norm_of(P_HOST_SLOT, want);   /* the picker shows the new choice */
+            refresh_host(p);
+            host_kick(p);
+            return;
+        }
             if (i == P_UPROG_SAVE) save_user_prog(p, idx_of(p, P_UPROG_SLOT));
             if (i == P_UPRE_SAVE) save_user_preset(p, idx_of(p, P_UPRE_SLOT));
             if (i == P_UPRE_LOAD) load_user_preset(p, idx_of(p, P_UPRE_SLOT));
@@ -1532,6 +1544,8 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         else copy_str(b, p->host_scanned ? "-" : "Scan first", sizeof(b));
         break;
     case P_HOST_SCAN: copy_str(b, "Scan", sizeof(b)); break;
+    case P_HOST_PREV: copy_str(b, "<", sizeof(b)); break;
+    case P_HOST_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_SOUND_X: copy_str(b, x == 0 ? "-" : SY_SOUND_NAMES[SY_SILENT + x], sizeof(b)); break;
     case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
     case P_PAD_BASE:

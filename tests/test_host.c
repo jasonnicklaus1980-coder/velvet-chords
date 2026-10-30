@@ -1616,6 +1616,13 @@ int main(int argc, char **argv) {
         hfx->setParameter(hfx, pSlot, 2.f / 16.f);
         display(hfx, pSlot, d);
         CHECK(!strcmp(d, "-"), "Velvet Chords itself is not listed as a second instrument (slot 2 is empty: %s)", d);
+        int pNext = find_param(hfx, "Host next");
+        CHECK(pNext >= 0, "the Host next trigger exists");
+        hfx->setParameter(hfx, pSlot, 0.f);                                        /* back to None */
+        hfx->setParameter(hfx, pNext, 1.f); hfx->setParameter(hfx, pNext, 0.f);   /* press Host next: None -> first instrument */
+        { struct timespec ts = {0, 200 * 1000000L}; nanosleep(&ts, 0); }
+        display(hfx, pSlot, d);
+        CHECK(!strcmp(d, "Fake Sine"), "Host next picks the first scanned instrument (%s)", d);
         hfx->setParameter(hfx, pSlot, 1.f / 16.f);
         { struct timespec ts = {0, 200 * 1000000L}; nanosleep(&ts, 0); }            /* let the load finish */
 
