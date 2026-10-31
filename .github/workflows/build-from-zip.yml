@@ -70,7 +70,7 @@ jobs:
       - name: Run the Windows DLL in a VST2 host under Wine
         env:
           WINEDEBUG: "-all"
-          WINEPREFIX: "/tmp/wineprefix"
+          WINEPREFIX: "${{ runner.temp }}/wineprefix"
         run: make win-test ZIG=zig
 
       - name: Package the Windows zip
