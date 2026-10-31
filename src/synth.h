@@ -1,7 +1,7 @@
 #ifndef VC_SYNTH_H
 #define VC_SYNTH_H
 
-#define SY_VOICES 48
+#define SY_VOICES 96
 /* voice groups: melody (every other MIDI channel) and drums (channel 10). Drums may hold at most SY_DRUM_MAX voices, so
  * the melody always has the rest, and a drum hit never takes a melody voice. */
 enum { SY_GROUP_MELODY, SY_GROUP_DRUM };
