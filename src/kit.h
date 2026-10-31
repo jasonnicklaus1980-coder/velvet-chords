@@ -70,6 +70,7 @@ typedef struct {
     KitVoice v[KIT_VOICES];
     unsigned long clock;
     const Kit *seen;       /* the kit the voices were started from; a different kit silences them */
+    float gain;            /* the kit's level: volume, or 0 when muted. Set by the plugin before each block. */
 } KitPlayer;
 
 void kit_player_reset(KitPlayer *kp);

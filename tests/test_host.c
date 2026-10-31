@@ -1683,6 +1683,49 @@ int main(int argc, char **argv) {
         kfx->dispatcher(kfx, effClose, 0, 0, 0, 0);
         unsetenv("VC_KIT_DIR");
     }
+    /* a project keeps the drum kit by file: save with the kit loaded, open a new instance and restore the state, and the
+     * kit comes back with its sound, found by its file name in the scan */
+    {
+        setenv("VC_KIT_DIR", "build/native/kit_test", 1);
+        AEffect *sfx = open_fx();
+        int pScan = find_param(sfx, "Scan plugins"), pKitNext = find_param(sfx, "Kit next"), pSound = find_param(sfx, "Sound");
+        int pKitVol = find_param(sfx, "Kit volume"), pKitMute = find_param(sfx, "Kit mute");
+        CHECK(pKitVol >= 0 && pKitMute >= 0, "the kit volume and mute parameters exist");
+        char d[96];
+        float L[512], R[512];
+        sfx->setParameter(sfx, pSound, value_of(sfx, pSound, "Silent (MIDI only)"));
+        sfx->setParameter(sfx, pKitVol, 0.5f);
+        sfx->setParameter(sfx, pScan, 1.f); sfx->setParameter(sfx, pScan, 0.f);
+        { struct timespec ts = {0, 300 * 1000000L}; nanosleep(&ts, 0); }
+        sfx->setParameter(sfx, pKitNext, 1.f); sfx->setParameter(sfx, pKitNext, 0.f);
+        { struct timespec ts = {0, 800 * 1000000L}; nanosleep(&ts, 0); }
+        void *chunk = NULL;
+        int size = (int)sfx->dispatcher(sfx, effGetChunk, 0, 0, &chunk, 0.f);
+        CHECK(size > 0 && chunk != NULL, "the plugin saves its state (%d bytes)", size);
+        unsigned char *saved = malloc(size > 0 ? (size_t)size : 1);
+        if (saved && chunk) memcpy(saved, chunk, (size_t)size);
+        sfx->dispatcher(sfx, effClose, 0, 0, 0, 0);
+
+        AEffect *rfx = open_fx();
+        int rKit = find_param(rfx, "Kit"), rKitVol = find_param(rfx, "Kit volume");
+        int rScan = find_param(rfx, "Scan plugins");
+        if (saved) rfx->dispatcher(rfx, effSetChunk, 0, size, saved, 0.f);
+        { struct timespec ts = {0, 1500 * 1000000L}; nanosleep(&ts, 0); }   /* the scan and the load run on the worker */
+        display(rfx, rKit, d);
+        CHECK(!strcmp(d, "kit"), "the restored project has its kit again (%s)", d);
+        CHECK(rKitVol >= 0 && fabs(rfx->getParameter(rfx, rKitVol) - 0.5f) < 0.01f, "the kit volume is restored");
+        (void)rScan;
+
+        EvBuf eb; memset(&eb, 0, sizeof eb);
+        midi(&eb.ev[0], 0, 0x90, 36, 100); send(rfx, &eb, 1);
+        double heard = 0;
+        for (int k = 0; k < 4; k++) heard += block(rfx, L, R, 512);
+        CHECK(heard > 0.01, "the restored kit sounds (energy %.4f)", heard);
+        midi(&eb.ev[0], 0, 0x80, 36, 0); send(rfx, &eb, 1);
+        rfx->dispatcher(rfx, effClose, 0, 0, 0, 0);
+        free(saved);
+        unsetenv("VC_KIT_DIR");
+    }
     /* the MPC's own plugin list: with a settings file present, the picker lists the instruments in its pluginList-arm
      * entries (here the test instrument and Velvet Chords itself, which must be left out), not the plugin folder */
     {

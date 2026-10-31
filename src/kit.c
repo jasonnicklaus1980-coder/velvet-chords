@@ -245,8 +245,8 @@ void kit_render(KitPlayer *kp, const Kit *k, float *L, float *R, int n) {
                 l0 = r0 = s->data[i0] / 32768.f;
                 l1 = r1 = s->data[i1] / 32768.f;
             }
-            L[f] += v->gl * ((1.f - t) * l0 + t * l1);
-            R[f] += v->gr * ((1.f - t) * r0 + t * r1);
+            L[f] += kp->gain * v->gl * ((1.f - t) * l0 + t * l1);
+            R[f] += kp->gain * v->gr * ((1.f - t) * r0 + t * r1);
             v->pos += v->step;
         }
     }

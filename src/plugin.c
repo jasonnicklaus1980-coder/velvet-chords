@@ -29,7 +29,7 @@
 #define IMP_LIST_MAX 256 /* most files the MIDI picker lists */
 #define IMP_NAME 96     /* longest path kept for an import file */
 #define IMP_MAX_DEPTH 4 /* folder levels below Import that are searched */
-#define CHUNK_VERSION 12 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts) */
+#define CHUNK_VERSION 13 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts); 13 the hosted instrument and the drum kit are kept by file (appended after the starred presets) */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 #define HOST_MAX 64       /* hosted instruments you can pick from the MPC's plugin list */
@@ -87,7 +87,7 @@ enum {
     P_HOST_UP, P_HOST_DOWN, P_HOST_PICK,
     P_HOST_ROW0, P_HOST_ROW_END = P_HOST_ROW0 + HOST_ROWS - 1,
     /* the drum kit picker (appended, so saved projects keep their places) */
-    P_KIT_PREV, P_KIT_NEXT, P_KIT_SLOT,
+    P_KIT_PREV, P_KIT_NEXT, P_KIT_SLOT, P_KIT_VOL, P_KIT_MUTE,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -279,6 +279,8 @@ static void init_param_info(void) {
     P(P_KIT_PREV, "Kit prev", 2, 0.f, 1)
     P(P_KIT_NEXT, "Kit next", 2, 0.f, 1)
     P(P_KIT_SLOT, "Kit", KIT_LIST_MAX + 1, 0.f, 0)
+    P(P_KIT_VOL, "Kit volume", 0, 0.8f, 0)
+    P(P_KIT_MUTE, "Kit mute", 2, 0.f, 0)
     P(P_BANK_A, "Bank A", 2, 1.f, 0)
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
@@ -346,6 +348,8 @@ typedef struct {
     volatile int kit_want, kit_pending, kit_count, kit_slot;
     char kit_paths[KIT_LIST_MAX][KIT_PATH_LEN];
     char kit_names[KIT_LIST_MAX][128];
+    volatile int restore_pending;                  /* a project was loaded: select its instrument and kit once the scan is done */
+    char restore_host[KIT_PATH_LEN], restore_kit[KIT_PATH_LEN];
     char host_paths[HOST_MAX][VH_PATH_LEN];
     char host_names[HOST_MAX][VH_NAME_LEN];
     char host_scan_paths[HOST_SCAN_MAX][VH_PATH_LEN];
@@ -533,7 +537,7 @@ static void mlog_service(Plugin *p) {
  * take the MPC with it. */
 /* the folder a hosted plugin sits in, relative to the plugin folder: "" at the top, "pad" for /sdcard/vst/pad/x.so */
 static void host_folder(const char *path, char *out, size_t len) {
-    static const char *roots[] = {"/sdcard/vst/", MPC_EXPANSIONS_DIR "/"};
+    static const char *roots[] = {"/sdcard/vst/", MPC_EXPANSIONS_DIR "/", MPC_EXPANSIONS_SSD_DIR "/"};
     const char *rel = path;
     for (size_t r = 0; r < sizeof roots / sizeof roots[0]; r++) {
         if (strncmp(path, roots[r], strlen(roots[r])) == 0) { rel = path + strlen(roots[r]); break; }
@@ -574,10 +578,11 @@ static void host_scan(Plugin *p) {
         int n = mpc_plugin_list(settings, list, HOST_MAX);
         for (int i = 0; i >= 0 && i < n; i++) host_add(p, &found, list[i].path, list[i].name);
     }
-    /* 2. every plugin in the plugin folder and the expansions folder, subfolders included, so plugins the list doesn't
-     * name are still found */
-    const char *folders[2] = {dir ? dir : HOST_DIR, exp ? exp : MPC_EXPANSIONS_DIR};
-    for (int f = 0; f < 2; f++) {
+    /* 2. every plugin in the plugin folder and the expansions folders (the internal drive and the SSD), subfolders
+     * included, so plugins the list doesn't name are still found */
+    const char *folders[3] = {dir ? dir : HOST_DIR, exp ? exp : MPC_EXPANSIONS_DIR, dir ? NULL : MPC_EXPANSIONS_SSD_DIR};
+    for (int f = 0; f < 3; f++) {
+        if (!folders[f]) continue;
         int n = mpc_walk_plugins(folders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
         for (int i = 0; i >= 0 && i < n; i++) host_probe_add(p, &found, p->host_scan_paths[i]);
     }
@@ -642,8 +647,27 @@ static void kit_apply(Plugin *p) {
     if (next) for (int i = 0; i < next->prog->ninstruments; i++) kit_load_instrument(next, i);
 }
 
+/* after a scan: selects the instrument and kit the project was saved with, by file. A file that isn't in the list
+ * (moved or deleted) leaves that slot on None. */
+static void restore_selection(Plugin *p) {
+    p->restore_pending = 0;
+    int hw = 0, kw = 0;
+    for (int i = 0; i < p->host_count && p->restore_host[0] && !hw; i++) if (!strcmp(p->host_paths[i], p->restore_host)) hw = i + 1;
+    for (int i = 0; i < p->kit_count && p->restore_kit[0] && !kw; i++) if (!strcmp(p->kit_paths[i], p->restore_kit)) kw = i + 1;
+    p->host_want = hw;
+    p->val[P_HOST_SLOT] = norm_of(P_HOST_SLOT, hw);
+    p->kit_want = kw;
+    p->val[P_KIT_SLOT] = norm_of(P_KIT_SLOT, kw);
+    p->kit_pending = 1;
+}
+
 static void host_service(Plugin *p) {
-    if (p->host_scan_req) { p->host_scan_req = 0; host_scan(p); p->host_pending = 1; }
+    if (p->host_scan_req) {
+        p->host_scan_req = 0;
+        host_scan(p);
+        p->host_pending = 1;
+        if (p->restore_pending) restore_selection(p);
+    }
     if (p->host_pending) { p->host_pending = 0; host_apply(p); }
     if (p->kit_pending) { p->kit_pending = 0; kit_apply(p); }
 }
@@ -687,6 +711,7 @@ static void kit_render_block(Plugin *p, int n) {
     Kit *k = __atomic_load_n(&p->kit, __ATOMIC_ACQUIRE);
     int nq = e->nhq > EN_HOST_EV ? EN_HOST_EV : e->nhq;
     kit_player_follow(&p->kp, k);   /* a new kit silences the old voices before any of this block's notes start */
+    p->kp.gain = p->val[P_KIT_MUTE] >= 0.5f ? 0.f : p->val[P_KIT_VOL];
     int pos = 0;
     for (int i = 0; i < nq; i++) {
         int f = e->hq[i].frame;
@@ -1742,7 +1767,8 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_HOST_PREV: copy_str(b, "<", sizeof(b)); break;
     case P_HOST_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_SOUND_X: copy_str(b, x == 0 ? "-" : SY_SOUND_NAMES[SY_SILENT + x], sizeof(b)); break;
-    case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
+    case P_KIT_MUTE: copy_str(b, x ? "Muted" : "On", sizeof(b)); break;
+    case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: case P_KIT_VOL: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
     case P_PAD_BASE:
         if (e->map_set) { copy_str(b, "Learned layout", sizeof(b)); break; }
         { char nn[8]; x = e->pad_base; vc_note_name(x, 0, nn, sizeof(nn)); snprintf(b, sizeof(b), "%s (%d)", nn, x); }
@@ -1842,7 +1868,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
 /* ---------- chunk (saved inside the MPC project) ---------- */
 
 #define IMP_REC 23
-static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2) + 1 + VC_USER_PRESETS * (1 + UPRE_MAX * 4) + 32; }
+static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2) + 1 + VC_USER_PRESETS * (1 + UPRE_MAX * 4) + 32 + 2 * (4 + KIT_PATH_LEN); }
 
 static void w32(unsigned char *b, int *k, uint32_t v) { b[(*k)++] = v & 255; b[(*k)++] = (v >> 8) & 255; b[(*k)++] = (v >> 16) & 255; b[(*k)++] = v >> 24; }
 static uint32_t r32(const unsigned char *b, int *k) { uint32_t v = b[*k] | (b[*k + 1] << 8) | (b[*k + 2] << 16) | ((uint32_t)b[*k + 3] << 24); *k += 4; return v; }
@@ -1891,8 +1917,29 @@ static int get_chunk(Plugin *p, void **data) {
         for (int j = 0; j < UPRE_MAX; j++) { union { float f; uint32_t u; } u; u.f = p->upre[s][j]; w32(b, &k, u.u); }
     }
     for (int j = 0; j < 32; j++) b[k++] = p->fav[j]; /* version 7: starred presets */
+    /* version 13: the hosted instrument and the drum kit, by file, each as a length and its path ("" for none) */
+    const char *hpath = p->host_slot > 0 ? p->host_paths[p->host_slot - 1] : "";
+    const char *kpath = p->kit_slot > 0 ? p->kit_paths[p->kit_slot - 1] : "";
+    for (int s = 0; s < 2; s++) {
+        const char *path = s == 0 ? hpath : kpath;
+        size_t n = strlen(path);
+        w32(b, &k, (uint32_t)n);
+        memcpy(b + k, path, n);
+        k += (int)n;
+    }
     *data = b;
     return k;
+}
+
+/* reads a length-prefixed path from a chunk into dst. A damaged length ends the read and leaves dst empty. */
+static void read_chunk_path(const unsigned char *b, int size, int *k, char *dst) {
+    dst[0] = 0;
+    if (size < *k + 4) return;
+    uint32_t n = r32(b, k);
+    if (n >= KIT_PATH_LEN || size < *k + (int)n) return;
+    memcpy(dst, b + *k, n);
+    dst[n] = 0;
+    *k += (int)n;
 }
 
 static int set_chunk(Plugin *p, const void *data, int size) {
@@ -1991,6 +2038,16 @@ static int set_chunk(Plugin *p, const void *data, int size) {
         }
     }
     if (ver >= 7 && size >= k + 32) { for (int j = 0; j < 32; j++) p->fav[j] = b[k++]; p->fav[0] &= 0xFE; } /* bit 0 is not a preset */
+    if (ver >= 13) {   /* the instrument and kit by file: a scan finds them and selects them (see restore_selection) */
+        read_chunk_path(b, size, &k, p->restore_host);
+        read_chunk_path(b, size, &k, p->restore_kit);
+        if (p->restore_host[0] || p->restore_kit[0]) {
+            /* a one-off scan while the project loads, so the instrument and kit are back before the screen shows them */
+            p->restore_pending = 1;
+            p->host_scan_req = 1;
+            host_service(p);
+        }
+    }
     if (idx_of(p, P_MODE) == VC_MODE_SONG) set_param(p, P_MODE, norm_of(P_MODE, VC_MODE_KEY), 0); /* Song mode is gone: an old project moves to Scale */
     load_riff_fields(p);
     load_note_field(p);

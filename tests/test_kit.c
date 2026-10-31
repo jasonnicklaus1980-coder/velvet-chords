@@ -135,6 +135,7 @@ int main(int argc, char **argv) {
 
     KitPlayer kp;
     memset(&kp, 0, sizeof kp);
+    kp.gain = 1.f;
     float L[512], R[512];
     memset(L, 0, sizeof L); memset(R, 0, sizeof R);
     kit_note_on(&kp, k, 0, 100, 44100.0);

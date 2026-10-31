@@ -757,14 +757,16 @@ class Skin:
         bg.panel((12, 152, 1268, 620))
         bg.bar((12, 152, 1268, 620), "MPC plugin list and Expansions", right="Subfolder in brackets")
         for k in range(8):
-            on, off = self.img.host_row(True, 1224, 40), self.img.host_row(False, 1224, 40)
+            on, off = self.img.host_row(True, 1224, 38), self.img.host_row(False, 1224, 38)
             key = self.define("vcHostRow", definition([A_QLINK], [
-                button_sub(on, off, k, 8, 1224, 40),
-                label_sub("Name", "Name", 14, 0, 1196, 40, 15, TEXT),
+                button_sub(on, off, k, 8, 1224, 38),
+                label_sub("Name", "Name", 14, 0, 1196, 38, 15, TEXT),
             ]))
-            comps_y = 192 + k * 48
-            c.append(self.place(key, "Host row %d" % (k + 1), 28, comps_y, 1224, 40,
+            comps_y = 192 + k * 46
+            c.append(self.place(key, "Host row %d" % (k + 1), 28, comps_y, 1224, 38,
                                 [("Data", self.p("Host row")), ("Name", self.p("Host row %d" % (k + 1)))]))
+        self.value_field(c, bg, "Kit volume", 28, 580, 200, h=30, caption="Kit volume")
+        self.switch(c, bg, "Kit mute", 260, 580, "Kit mute")
         self.page("Host", 6, c, "vc_bg_host.png", bg)
 
     def tui(self):
