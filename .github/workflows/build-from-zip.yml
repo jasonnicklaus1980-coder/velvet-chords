@@ -48,3 +48,51 @@ jobs:
         with:
           name: VelvetChords-MPC
           path: ${{ env.PROJECT }}/dist/*.zip
+
+  windows:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download Zig
+        run: |
+          curl -sSfL https://ziglang.org/download/0.13.0/zig-linux-x86_64-0.13.0.tar.xz | tar -xJ
+          echo "$PWD/zig-linux-x86_64-0.13.0" >> "$GITHUB_PATH"
+
+      - name: Build the Windows DLL
+        run: make win ZIG=zig
+
+      - name: Install Wine and Xvfb for the Windows test
+        run: sudo apt-get update -q && sudo apt-get install -y -q wine64 xvfb
+
+      - name: Run the Windows DLL in a VST2 host under Wine
+        env:
+          WINEDEBUG: "-all"
+          WINEPREFIX: "/tmp/wineprefix"
+        run: make win-test ZIG=zig
+
+      - name: Package the Windows zip
+        run: |
+          rm -rf dist/win && mkdir -p dist/win/skin
+          cp build/win/velvetchords.dll dist/win/
+          cp "package/skin/Velvet Chords - VST - Velvet Chords"/*.png dist/win/skin/
+          cp package/windows/README.txt dist/win/
+          cd dist && zip -qr VelvetChords-Windows-x64.zip win
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VelvetChords-Windows
+          path: dist/VelvetChords-Windows-x64.zip
+
+      - name: Publish the Windows zip as the windows-preview pre-release
+        if: github.event_name == 'push' && github.ref == 'refs/heads/keygroups-prep'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete windows-preview --yes --cleanup-tag 2>/dev/null || true
+          gh release create windows-preview dist/VelvetChords-Windows-x64.zip \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "Velvet Chords for Windows (preview)" \
+            --notes "Built from commit $GITHUB_SHA by the build-from-zip workflow. Tested under Wine only, not yet in a Windows DAW. Unzip, keep the skin folder beside velvetchords.dll, and see the README inside."
