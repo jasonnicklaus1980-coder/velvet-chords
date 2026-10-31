@@ -70,11 +70,15 @@ isolation-test: native build/native/test_isolation
 # The MPC build above is unchanged. Override ZIG if zig is not on the PATH.
 ZIG ?= zig
 WIN_CFLAGS := -std=gnu99 -O2 $(WARN) -DNDEBUG
+# the editor controls come from the committed skin: regenerate src/win_layout.h when the skin changes
+win-layout:
+	python3 tools/make_win_layout.py
+
 win: src/songs_gen.c | build/win
-	$(ZIG) cc -target x86_64-windows-gnu $(WIN_CFLAGS) -shared -o build/win/velvetchords.dll $(SRC) src/plugin.c
+	$(ZIG) cc -target x86_64-windows-gnu $(WIN_CFLAGS) -shared -o build/win/velvetchords.dll $(SRC) src/plugin.c -lgdi32 -luser32
 	llvm-readobj --coff-exports build/win/velvetchords.dll | grep -q VSTPluginMain
 	@echo "built build/win/velvetchords.dll"
-.PHONY: win
+.PHONY: win win-layout
 
 build/win:
 	mkdir -p $@

@@ -318,6 +318,8 @@ typedef struct {
     float trig_last[NUM_PARAMS];
     double trig_time[NUM_PARAMS];
     int refresh_running;
+    void *ui_hwnd;                 /* the Windows editor window, or NULL */
+    int ui_page;                   /* the editor page shown (0 Play .. 5 Lanes) */
     pthread_t refresh_thread;
     /* MIDI import */
     ImportChord imp[VC_PADS], imp_engine[VC_PADS];
@@ -1856,11 +1858,184 @@ static void destroy(Plugin *p) {
     free(p->scratchL); free(p->scratchR); free(p->chunk); free(p->outEvents); free(p->eng); free(p);
 }
 
+/* ---------- editor window (Windows only) ----------
+ * A VST2 editor drawn with GDI from src/win_layout.h, which holds the MPC skin's six pages: every control is a box at
+ * its place on the skin, labelled with its name and current value. Left click steps or sets a control, right click steps
+ * back, and the six tabs along the bottom change page. The MPC build has no editor; these stubs keep it unchanged. */
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+#include "win_layout.h"
+
+typedef struct { short top, left, bottom, right; } VcERect;   /* the VST2 editor rectangle */
+#define WIN_TAB_H 32
+#define WIN_EDITOR_W WIN_PAGE_W
+#define WIN_EDITOR_H (WIN_PAGE_H + WIN_TAB_H)
+
+static HINSTANCE g_hinst;
+BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
+    (void)reserved;
+    if (reason == DLL_PROCESS_ATTACH) g_hinst = inst;
+    return TRUE;
+}
+
+static const COLORREF UI_BG = RGB(0x17, 0x18, 0x22), UI_CTL = RGB(0x2a, 0x2c, 0x3c), UI_SEL = RGB(0x3d, 0x6f, 0xd8),
+                      UI_TXT = RGB(0xec, 0xec, 0xf3), UI_DIM = RGB(0x9a, 0x9c, 0xb0), UI_TAB = RGB(0x22, 0x24, 0x33);
+
+static Plugin *ui_plugin(HWND h) { return (Plugin *)GetWindowLongPtrA(h, GWLP_USERDATA); }
+
+static int ctl_hit(const Plugin *p, int x, int y) {
+    for (int i = 0; i < WIN_CTL_COUNT; i++) {
+        const WinCtl *c = &WIN_CTL[i];
+        if (c->page == p->ui_page && x >= c->x && x < c->x + c->w && y >= c->y && y < c->y + c->h) return i;
+    }
+    return -1;
+}
+
+static void ctl_click(Plugin *p, const WinCtl *c, int dir) {
+    int i = c->param;
+    if (c->kind == WIN_CTL_SHOW || i < 0 || i >= NUM_PARAMS) return;
+    if (c->kind == WIN_CTL_SEG) {
+        if (PINFO[i].steps > 0 && c->seg < PINFO[i].steps) set_param(p, i, norm_of(i, c->seg), 0);
+        return;
+    }
+    if (PINFO[i].trigger) { set_param(p, i, 1.f, 0); return; }
+    if (PINFO[i].steps >= 2) step_param(p, i, dir, PINFO[i].steps);
+}
+
+static void ui_paint(HWND h, Plugin *p) {
+    PAINTSTRUCT ps;
+    HDC dc = BeginPaint(h, &ps);
+    RECT all;
+    GetClientRect(h, &all);
+    HBRUSH bg = CreateSolidBrush(UI_BG);
+    FillRect(dc, &all, bg);
+    DeleteObject(bg);
+    HFONT font = CreateFontA(-14, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
+                             CLEARTYPE_QUALITY, DEFAULT_PITCH, "Segoe UI");
+    HFONT old = (HFONT)SelectObject(dc, font);
+    SetBkMode(dc, TRANSPARENT);
+    SetTextColor(dc, UI_TXT);
+    for (int i = 0; i < WIN_CTL_COUNT; i++) {
+        const WinCtl *c = &WIN_CTL[i];
+        if (c->page != p->ui_page) continue;
+        int on = c->kind == WIN_CTL_SEG && idx_of(p, c->param) == c->seg;
+        HBRUSH b = CreateSolidBrush(on ? UI_SEL : UI_CTL);
+        RECT r = {c->x, c->y, c->x + c->w, c->y + c->h};
+        FillRect(dc, &r, b);
+        DeleteObject(b);
+        char text[160];
+        if (c->kind == WIN_CTL_SEG) {
+            snprintf(text, sizeof text, "%s", c->name);
+        } else {
+            char val[96] = "";
+            if (c->param >= 0 && c->param < NUM_PARAMS) param_display(p, c->param, val, sizeof val);
+            snprintf(text, sizeof text, "%s\n%s", c->name, val);
+        }
+        RECT tr = r;
+        tr.left += 4;
+        tr.right -= 4;
+        DrawTextA(dc, text, -1, &tr, DT_CENTER | DT_VCENTER | DT_WORDBREAK | DT_NOPREFIX);
+    }
+    for (int t = 0; t < WIN_PAGE_COUNT; t++) {
+        RECT r = {t * WIN_EDITOR_W / WIN_PAGE_COUNT, WIN_PAGE_H, (t + 1) * WIN_EDITOR_W / WIN_PAGE_COUNT, WIN_EDITOR_H};
+        HBRUSH b = CreateSolidBrush(t == p->ui_page ? UI_SEL : UI_TAB);
+        FillRect(dc, &r, b);
+        DeleteObject(b);
+        SetTextColor(dc, t == p->ui_page ? UI_TXT : UI_DIM);
+        DrawTextA(dc, WIN_PAGE_NAMES[t], -1, &r, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX);
+    }
+    SelectObject(dc, old);
+    DeleteObject(font);
+    EndPaint(h, &ps);
+}
+
+static LRESULT CALLBACK ui_proc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
+    switch (msg) {
+    case WM_CREATE:
+        SetWindowLongPtrA(h, GWLP_USERDATA, (LONG_PTR)((CREATESTRUCTA *)lp)->lpCreateParams);
+        return 0;
+    case WM_PAINT: {
+        Plugin *p = ui_plugin(h);
+        if (p) ui_paint(h, p);
+        else { PAINTSTRUCT ps; BeginPaint(h, &ps); EndPaint(h, &ps); }
+        return 0;
+    }
+    case WM_ERASEBKGND: return 1;   /* ui_paint fills the whole client area */
+    case WM_LBUTTONDOWN:
+    case WM_RBUTTONDOWN: {
+        Plugin *p = ui_plugin(h);
+        if (!p) return 0;
+        int x = (short)LOWORD(lp), y = (short)HIWORD(lp);
+        if (y >= WIN_PAGE_H) {
+            int t = x * WIN_PAGE_COUNT / WIN_EDITOR_W;
+            if (t >= 0 && t < WIN_PAGE_COUNT) p->ui_page = t;
+        } else {
+            int i = ctl_hit(p, x, y);
+            if (i >= 0) ctl_click(p, &WIN_CTL[i], msg == WM_LBUTTONDOWN ? 1 : -1);
+        }
+        InvalidateRect(h, NULL, FALSE);
+        return 0;
+    }
+    case WM_TIMER:
+        InvalidateRect(h, NULL, FALSE);   /* the values follow the sound and automation */
+        return 0;
+    case WM_DESTROY:
+        KillTimer(h, 1);
+        return 0;
+    }
+    return DefWindowProcA(h, msg, wp, lp);
+}
+
+static void ui_register(void) {
+    static int done;
+    if (done) return;
+    WNDCLASSA wc;
+    memset(&wc, 0, sizeof wc);
+    wc.lpfnWndProc = ui_proc;
+    wc.hInstance = g_hinst;
+    wc.hCursor = LoadCursorA(NULL, IDC_ARROW);
+    wc.lpszClassName = "VelvetChordsEditor";
+    RegisterClassA(&wc);
+    done = 1;
+}
+
+static intptr_t ui_get_rect(void *ptr) {
+    static VcERect r = {0, 0, WIN_EDITOR_H, WIN_EDITOR_W};
+    if (ptr) *(VcERect **)ptr = &r;
+    return 1;
+}
+
+static intptr_t ui_open(Plugin *p, void *parent) {
+    ui_register();
+    HWND h = CreateWindowExA(0, "VelvetChordsEditor", "Velvet Chords", WS_CHILD | WS_VISIBLE, 0, 0, WIN_EDITOR_W,
+                             WIN_EDITOR_H, (HWND)parent, NULL, g_hinst, p);
+    if (!h) return 0;
+    p->ui_hwnd = h;
+    SetTimer(h, 1, 100, NULL);
+    return 1;
+}
+
+static void ui_close(Plugin *p) {
+    if (!p->ui_hwnd) return;
+    DestroyWindow((HWND)p->ui_hwnd);
+    p->ui_hwnd = NULL;
+}
+#else
+static intptr_t ui_get_rect(void *ptr) { (void)ptr; return 0; }   /* no editor on the MPC build */
+static intptr_t ui_open(Plugin *p, void *parent) { (void)p; (void)parent; return 0; }
+static void ui_close(Plugin *p) { (void)p; }
+#endif
+
 static intptr_t dispatcher(AEffect *fx, int32_t op, int32_t index, intptr_t value, void *ptr, float opt) {
     Plugin *p = (Plugin *)fx->object;
     switch (op) {
     case effOpen: p->opened = 1; if (!p->refresh_running) start_refresh_thread(p); scan_import_files(p); return 0; /* host knows us now */
-    case effClose: destroy(p); return 0;
+    case effEditGetRect: return ui_get_rect(ptr);
+    case effEditOpen: return ui_open(p, ptr);
+    case effEditClose: ui_close(p); return 0;
+    case effClose: ui_close(p); destroy(p); return 0;
     case effSetSampleRate: en_set_sr(p->eng, opt); fx_reverb_init(&p->rv, p->eng->sr);
         return 0;
     case effSetBlockSize: ensure_scratch(p, (int)value); return 0;
