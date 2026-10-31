@@ -7,6 +7,7 @@ typedef struct {
     void *seq;
     int port, client;
     char status[96];
+    void *out_fn, *close_fn;   /* the ALSA entry points, looked up when this port opens (per port, not shared) */
 } MidiPort;
 
 int vc_port_open(MidiPort *m, const char *client_name, const char *port_name); /* 1 = ok */

@@ -1506,7 +1506,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
         sync_layout(p);
         if ((i == P_KEY || i == P_SCALE) && from_host && !idx_of(p, P_KEYSYNC)) { /* share with copies that follow */
             g_vc_key.key = idx_of(p, P_KEY); g_vc_key.scale = idx_of(p, P_SCALE);
-            g_vc_key.source = e->instance_id; g_vc_key.version++;
+            g_vc_key.source = e->instance_id;
+            __atomic_add_fetch(&g_vc_key.version, 1u, __ATOMIC_RELEASE);   /* the fields above are visible before the version */
         }
         /* the host redraws the pads: the new key, scale or mode is on the screen at once, like the MPC's Pad Perform */
         if (from_host) refresh_host(p);
@@ -2180,8 +2181,9 @@ static void render(Plugin *p, float **out, int n, int accumulate) {
         return;
     }
     /* key sync: adopt the key and scale another copy published */
-    if (idx_of(p, P_KEYSYNC) && g_vc_key.version && g_vc_key.version != p->key_seen && g_vc_key.source != e->instance_id) {
-        p->key_seen = g_vc_key.version;
+    unsigned key_ver = __atomic_load_n(&g_vc_key.version, __ATOMIC_ACQUIRE);
+    if (idx_of(p, P_KEYSYNC) && key_ver && key_ver != p->key_seen && g_vc_key.source != e->instance_id) {
+        p->key_seen = key_ver;
         p->val[P_KEY] = norm_of(P_KEY, g_vc_key.key);
         p->val[P_SCALE] = norm_of(P_SCALE, g_vc_key.scale);
         sync_layout(p);

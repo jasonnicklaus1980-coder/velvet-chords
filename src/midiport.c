@@ -31,8 +31,6 @@ typedef int (*out_fn)(void *, SeqEvent *);
 typedef int (*id_fn)(void *);
 typedef const char *(*err_fn)(int);
 
-static out_fn p_out;
-static close_fn p_close;
 
 int vc_port_is_open(const MidiPort *m) { return m && m->seq != 0; }
 
@@ -45,9 +43,9 @@ int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
     port_fn pt = (port_fn)dlsym(m->lib, "snd_seq_create_simple_port");
     id_fn idf = (id_fn)dlsym(m->lib, "snd_seq_client_id");
     err_fn er = (err_fn)dlsym(m->lib, "snd_strerror");
-    p_out = (out_fn)dlsym(m->lib, "snd_seq_event_output_direct");
-    p_close = (close_fn)dlsym(m->lib, "snd_seq_close");
-    if (!o || !nm || !pt || !idf || !p_out || !p_close) { snprintf(m->status, sizeof(m->status), "ALSA library incomplete"); return 0; }
+    m->out_fn = (void *)dlsym(m->lib, "snd_seq_event_output_direct");
+    m->close_fn = (void *)dlsym(m->lib, "snd_seq_close");
+    if (!o || !nm || !pt || !idf || !m->out_fn || !m->close_fn) { snprintf(m->status, sizeof(m->status), "ALSA library incomplete"); return 0; }
     void *seq = 0;
     int r = o(&seq, "default", SEQ_OPEN_OUTPUT, SEQ_NONBLOCK);
     if (r < 0 || !seq) { snprintf(m->status, sizeof(m->status), "MIDI port unavailable: %s", er ? er(r) : "error"); return 0; }
@@ -55,7 +53,7 @@ int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
     int port = pt(seq, port_name, CAP_READ | CAP_SUBS_READ, TYPE_MIDI_GENERIC | TYPE_SOFTWARE | TYPE_APPLICATION);
     if (port < 0) {
         snprintf(m->status, sizeof(m->status), "Couldn't create port: %s", er ? er(port) : "error");
-        p_close(seq);
+        ((close_fn)m->close_fn)(seq);
         return 0;
     }
     m->seq = seq;
@@ -66,7 +64,7 @@ int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
 }
 
 void vc_port_send(MidiPort *m, const unsigned char *msg) {
-    if (!m->seq || !p_out) return;
+    if (!m->seq || !m->out_fn) return;
     SeqEvent ev;
     memset(&ev, 0, sizeof(ev));
     int st = msg[0] & 0xF0, ch = msg[0] & 0x0F;
@@ -78,11 +76,11 @@ void vc_port_send(MidiPort *m, const unsigned char *msg) {
     ev.src_port = (unsigned char)m->port;
     ev.dst_client = ADDR_SUBSCRIBERS;     /* to whoever listens (MPC tracks set to this input) */
     ev.dst_port = ADDR_UNKNOWN;
-    p_out(m->seq, &ev);                   /* non-blocking; a full buffer drops the event rather than stalling audio */
+    ((out_fn)m->out_fn)(m->seq, &ev);                   /* non-blocking; a full buffer drops the event rather than stalling audio */
 }
 
 void vc_port_close(MidiPort *m) {
-    if (m->seq && p_close) p_close(m->seq);
+    if (m->seq && m->close_fn) ((close_fn)m->close_fn)(m->seq);
     m->seq = 0;
     snprintf(m->status, sizeof(m->status), "Port closed");
 }

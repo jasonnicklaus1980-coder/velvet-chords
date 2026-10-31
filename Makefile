@@ -40,7 +40,7 @@ build/native build/arm:
 
 native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
-test: native vhost-test sample-meta-test keygroup-test mpc-list-test kit-test
+test: native vhost-test sample-meta-test keygroup-test mpc-list-test isolation-test kit-test
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
@@ -91,6 +91,14 @@ build/native/test_kit: tests/test_kit.c src/kit.c src/kit.h src/xpm_read.c src/x
 kit-test: build/native/test_kit
 	./build/native/test_kit build/native/kit_test
 .PHONY: kit-test
+
+# two instances at once (a melody track and a drum track): the melody must not change when the drums play beside it
+build/native/test_isolation: tests/test_isolation.c src/vst2_abi.h | build/native
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_isolation.c -ldl -lm
+
+isolation-test: native build/native/test_isolation
+	./build/native/test_isolation build/native/velvetchords.so
+.PHONY: isolation-test
 
 # the MPC's own plugin list (MPC.settings), which the host picker cycles through
 build/native/test_mpc_list: tests/test_mpc_list.c src/mpc_list.c src/mpc_list.h src/xml_min.c src/xml_min.h src/vhost.h | build/native
