@@ -586,18 +586,26 @@ static void host_scan(Plugin *p) {
         int n = mpc_walk_plugins(folders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
         for (int i = 0; i >= 0 && i < n; i++) host_probe_add(p, &found, p->host_scan_paths[i]);
     }
-    /* 3. the drum kits: every .xpm in the kit folder, subfolders included. The names are written before the count. */
+    /* 3. the drum kits: every .xpm in the kit folder and in the expansion folders, subfolders included. Each kit is
+     * listed once. The names are written before the count. */
     const char *kdir = getenv("VC_KIT_DIR");   /* test hook */
-    int nk = mpc_walk_files(kdir ? kdir : MPC_KIT_DIR, p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH, ".xpm");
+    const char *kfolders[3] = {kdir ? kdir : MPC_KIT_DIR, exp ? exp : MPC_EXPANSIONS_DIR, dir ? NULL : MPC_EXPANSIONS_SSD_DIR};
     int kc = 0;
-    for (int i = 0; i >= 0 && i < nk && kc < KIT_LIST_MAX; i++) {
-        memcpy(p->kit_paths[kc], p->host_scan_paths[i], sizeof p->kit_paths[kc]);
-        const char *base = strrchr(p->host_scan_paths[i], '/');
-        base = base ? base + 1 : p->host_scan_paths[i];
-        snprintf(p->kit_names[kc], sizeof p->kit_names[kc], "%s", base);
-        char *dot = strrchr(p->kit_names[kc], '.');
-        if (dot) *dot = 0;   /* the name without .xpm */
-        kc++;
+    for (int f = 0; f < 3 && kc < KIT_LIST_MAX; f++) {
+        if (!kfolders[f]) continue;
+        int nk = mpc_walk_files(kfolders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH, ".xpm");
+        for (int i = 0; i >= 0 && i < nk && kc < KIT_LIST_MAX; i++) {
+            int seen = 0;
+            for (int k = 0; k < kc && !seen; k++) seen = !strcmp(p->kit_paths[k], p->host_scan_paths[i]);
+            if (seen) continue;
+            memcpy(p->kit_paths[kc], p->host_scan_paths[i], sizeof p->kit_paths[kc]);
+            const char *base = strrchr(p->host_scan_paths[i], '/');
+            base = base ? base + 1 : p->host_scan_paths[i];
+            snprintf(p->kit_names[kc], sizeof p->kit_names[kc], "%s", base);
+            char *dot = strrchr(p->kit_names[kc], '.');
+            if (dot) *dot = 0;   /* the name without .xpm */
+            kc++;
+        }
     }
     __atomic_store_n(&p->kit_count, kc, __ATOMIC_RELEASE);
 
