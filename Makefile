@@ -14,7 +14,7 @@ ARM_CC ?= arm-linux-gnueabihf-gcc
 ARM_FLAGS ?= -march=armv7-a -mfpu=neon -mfloat-abi=hard -mthumb
 ARM_LDEXTRA ?= -static-libgcc
 
-.PHONY: all native test arm arm-test release clean data skin
+.PHONY: all native test arm arm-test release clean data skin win
 
 all: native test
 
@@ -65,6 +65,19 @@ build/native/test_isolation: tests/test_isolation.c src/vst2_abi.h | build/nativ
 isolation-test: native build/native/test_isolation
 	./build/native/test_isolation build/native/velvetchords.so
 .PHONY: isolation-test
+
+# Windows 64-bit VST2 DLL for desktop DAWs (cross-compiled with zig; no ALSA, so no virtual MIDI port).
+# The MPC build above is unchanged. Override ZIG if zig is not on the PATH.
+ZIG ?= zig
+WIN_CFLAGS := -std=gnu99 -O2 $(WARN) -DNDEBUG
+win: src/songs_gen.c | build/win
+	$(ZIG) cc -target x86_64-windows-gnu $(WIN_CFLAGS) -shared -o build/win/velvetchords.dll $(SRC) src/plugin.c
+	llvm-readobj --coff-exports build/win/velvetchords.dll | grep -q VSTPluginMain
+	@echo "built build/win/velvetchords.dll"
+.PHONY: win
+
+build/win:
+	mkdir -p $@
 
 # regenerate the screen skin (needs python3-pil and the Poppins font); the result is committed in package/skin
 skin: native

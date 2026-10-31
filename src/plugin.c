@@ -15,12 +15,24 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#ifdef _WIN32
+#include <direct.h>
+#define vc_mkdir(path, mode) _mkdir(path)   /* Windows makes folders without a mode */
+#else
+#define vc_mkdir(path, mode) mkdir(path, mode)
+#endif
 #include <errno.h>
+#ifndef _WIN32
 #include <dlfcn.h>
+#endif
 #include <pthread.h>
 #include <time.h>
 
+#ifdef _WIN32
+#define VC_EXPORT __declspec(dllexport)
+#else
 #define VC_EXPORT __attribute__((visibility("default")))
+#endif
 #define VC_UID VC_FOURCC('V', 'l', 'v', 'C')
 #define VC_VERSION 1000
 #define IMP_LIST_MAX 256 /* most files the MIDI picker lists */
@@ -495,17 +507,25 @@ static void *refresh_loop(void *arg) {
 }
 
 static void start_refresh_thread(Plugin *p) {
+#ifdef _WIN32
+    if (pthread_create(&p->refresh_thread, 0, refresh_loop, p) == 0) p->refresh_running = 1;
+#else
     /* looked up at runtime: the host process always has threads, and this keeps the link free of libpthread */
     pthread_create_fn create = (pthread_create_fn)dlsym(RTLD_DEFAULT, "pthread_create");
     if (create && create(&p->refresh_thread, 0, refresh_loop, p) == 0) p->refresh_running = 1;
+#endif
 }
 
 static void stop_refresh_thread(Plugin *p) {
     if (!p->refresh_running) return;
     p->refresh_quit = 1;
+#ifdef _WIN32
+    pthread_join(p->refresh_thread, 0);
+#else
     pthread_join_fn join = (pthread_join_fn)dlsym(RTLD_DEFAULT, "pthread_join");
     if (join) join(p->refresh_thread, 0);
     else { struct timespec ts = {0, 100 * 1000000L}; nanosleep(&ts, 0); } /* let the loop see refresh_quit */
+#endif
     p->refresh_running = 0;
 }
 
@@ -642,7 +662,7 @@ static void export_user_preset(Plugin *p, int slot) {
     if (slot < 0 || slot >= VC_USER_PRESETS) return;
     if (!p->upre_ok[slot]) { snprintf(p->upre_msg, sizeof(p->upre_msg), "Slot %d is empty: Save first", slot + 1); return; }
     char path[512];
-    mkdir(export_dir(), 0775);
+    vc_mkdir(export_dir(), 0775);
     upre_path(path, sizeof(path), slot);
     FILE *f = fopen(path, "w");
     if (!f) { snprintf(p->upre_msg, sizeof(p->upre_msg), "Could not write the file"); return; }
@@ -721,7 +741,7 @@ static void analyze_sample(Plugin *p, int slot) {
     if (p->lp_pending.un[slot]) { snprintf(p->ana_msg, sizeof(p->ana_msg), "Progression %d holds chords: Clear progression first", slot + 1); return; }
     char dir[512], path[512], msg[96];
     snprintf(dir, sizeof(dir), "%s/Analyze", export_dir());
-    mkdir(dir, 0775); /* made on first use, so the folder is there to copy a sample into */
+    vc_mkdir(dir, 0775); /* made on first use, so the folder is there to copy a sample into */
     snprintf(path, sizeof(path), "%s/sample.wav", dir);
     char found[160] = "sample.wav";
     if (access(path, R_OK) != 0) { /* no sample.wav: use the first WAV in the folder, so a renamed export still works */
@@ -907,7 +927,7 @@ static const char *export_dir(void) {
     /* MPC OS internal drive (where MPC.settings lives); falls back to /sdcard like the plugin itself.
      * mkdir+errno instead of stat(): stat() binds to GLIBC_2.33 on new toolchains. */
     static const char *internal = "/media/az01-internal/Velvet Chords";
-    if (mkdir(internal, 0775) == 0 || errno == EEXIST) return internal;
+    if (vc_mkdir(internal, 0775) == 0 || errno == EEXIST) return internal;
     return "/sdcard/Velvet Chords";
 }
 
@@ -958,8 +978,8 @@ static void scan_import_dir(const char *rel, int depth) {
 static int cmp_import_names(const void *x, const void *y) { return strcmp((const char *)x, (const char *)y); }
 
 static void scan_import_files(Plugin *p) {
-    mkdir(export_dir(), 0775);
-    mkdir(import_dir(), 0775);
+    vc_mkdir(export_dir(), 0775);
+    vc_mkdir(import_dir(), 0775);
     imp_scan_n = 0;
     scan_import_dir("", 0);
     if (imp_scan_n == 0) { /* say where it looked, so an empty list can be traced */
@@ -996,7 +1016,7 @@ static void do_export(Plugin *p, double hostTempo) {
     static MfChord ch[256];
     char fname[160], path[512], text[700], title[160];
     const char *dir = export_dir();
-    mkdir(dir, 0775);
+    vc_mkdir(dir, 0775);
     LayoutParams *lp = &p->lp_pending;
     int ok = 0, n = 0;
     build_local(p, pads, v);
@@ -1951,5 +1971,7 @@ VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
 }
 
 /* some hosts look for "main" instead of "VSTPluginMain" */
+#ifndef _WIN32
 VC_EXPORT AEffect *vc_main_alias(audioMasterCallback host) __asm__("main");
 AEffect *vc_main_alias(audioMasterCallback host) { return VSTPluginMain(host); }
+#endif

@@ -1,5 +1,7 @@
 #include "midiport.h"
+#ifndef _WIN32
 #include <dlfcn.h>
+#endif
 #include <stdio.h>
 #include <string.h>
 
@@ -34,6 +36,14 @@ typedef const char *(*err_fn)(int);
 
 int vc_port_is_open(const MidiPort *m) { return m && m->seq != 0; }
 
+#ifdef _WIN32
+/* the virtual port is ALSA, which Windows doesn't have: the plugin still plays its own sound */
+int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
+    (void)m; (void)client_name; (void)port_name;
+    snprintf(m->status, sizeof(m->status), "Virtual MIDI port is not available on Windows");
+    return 0;
+}
+#else
 int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
     if (m->seq) return 1;
     if (!m->lib) m->lib = dlopen("libasound.so.2", RTLD_NOW | RTLD_LOCAL);
@@ -62,6 +72,7 @@ int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
     snprintf(m->status, sizeof(m->status), "Port open: %s (%d:%d)", port_name, m->client, m->port);
     return 1;
 }
+#endif
 
 void vc_port_send(MidiPort *m, const unsigned char *msg) {
     if (!m->seq || !m->out_fn) return;
