@@ -22,11 +22,19 @@
 #define vc_mkdir(path, mode) mkdir(path, mode)
 #endif
 #include <errno.h>
-#ifndef _WIN32
+#ifdef _WIN32
+#define WIN32_LEAN_AND_MEAN
+#define NOMINMAX
+#include <windows.h>
+typedef DWORD vc_thread_id;        /* a thread's id: the audio thread is recognised by it */
+typedef HANDLE vc_thread_handle;   /* the refresh thread's handle */
+#else
 #include <dlfcn.h>
-#endif
 #include <pthread.h>
 #include <time.h>
+typedef pthread_t vc_thread_id;
+typedef pthread_t vc_thread_handle;
+#endif
 
 #ifdef _WIN32
 #define VC_EXPORT __declspec(dllexport)
@@ -314,7 +322,7 @@ typedef struct {
     int riff_sel, note_sel;     /* riff slot shown by the Riff step parameters; note shown by Edit note */
     volatile int refresh_req, refresh_quit;
     volatile int have_audio_thread, opened;
-    pthread_t audio_thread;
+    vc_thread_id audio_thread;
     float trig_last[NUM_PARAMS];
     double trig_time[NUM_PARAMS];
     int refresh_running;
@@ -322,7 +330,7 @@ typedef struct {
     int ui_page;                   /* the editor page shown (0 Play .. 5 Lanes) */
     void *ui_store;                /* the editor's pictures (Windows): the page background and each control's two states */
     int ui_loaded_page;            /* the page whose pictures are loaded, or -1 */
-    pthread_t refresh_thread;
+    vc_thread_handle refresh_thread;
     /* MIDI import */
     ImportChord imp[VC_PADS], imp_engine[VC_PADS];
     int nimp;
@@ -445,6 +453,31 @@ static void save_user_prog(Plugin *p, int slot) {
     sync_layout(p);
 }
 
+static vc_thread_id vc_this_thread(void) {
+#ifdef _WIN32
+    return GetCurrentThreadId();
+#else
+    return pthread_self();
+#endif
+}
+
+static int vc_same_thread(vc_thread_id a, vc_thread_id b) {
+#ifdef _WIN32
+    return a == b;
+#else
+    return pthread_equal(a, b);
+#endif
+}
+
+static void vc_sleep_ms(int ms) {
+#ifdef _WIN32
+    Sleep((DWORD)ms);
+#else
+    struct timespec ts = {0, (long)ms * 1000000L};
+    nanosleep(&ts, 0);
+#endif
+}
+
 /* Screen refresh. Never call the host from here: this runs on the audio thread (pad hits, automation), and a
  * host that redraws inside that call stalls the audio for every track. Just raise a flag; a background thread
  * (refresh_loop) tells the host at most every 40 ms. */
@@ -452,16 +485,24 @@ static void refresh_host(Plugin *p) {
     /* From the screen or the host's UI thread: tell the host right away, like any plugin (the MPC may ignore
      * requests from other threads, which froze the screen and one-tap buttons). From the audio thread (pad hits,
      * automation): only raise a flag for the background helper, so the audio is never held up. */
-    if (p->opened && p->host && !(p->have_audio_thread && pthread_equal(pthread_self(), p->audio_thread))) {
+    if (p->opened && p->host && !(p->have_audio_thread && vc_same_thread(vc_this_thread(), p->audio_thread))) {
         p->refresh_req = 0;
         p->host(&p->fx, audioMasterUpdateDisplay, 0, 0, 0, 0.f);
     } else p->refresh_req = 1;
 }
 
 static double mono_seconds(void) {
+#ifdef _WIN32
+    static LARGE_INTEGER freq;
+    LARGE_INTEGER t;
+    if (!freq.QuadPart) QueryPerformanceFrequency(&freq);
+    QueryPerformanceCounter(&t);
+    return (double)t.QuadPart / (double)freq.QuadPart;
+#else
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (double)ts.tv_sec + ts.tv_nsec * 1e-9;
+#endif
 }
 
 static void mlog_push(Plugin *p, char dir, const unsigned char *d) {
@@ -492,14 +533,15 @@ static void mlog_service(Plugin *p) {
     if (!p->midi_log_on) { fclose(f); p->mlog_file = 0; }
 }
 
+#ifndef _WIN32
 typedef int (*pthread_create_fn)(pthread_t *, const pthread_attr_t *, void *(*)(void *), void *);
 typedef int (*pthread_join_fn)(pthread_t, void **);
+#endif
 
 static void *refresh_loop(void *arg) {
     Plugin *p = (Plugin *)arg;
     while (!p->refresh_quit) {
-        struct timespec ts = {0, 40 * 1000000L};
-        nanosleep(&ts, 0);
+        vc_sleep_ms(40);
         mlog_service(p);
         if (p->refresh_req && !p->refresh_quit) {
             p->refresh_req = 0;
@@ -510,9 +552,17 @@ static void *refresh_loop(void *arg) {
     return 0;
 }
 
+#ifdef _WIN32
+static DWORD WINAPI refresh_thread_main(LPVOID arg) {
+    refresh_loop(arg);
+    return 0;
+}
+#endif
+
 static void start_refresh_thread(Plugin *p) {
 #ifdef _WIN32
-    if (pthread_create(&p->refresh_thread, 0, refresh_loop, p) == 0) p->refresh_running = 1;
+    p->refresh_thread = CreateThread(NULL, 0, refresh_thread_main, p, 0, NULL);
+    if (p->refresh_thread) p->refresh_running = 1;
 #else
     /* looked up at runtime: the host process always has threads, and this keeps the link free of libpthread */
     pthread_create_fn create = (pthread_create_fn)dlsym(RTLD_DEFAULT, "pthread_create");
@@ -524,11 +574,13 @@ static void stop_refresh_thread(Plugin *p) {
     if (!p->refresh_running) return;
     p->refresh_quit = 1;
 #ifdef _WIN32
-    pthread_join(p->refresh_thread, 0);
+    WaitForSingleObject(p->refresh_thread, INFINITE);
+    CloseHandle(p->refresh_thread);
+    p->refresh_thread = NULL;
 #else
     pthread_join_fn join = (pthread_join_fn)dlsym(RTLD_DEFAULT, "pthread_join");
     if (join) join(p->refresh_thread, 0);
-    else { struct timespec ts = {0, 100 * 1000000L}; nanosleep(&ts, 0); } /* let the loop see refresh_quit */
+    else vc_sleep_ms(100); /* let the loop see refresh_quit */
 #endif
     p->refresh_running = 0;
 }
@@ -1765,7 +1817,7 @@ static void send_midi_out(Plugin *p) {
 
 static void render(Plugin *p, float **out, int n, int accumulate) {
     Engine *e = p->eng;
-    p->audio_thread = pthread_self(); /* every block: the host may move audio between threads */
+    p->audio_thread = vc_this_thread(); /* every block: the host may move audio between threads */
     p->have_audio_thread = 1;
     apply_pending(p);
     e->tempo = host_tempo_pos(p, &e->ppq, &e->playing);
@@ -1867,9 +1919,6 @@ static void destroy(Plugin *p) {
  * or sets a control, right click steps it back, and the tabs along the bottom change page. The MPC build has no
  * editor; the stubs at the end keep it unchanged. */
 #ifdef _WIN32
-#define WIN32_LEAN_AND_MEAN
-#define NOMINMAX
-#include <windows.h>
 #include "win_layout.h"
 
 typedef struct { short top, left, bottom, right; } VcERect;   /* the VST2 editor rectangle */
