@@ -51,8 +51,6 @@ jobs:
 
   windows:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
       - uses: actions/checkout@v4
 
@@ -86,13 +84,51 @@ jobs:
           name: VelvetChords-Windows
           path: dist/VelvetChords-Windows-x64.zip
 
-      - name: Publish the Windows zip as the windows-preview pre-release
-        if: github.event_name == 'push' && github.ref == 'refs/heads/keygroups-prep'
+  mac:
+    runs-on: macos-13
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build the Intel macOS plugin bundle
+        run: make mac MAC_CC=clang
+
+      - name: Check the bundle is x86_64
+        run: |
+          lipo -archs "build/mac/Velvet Chords.vst/Contents/MacOS/Velvet Chords"
+          lipo -archs "build/mac/Velvet Chords.vst/Contents/MacOS/Velvet Chords" | grep -q x86_64
+
+      - name: Package the macOS zip
+        run: |
+          rm -rf dist/mac-intel-pkg && mkdir -p dist/mac-intel-pkg
+          cp -R "build/mac/Velvet Chords.vst" dist/mac-intel-pkg/
+          cp package/mac/README.txt dist/mac-intel-pkg/
+          cd dist/mac-intel-pkg && zip -qr ../VelvetChords-Mac-Intel.zip "Velvet Chords.vst" README.txt
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: VelvetChords-Mac-Intel
+          path: dist/VelvetChords-Mac-Intel.zip
+
+  publish:
+    needs: [windows, mac]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/keygroups-prep'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: VelvetChords-*
+          merge-multiple: true
+          path: assets
+
+      - name: Publish the Windows and macOS zips as the windows-preview pre-release
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          ls -l assets
           gh release delete windows-preview --yes --cleanup-tag 2>/dev/null || true
-          gh release create windows-preview dist/VelvetChords-Windows-x64.zip \
+          gh release create windows-preview assets/*.zip \
             --prerelease --target "$GITHUB_SHA" \
-            --title "Velvet Chords for Windows (preview)" \
-            --notes "Built from commit $GITHUB_SHA by the build-from-zip workflow. Tested under Wine only, not yet in a Windows DAW. Unzip, keep the skin folder beside velvetchords.dll, and see the README inside."
+            --title "Velvet Chords preview: Windows and Intel macOS" \
+            --notes "Built from commit $GITHUB_SHA by the build-from-zip workflow. Windows: tested under Wine only. Intel macOS: built, not yet loaded in a Mac DAW. Neither is tested in a DAW yet; see the READMEs inside each zip."

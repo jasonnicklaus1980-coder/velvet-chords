@@ -90,6 +90,20 @@ void vc_port_close(MidiPort *m) {
     m->seq = 0;
     snprintf(m->status, sizeof(m->status), "Port closed");
 }
+#elif defined(__APPLE__)
+/* macOS: the virtual port will be a CoreMIDI source; it is not built yet, so the port reports that */
+int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
+    (void)client_name; (void)port_name;
+    snprintf(m->status, sizeof(m->status), "Virtual MIDI port not available on macOS yet");
+    return 0;
+}
+
+void vc_port_send(MidiPort *m, const unsigned char *msg) { (void)m; (void)msg; }
+
+void vc_port_close(MidiPort *m) {
+    m->seq = 0;
+    snprintf(m->status, sizeof(m->status), "Port closed");
+}
 #else
 int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
     if (m->seq) return 1;

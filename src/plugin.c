@@ -2315,7 +2315,7 @@ VC_EXPORT AEffect *VSTPluginMain(audioMasterCallback host) {
 }
 
 /* some hosts look for "main" instead of "VSTPluginMain" */
-#ifndef _WIN32
+#if !defined(_WIN32) && !defined(__APPLE__)
 VC_EXPORT AEffect *vc_main_alias(audioMasterCallback host) __asm__("main");
 AEffect *vc_main_alias(audioMasterCallback host) { return VSTPluginMain(host); }
 #endif

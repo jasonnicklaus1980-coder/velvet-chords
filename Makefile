@@ -95,6 +95,19 @@ win-test: win
 	cd build/win_fake && VC_VMIDI=present VC_FAKE_VMIDI_LOG="$$PWD/vmidi.log" xvfb-run -a wine win_host.exe velvetchords.dll
 .PHONY: win-test
 
+# Intel macOS VST2 bundle (x86_64). On a Mac: make mac (clang). Elsewhere, with zig:
+#   make mac MAC_CC="zig cc -target x86_64-macos.10.13"
+MAC_CC ?= clang
+MAC_BUNDLE := build/mac/Velvet Chords.vst
+mac:
+	rm -rf "build/mac" && mkdir -p "$(MAC_BUNDLE)/Contents/MacOS"
+	$(MAC_CC) -std=gnu99 -O2 -fPIC -shared -o "$(MAC_BUNDLE)/Contents/MacOS/Velvet Chords" $(SRC) src/plugin.c
+	cp package/mac/Info.plist "$(MAC_BUNDLE)/Contents/Info.plist"
+	printf 'BNDL????' > "$(MAC_BUNDLE)/Contents/PkgInfo"
+	if command -v codesign >/dev/null 2>&1; then codesign --force --sign - "$(MAC_BUNDLE)"; fi
+	@echo "built $(MAC_BUNDLE)"
+.PHONY: mac
+
 # regenerate the screen skin (needs python3-pil and the Poppins font); the result is committed in package/skin
 skin: native
 	$(NATIVE_CC) -std=gnu99 -O1 -o build/native/list_params tools/list_params.c -ldl
