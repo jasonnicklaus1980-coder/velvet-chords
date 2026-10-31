@@ -76,7 +76,7 @@ win-layout:
 
 win: src/songs_gen.c | build/win
 	$(ZIG) cc -target x86_64-windows-gnu $(WIN_CFLAGS) -shared -o build/win/velvetchords.dll $(SRC) src/plugin.c -lgdi32 -luser32 -lgdiplus
-	llvm-readobj --coff-exports build/win/velvetchords.dll | grep -q VSTPluginMain
+	grep -a -q VSTPluginMain build/win/velvetchords.dll
 	@echo "built build/win/velvetchords.dll"
 .PHONY: win win-layout
 
