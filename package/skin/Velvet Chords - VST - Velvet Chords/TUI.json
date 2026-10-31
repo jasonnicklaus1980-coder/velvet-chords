@@ -45860,6 +45860,132 @@
                     }
                 },
                 {
+                    "key": "vcField_200x30_18_ececf3_e",
+                    "value": {
+                        "version": 4,
+                        "actions": [
+                            {
+                                "version": 2,
+                                "onAction": "Mouse Down",
+                                "handler": "Q-Link",
+                                "handleName": "Data",
+                                "additionalData": "",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Double Click",
+                                "handler": "Show Overlay",
+                                "handleName": "",
+                                "additionalData": "knob overlay",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "onAction": "Enter Pressed",
+                                "handler": "Show Overlay",
+                                "handleName": "",
+                                "additionalData": "knob overlay",
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                }
+                            }
+                        ],
+                        "backgroundData": {
+                            "version": 1,
+                            "focussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            },
+                            "unfocussed": {
+                                "version": 1,
+                                "colour": "0",
+                                "image": ""
+                            }
+                        },
+                        "ignoreMousePresses": false,
+                        "disableCoarseDataWheel": false,
+                        "repeats": 1,
+                        "hideQLinkBounds": true,
+                        "componentsData": [
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Focus",
+                                    "type": "Focus",
+                                    "data": {
+                                        "version": 1,
+                                        "backgroundColour": "00000000",
+                                        "outlineColour": "ff3d9cf5",
+                                        "backgroundInset": 2.0,
+                                        "outlineThickness": 2.0
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "WhenFocussed",
+                                    "boundsType": "Absolute",
+                                    "bounds": "0 0 200 30",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Value",
+                                    "type": "Label",
+                                    "data": {
+                                        "version": 1,
+                                        "textStyle": {
+                                            "version": 1,
+                                            "font": {
+                                                "version": 1,
+                                                "name": "Titillium Web",
+                                                "style": "SemiBold",
+                                                "height": 18.0
+                                            },
+                                            "colour": "ffececf3",
+                                            "justification": "horizontallyCentred verticallyCentred",
+                                            "case": "Original"
+                                        },
+                                        "type": "Value",
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": []
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Show",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "10 0 180 30",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            }
+                        ]
+                    }
+                },
+                {
                     "key": "vcField_300x30_18_ececf3_e",
                     "value": {
                         "version": 4,
@@ -46249,6 +46375,96 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
+                                    "name": "prev",
+                                    "type": "vcChev_prev",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 240"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "728 96 44 44",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "next",
+                                    "type": "vcChev_next",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 241"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "No",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "984 96 44 44",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Kit",
+                                    "type": "vcField_212x44_18_ececf3_e",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 242"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "Yes",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "772 96 212 44",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
                                     "name": "Host volume",
                                     "type": "vcField_212x44_18_ececf3_e",
                                     "data": {
@@ -46551,6 +46767,66 @@
                                 "version": 2,
                                 "componentData": {
                                     "version": 1,
+                                    "name": "Kit volume",
+                                    "type": "vcField_200x30_18_ececf3_e",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 243"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "Yes",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "28 580 200 30",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
+                                    "name": "Kit mute",
+                                    "type": "vcSwitch",
+                                    "data": {
+                                        "version": 1,
+                                        "handleName": "Data"
+                                    }
+                                },
+                                "handle remapping": {
+                                    "version": 1,
+                                    "map": [
+                                        {
+                                            "key": "Data",
+                                            "value": "Parameter 244"
+                                        }
+                                    ]
+                                },
+                                "bounds": {
+                                    "version": 2,
+                                    "acceptsHWFocus": "Yes",
+                                    "showWhenDataModelInvalid": "Hide",
+                                    "whenVisible": "Always",
+                                    "boundsType": "Absolute",
+                                    "bounds": "260 580 44 36",
+                                    "additionalInvalidatingHandles": []
+                                }
+                            },
+                            {
+                                "version": 2,
+                                "componentData": {
+                                    "version": 1,
                                     "name": "Scroll (Q-Link)",
                                     "type": "vcField_300x30_18_ececf3_e",
                                     "data": {
@@ -46563,7 +46839,7 @@
                                     "map": [
                                         {
                                             "key": "Data",
-                                            "value": "Parameter 240"
+                                            "value": "Parameter 245"
                                         }
                                     ]
                                 },
