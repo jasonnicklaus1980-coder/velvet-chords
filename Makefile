@@ -83,6 +83,14 @@ win: src/songs_gen.c | build/win
 build/win:
 	mkdir -p $@
 
+# run the Windows build in a VST2 host under Wine (not part of make test): loads the DLL, opens and clicks the editor,
+# plays notes and checks the state. Needs wine and xvfb-run; the skin folder is copied beside the DLL.
+win-test: win
+	$(ZIG) cc -target x86_64-windows-gnu -std=gnu99 -O1 -Wall -o build/win/win_host.exe tests/win_host.c -luser32 -lgdi32
+	rm -rf build/win/skin && mkdir -p build/win/skin && cp "package/skin/Velvet Chords - VST - Velvet Chords"/*.png build/win/skin/
+	cd build/win && xvfb-run -a wine win_host.exe velvetchords.dll
+.PHONY: win-test
+
 # regenerate the screen skin (needs python3-pil and the Poppins font); the result is committed in package/skin
 skin: native
 	$(NATIVE_CC) -std=gnu99 -O1 -o build/native/list_params tools/list_params.c -ldl

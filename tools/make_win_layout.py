@@ -39,7 +39,8 @@ def main():
             pngs = re.findall(r'"([^"]+\.png)"', json.dumps(defs.get(ty, {})))
             on_img, off_img = (pngs[0], pngs[1]) if len(pngs) >= 2 else (None, pngs[0]) if pngs else (None, None)
             if ty.startswith("vcSeg_"):
-                kind, seg = "SEG", int(ty.rsplit("_", 1)[1])
+                # the value this segment sets is its buttonId (the skin's own button value, e.g. Mode Custom is 2)
+                kind, seg = "SEG", int(defs[ty]["componentsData"][0]["componentData"]["data"]["buttonId"])
             elif ty.startswith(("vcPad", "vcKey", "vcDot")):
                 kind, seg = "SHOW", -1                     # pads, keys and scale dots: shown, not clicked
             else:
