@@ -537,7 +537,7 @@ static void mlog_service(Plugin *p) {
  * take the MPC with it. */
 /* the folder a hosted plugin sits in, relative to the plugin folder: "" at the top, "pad" for /sdcard/vst/pad/x.so */
 static void host_folder(const char *path, char *out, size_t len) {
-    static const char *roots[] = {"/sdcard/vst/", MPC_EXPANSIONS_DIR "/", MPC_EXPANSIONS_SSD_DIR "/"};
+    static const char *roots[] = {"/sdcard/vst/", MPC_EXPANSIONS_DIR "/", MPC_EXPANSIONS_SSD_DIR "/", MPC_SYNTHS_DIR "/", MPC_SYNTHS_SSD_DIR "/"};
     const char *rel = path;
     for (size_t r = 0; r < sizeof roots / sizeof roots[0]; r++) {
         if (strncmp(path, roots[r], strlen(roots[r])) == 0) { rel = path + strlen(roots[r]); break; }
@@ -580,8 +580,9 @@ static void host_scan(Plugin *p) {
     }
     /* 2. every plugin in the plugin folder and the expansions folders (the internal drive and the SSD), subfolders
      * included, so plugins the list doesn't name are still found */
-    const char *folders[3] = {dir ? dir : HOST_DIR, exp ? exp : MPC_EXPANSIONS_DIR, dir ? NULL : MPC_EXPANSIONS_SSD_DIR};
-    for (int f = 0; f < 3; f++) {
+    const char *folders[5] = {dir ? dir : HOST_DIR, exp ? exp : MPC_EXPANSIONS_DIR, dir ? NULL : MPC_EXPANSIONS_SSD_DIR,
+                              dir ? NULL : MPC_SYNTHS_DIR, dir ? NULL : MPC_SYNTHS_SSD_DIR};
+    for (int f = 0; f < 5; f++) {
         if (!folders[f]) continue;
         int n = mpc_walk_plugins(folders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
         for (int i = 0; i >= 0 && i < n; i++) host_probe_add(p, &found, p->host_scan_paths[i]);
