@@ -74,7 +74,7 @@ The Q-Links follow the page. If the skin doesn't appear (for example `/sdcard/Sy
 Velvet Chords can work as a pure chord-and-pattern generator that plays **another** instrument, the way ChordPrism sits in front of a synth in a DAW. It sends its chords out as MIDI and stays silent itself.
 
 1. **Track 1: Velvet Chords.** On the Pattern page set *Built-in sound* to **Silent** and *Send chords as MIDI* to **Virtual port**. Output is on channel 16 by default.
-2. **Track 2: your instrument.** Any keygroup or plugin track: an MPC piano, an AIR synth, a Rhodes. In that track's MIDI input settings, choose the input port **Velvet Chords Out**, channel 16, with monitoring on so it plays while Track 1 is selected. (Menu names differ between MPC OS versions.)
+2. **Track 2: your instrument.** Any instrument track: an MPC piano, an AIR synth, a Rhodes. In that track's MIDI input settings, choose the input port **Velvet Chords Out**, channel 16, with monitoring on so it plays while Track 1 is selected. (Menu names differ between MPC OS versions.)
 3. Select Track 1 and play the pads. Each pad sends its chord, or its rhythm pattern, to Track 2.
 
 The *MIDI port* readout on the Pattern page shows whether the port opened. If MPC doesn't list *Velvet Chords Out* as an input, save the project, then reload it or restart MPC with the plugin loaded so MPC rescans its MIDI ports.
