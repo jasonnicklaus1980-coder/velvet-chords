@@ -287,23 +287,11 @@ static OwnerRec *find_owner(Engine *e, int owner) {
 }
 
 /* queues a note for the hosted instrument (no-op when none is loaded, and never allocates) */
-static void host_tap(Engine *e, int kind, int note, float vel, int frame) {
-    if (!e->host_tap || e->nhq >= EN_HOST_EV) return;
-    HostEv *h = &e->hq[e->nhq++];
-    int v = (int)(vel * 127.f + 0.5f);
-    if (v > 127) v = 127;
-    if (kind == 1 && v < 1) v = 1;
-    h->frame = frame;
-    h->kind = (unsigned char)kind;
-    h->note = (unsigned char)note;
-    h->vel = (unsigned char)v;
-}
 
 static void note_on_slot(Engine *e, OwnerRec *r, int slot, int frame) {
     if (slot < 0 || slot >= r->n || r->sounding[slot]) return;
     int note = r->notes[slot];
     sy_note_on(&e->synth, note, r->vel, r->owner, r->group);
-    host_tap(e, 1, note, r->vel, frame);
     r->sounding[slot] = 1;
     if (e->out_ref[note]++ == 0 && e->midi_out) emit(e, frame, (unsigned char)(0x90 | (e->out_channel & 15)), (unsigned char)note, (unsigned char)(r->vel * 127.f + 0.5f));
 }
@@ -312,20 +300,17 @@ static void note_off_slot(Engine *e, OwnerRec *r, int slot, int frame) {
     if (slot < 0 || slot >= r->n || !r->sounding[slot]) return;
     int note = r->notes[slot];
     sy_release(&e->synth, note, r->owner);
-    host_tap(e, 0, note, 0.f, frame);
     r->sounding[slot] = 0;
     if (e->out_ref[note] > 0 && --e->out_ref[note] == 0 && e->midi_out) emit(e, frame, (unsigned char)(0x80 | (e->out_channel & 15)), (unsigned char)note, 0);
 }
 
 static void note_on_raw(Engine *e, OwnerRec *r, int note, int frame) {
     sy_note_on(&e->synth, note, r->vel, r->owner, r->group);
-    host_tap(e, 1, note, r->vel, frame);
     if (e->out_ref[note]++ == 0 && e->midi_out) emit(e, frame, (unsigned char)(0x90 | (e->out_channel & 15)), (unsigned char)note, (unsigned char)(r->vel * 127.f + 0.5f));
 }
 
 static void note_off_raw(Engine *e, OwnerRec *r, int note, int frame) {
     sy_release(&e->synth, note, r->owner);
-    host_tap(e, 0, note, 0.f, frame);
     if (e->out_ref[note] > 0 && --e->out_ref[note] == 0 && e->midi_out) emit(e, frame, (unsigned char)(0x80 | (e->out_channel & 15)), (unsigned char)note, 0);
 }
 
@@ -386,7 +371,6 @@ void en_reset(Engine *e) {
         e->out_ref[n] = 0;
     }
     sy_kill_all(&e->synth);
-    host_tap(e, 2, 0, 0.f, 0);
 }
 
 /* ---------- pattern generator ---------- */

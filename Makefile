@@ -5,7 +5,7 @@
 #   make release    package dist/VelvetChords-<ver>.zip from the ARM build
 
 VERSION := 1.0.0
-SRC := src/vhost.c src/vcmath.c src/chords.c src/layouts.c src/songs_gen.c src/presets_gen.c src/synth.c src/fx.c src/engine.c src/export.c src/midiport.c src/midiimport.c src/progression.c src/audioanalysis.c src/xml_min.c src/mpc_list.c src/xpm_read.c src/kit.c
+SRC := src/vcmath.c src/chords.c src/layouts.c src/songs_gen.c src/presets_gen.c src/synth.c src/fx.c src/engine.c src/export.c src/midiport.c src/midiimport.c src/progression.c src/audioanalysis.c
 WARN := -Wall -Wextra -Wno-unused-parameter
 COMMON := -std=gnu99 -O2 $(WARN) -fPIC -fvisibility=hidden -fno-strict-aliasing
 
@@ -40,7 +40,7 @@ build/native build/arm:
 
 native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
-test: native vhost-test sample-meta-test keygroup-test mpc-list-test isolation-test synth-pool-test kit-test
+test: native isolation-test synth-pool-test
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
@@ -49,48 +49,6 @@ test: native vhost-test sample-meta-test keygroup-test mpc-list-test isolation-t
 	rm -rf build/native/library && ./build/native/vc_export build/native/library
 	$(NATIVE_CC) -std=gnu99 -O1 -o build/native/list_params tools/list_params.c -ldl
 	sh scripts/check_skin.sh
-
-# sample metadata for keygroups (WAV format, root note, loops)
-build/native/test_sample_meta: tests/test_sample_meta.c src/sample_meta.c src/sample_meta.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_sample_meta.c src/sample_meta.c
-
-sample-meta-test: build/native/test_sample_meta
-	./build/native/test_sample_meta
-.PHONY: sample-meta-test
-
-# keygroup (XPM) reading: XML reader and the program reader built from docs/XPM_FORMAT.md
-build/native/test_xml_min: tests/test_xml_min.c src/xml_min.c src/xml_min.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_xml_min.c src/xml_min.c
-
-build/native/test_xpm_read: tests/test_xpm_read.c src/xpm_read.c src/xpm_read.h src/xml_min.c src/xml_min.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_xpm_read.c src/xpm_read.c src/xml_min.c -lm
-
-keygroup-test: build/native/test_xml_min build/native/test_xpm_read
-	./build/native/test_xml_min
-	./build/native/test_xpm_read
-.PHONY: keygroup-test
-
-# VST2 host (hosts a plugin inside Velvet Chords). The host is plain C; the test loads a small test instrument and
-# Velvet Chords itself (which must be refused). Both .so files go in one folder, which the host scans.
-build/native/vhost_test: tests/vhost_test.c src/vhost.c src/vhost.h src/vst2_abi.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/vhost_test.c src/vhost.c -ldl -lm
-
-build/native/vhdir/fake_synth.so: tests/fake_synth.c src/vst2_abi.h | build/native
-	mkdir -p build/native/vhdir
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -fPIC -Isrc -shared -o $@ tests/fake_synth.c -lm
-
-vhost-test: native build/native/vhost_test build/native/vhdir/fake_synth.so
-	cp build/native/velvetchords.so build/native/vhdir/velvetchords.so
-	./build/native/vhost_test build/native/vhdir/fake_synth.so build/native/vhdir/velvetchords.so build/native/vhdir
-.PHONY: vhost-test
-
-# drum kits: the XPM program and its WAV samples, played from the kit's voices
-build/native/test_kit: tests/test_kit.c src/kit.c src/kit.h src/xpm_read.c src/xpm_read.h src/xml_min.c src/xml_min.h src/vcmath.c src/vcmath.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_kit.c src/kit.c src/mpc_list.c src/xpm_read.c src/xml_min.c src/vcmath.c -lm
-
-kit-test: build/native/test_kit
-	./build/native/test_kit build/native/kit_test
-.PHONY: kit-test
 
 # the synth voice pool: held notes are never cut to make room for a new one
 build/native/test_synth_pool: tests/test_synth_pool.c src/synth.c src/synth.h src/vcmath.c src/vcmath.h | build/native
@@ -107,14 +65,6 @@ build/native/test_isolation: tests/test_isolation.c src/vst2_abi.h | build/nativ
 isolation-test: native build/native/test_isolation
 	./build/native/test_isolation build/native/velvetchords.so
 .PHONY: isolation-test
-
-# the MPC's own plugin list (MPC.settings), which the host picker cycles through
-build/native/test_mpc_list: tests/test_mpc_list.c src/mpc_list.c src/mpc_list.h src/xml_min.c src/xml_min.h src/vhost.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_mpc_list.c src/mpc_list.c src/xml_min.c
-
-mpc-list-test: build/native/test_mpc_list
-	./build/native/test_mpc_list build/native/mpc_settings_test.xml
-.PHONY: mpc-list-test
 
 # regenerate the screen skin (needs python3-pil and the Poppins font); the result is committed in package/skin
 skin: native

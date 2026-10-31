@@ -227,12 +227,6 @@ class Images:
             a.rect(0, 0, w, h, 3, fill=CTRL, edge=CTRL_EDGE)
         return self.save("vc_cell_%d_%s.png" % (row, "on" if on else "off"), a.done())
 
-    def host_row(self, on, w, h):
-        """one instrument on the Host page: a bar, lit while it's pressed; its name is a live label on top"""
-        a = Art(w, h)
-        a.rect(0, 0, w, h, 5, fill=CTRL_SEL if on else CTRL, edge=ACCENT_DIM if on else CTRL_EDGE)
-        return self.save("vc_hostrow_%s_%dx%d.png" % ("on" if on else "off", w, h), a.done())
-
 
 class Background:
     """Full-page art: header, panels, field frames and labels; live text sits on top."""
@@ -553,11 +547,6 @@ class Skin:
         self.stepper(c, bg, "Preset", "Preset prev", "Preset next", 12, 10, 428, h=36)  # the factory preset in use, top left
         bg.panel((12, 64, 1268, 144))
         self.readout(c, bg, "Info", 28, 88, 700, 36, size=16, colour=TEXT_2)  # the scale's notes in the key, across the top
-        # hosted VST2 instrument, at the right of the Info bar: the picker (None, then the scanned instruments),
-        # Scan, and the level the hosted sound is mixed in at (double-tap to type it, as the other values)
-        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 752, 88, 150, h=36)
-        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 912, 88, w=62, h=36)
-        self.value_field(c, bg, "Host volume", 984, 88, 104, 36, size=16, colour=TEXT_2, editable=True)
         bg.panel((12, 152, 632, 620))
         self.pad_grid(c, 20, 162)
         bg.panel((640, 152, 1268, 620))
@@ -743,34 +732,6 @@ class Skin:
             self.value_field(c, bg, "Riff step %d" % (i + 1), x, 558, 72, size=14)
         self.page("Lanes", 5, c, "vc_bg_lanes.png", bg)
 
-        # ---------- Host: the MPC's plugin list and the expansions folder, eight instruments at a time
-        bg = Background("Host")
-        c = []
-        self.header_info(c, bg)
-        bg.panel((12, 64, 1268, 144))
-        # touch targets are 44 px tall here (36 on the rest of the skin), and the rows are 42 px
-        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 28, 96, 340, "Instrument", h=44)
-        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 384, 96, w=76, h=44)
-        self.action_button(c, bg, "host_up", "Page up", "Host page up", 472, 96, w=116, h=44)
-        self.action_button(c, bg, "host_down", "Page down", "Host page down", 600, 96, w=116, h=44)
-        self.stepper(c, bg, "Kit", "Kit prev", "Kit next", 728, 96, 300, "Keygroup", h=44)
-        self.value_field(c, bg, "Host volume", 1040, 96, 212, h=44, caption="Host volume")
-        bg.panel((12, 152, 1268, 620))
-        bg.bar((12, 152, 1268, 620), "MPC plugin list and Expansions", right="Subfolder in brackets")
-        for k in range(8):
-            on, off = self.img.host_row(True, 1224, 42), self.img.host_row(False, 1224, 42)
-            key = self.define("vcHostRow", definition([A_QLINK], [
-                button_sub(on, off, k, 8, 1224, 42),
-                label_sub("Name", "Name", 14, 0, 1196, 42, 17, TEXT),
-            ]))
-            comps_y = 192 + k * 46
-            c.append(self.place(key, "Host row %d" % (k + 1), 28, comps_y, 1224, 42,
-                                [("Data", self.p("Host row")), ("Name", self.p("Host row %d" % (k + 1)))]))
-        # the bottom strip: the kit's level and mute, and the scroll position (turn a Q-Link on it to move the list)
-        self.value_field(c, bg, "Kit volume", 28, 580, 200, h=30, caption="Kit volume")
-        self.switch(c, bg, "Kit mute", 260, 580, "Kit mute")
-        self.value_field(c, bg, "Host scroll", 520, 580, 300, h=30, caption="Scroll (Q-Link)")
-        self.page("Host", 6, c, "vc_bg_host.png", bg)
 
     def tui(self):
         return {"pageData": {"version": 1, "componentDefinitions": {"version": 2, "importFiles": [

@@ -92,10 +92,6 @@ typedef struct {
     int64_t next;                      /* sample time of the next step */
 } ArpLane;
 
-/* A note the built-in engine played, for a hosted instrument: kind 1 = note on, 0 = note off, 2 = all notes off */
-typedef struct { int frame; unsigned char kind, note, vel; } HostEv;
-#define EN_HOST_EV 256
-
 typedef struct Engine {
     Synth synth;
     float sr;
@@ -190,11 +186,6 @@ typedef struct Engine {
     int last_note_in;
     int events_changed; /* set when last_pad / pad_base / edit pad changed (for host display refresh) */
     int edit_pad_request; /* -1 none, else pad index to select for editing */
-
-    /* hosted instrument: host_tap is 1 while one is loaded; the notes played are queued in hq for it */
-    int host_tap;
-    int nhq;
-    HostEv hq[EN_HOST_EV];
 } Engine;
 
 void en_init(Engine *e, float sr);
