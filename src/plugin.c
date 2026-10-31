@@ -10,7 +10,6 @@
 #include "midiimport.h"
 #include "vhost.h"
 #include "mpc_list.h"
-#include "kit.h"
 #include <dirent.h>
 #include <strings.h>
 #include <unistd.h>
@@ -29,13 +28,11 @@
 #define IMP_LIST_MAX 256 /* most files the MIDI picker lists */
 #define IMP_NAME 96     /* longest path kept for an import file */
 #define IMP_MAX_DEPTH 4 /* folder levels below Import that are searched */
-#define CHUNK_VERSION 13 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts); 13 the hosted instrument and the drum kit are kept by file (appended after the starred presets) */
+#define CHUNK_VERSION 14 /* 4 adds note lists and riffs; 5 the saved progressions; 6 the user presets; 7 the starred presets (appended after the earlier data); 8 Scale is stored against the longer scale list; 9 Mode is stored without the R&B kit; 10 Mode has the chromatic and scale note modes and chromatic chords; 11 Pattern has the genre rhythms; 12 the Types mode is gone (Mode counts five layouts); 13 the hosted instrument and the drum kit are kept by file (appended after the starred presets); 14 the drum kit is gone, so only the hosted instrument is kept by file */
 #define VC_USER_PRESETS 4 /* user presets: your own settings, saved and recalled */
 #define UPRE_MAX 64       /* values per user preset: the settings below plus the 16 pattern steps */
 #define HOST_MAX 64       /* hosted instruments you can pick from the MPC's plugin list */
 #define HOST_ROWS 8       /* instruments the Host page shows at a time */
-#define KIT_LIST_MAX 32   /* drum kits (.xpm) the picker lists */
-#define MPC_KIT_DIR "/media/az01-internal/Velvet Chords/Keygroups"   /* where kits and their WAV files are kept */
 #define HOST_SCAN_MAX 64  /* files looked at in the plugin folder */
 #define HOST_BLOCK 512    /* block size a hosted instrument is opened with */
 #define HOST_MIX_MAX 4096 /* frames rendered per call into the mix buffers */
@@ -86,8 +83,6 @@ enum {
     /* the Host page: page up and down through the list, a row to pick (0..HOST_ROWS-1), and the name of each row */
     P_HOST_UP, P_HOST_DOWN, P_HOST_PICK,
     P_HOST_ROW0, P_HOST_ROW_END = P_HOST_ROW0 + HOST_ROWS - 1,
-    /* the drum kit picker (appended, so saved projects keep their places) */
-    P_KIT_PREV, P_KIT_NEXT, P_KIT_SLOT, P_KIT_VOL, P_KIT_MUTE,
     /* the Host page's scroll position (a Q-Link can turn it): the first instrument shown */
     P_HOST_SCROLL,
     NUM_PARAMS
@@ -278,11 +273,6 @@ static void init_param_info(void) {
             P(P_HOST_ROW0 + k, hnames[k], 1, 0.f, 0)
         }
     }
-    P(P_KIT_PREV, "Kit prev", 2, 0.f, 1)
-    P(P_KIT_NEXT, "Kit next", 2, 0.f, 1)
-    P(P_KIT_SLOT, "Kit", KIT_LIST_MAX + 1, 0.f, 0)
-    P(P_KIT_VOL, "Kit volume", 0, 0.8f, 0)
-    P(P_KIT_MUTE, "Kit mute", 2, 0.f, 0)
     P(P_HOST_SCROLL, "Host scroll", HOST_MAX + 1, 0.f, 0)
     P(P_BANK_A, "Bank A", 2, 1.f, 0)
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
@@ -346,14 +336,8 @@ typedef struct {
     VHost *hosted;
     volatile int host_want, host_pending, host_scan_req, host_slot, host_count, host_scanned;
     int host_top;                                  /* the first instrument the Host page shows */
-    Kit *kit;                                      /* the loaded drum kit (the worker publishes it, the audio thread reads it) */
-    KitPlayer kp;                                  /* the kit's voices: only the audio thread touches these */
-    volatile int kit_want, kit_pending, kit_count, kit_slot;
-    char kit_paths[KIT_LIST_MAX][KIT_PATH_LEN];
-    char kit_roots[KIT_LIST_MAX][KIT_PATH_LEN];    /* the folder each kit was found in: its WAV files are searched under it */
-    char kit_names[KIT_LIST_MAX][128];
-    volatile int restore_pending;                  /* a project was loaded: select its instrument and kit once the scan is done */
-    char restore_host[KIT_PATH_LEN], restore_kit[KIT_PATH_LEN];
+    volatile int restore_pending;                  /* a project was loaded: select its instrument once the scan is done */
+    char restore_host[VH_PATH_LEN];
     char host_paths[HOST_MAX][VH_PATH_LEN];
     char host_names[HOST_MAX][VH_NAME_LEN];
     char host_scan_paths[HOST_SCAN_MAX][VH_PATH_LEN];
@@ -592,55 +576,15 @@ static void host_scan(Plugin *p) {
         int n = mpc_walk_plugins(folders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH);
         for (int i = 0; i >= 0 && i < n; i++) host_probe_add(p, &found, p->host_scan_paths[i]);
     }
-    /* 3. the drum kits: every .xpm in the kit folder and in the expansion folders, subfolders included. Each kit is
-     * listed once. The names are written before the count. */
-    const char *kdir = getenv("VC_KIT_DIR");   /* test hook */
-    const char *kfolders[3] = {kdir ? kdir : MPC_KIT_DIR, exp ? exp : MPC_EXPANSIONS_DIR, dir ? NULL : MPC_EXPANSIONS_SSD_DIR};
-    int kc = 0;
-    for (int f = 0; f < 3 && kc < KIT_LIST_MAX; f++) {
-        if (!kfolders[f]) continue;
-        int nk = mpc_walk_files(kfolders[f], p->host_scan_paths, HOST_SCAN_MAX, MPC_WALK_DEPTH, ".xpm");
-        for (int i = 0; i >= 0 && i < nk && kc < KIT_LIST_MAX; i++) {
-            int seen = 0;
-            for (int k = 0; k < kc && !seen; k++) seen = !strcmp(p->kit_paths[k], p->host_scan_paths[i]);
-            if (seen) continue;
-            memcpy(p->kit_paths[kc], p->host_scan_paths[i], sizeof p->kit_paths[kc]);
-            snprintf(p->kit_roots[kc], sizeof p->kit_roots[kc], "%s", kfolders[f]);
-            const char *base = strrchr(p->host_scan_paths[i], '/');
-            base = base ? base + 1 : p->host_scan_paths[i];
-            snprintf(p->kit_names[kc], sizeof p->kit_names[kc], "%s", base);
-            char *dot = strrchr(p->kit_names[kc], '.');
-            if (dot) *dot = 0;   /* the name without .xpm */
-            char title[96];      /* inside an expansion: "Expansion title: kit", so the picker groups kits by expansion */
-            if (mpc_expansion_title(p->kit_paths[kc], kfolders[f], title, sizeof title) == 0) {
-                char named[128];
-                snprintf(named, sizeof named, "%s: %s", title, p->kit_names[kc]);
-                snprintf(p->kit_names[kc], sizeof p->kit_names[kc], "%s", named);
-            }
-            kc++;
-        }
-    }
-    /* sorted by name: the names start with the expansion's title, so each expansion's kits stay together */
-    for (int a = 0; a < kc; a++) {
-        int lo = a;
-        for (int b = a + 1; b < kc; b++) if (strcasecmp(p->kit_names[b], p->kit_names[lo]) < 0) lo = b;
-        if (lo == a) continue;
-        char tmp[KIT_PATH_LEN];
-        memcpy(tmp, p->kit_paths[a], sizeof tmp); memcpy(p->kit_paths[a], p->kit_paths[lo], sizeof tmp); memcpy(p->kit_paths[lo], tmp, sizeof tmp);
-        memcpy(tmp, p->kit_roots[a], sizeof tmp); memcpy(p->kit_roots[a], p->kit_roots[lo], sizeof tmp); memcpy(p->kit_roots[lo], tmp, sizeof tmp);
-        char nm[128];
-        memcpy(nm, p->kit_names[a], sizeof nm); memcpy(p->kit_names[a], p->kit_names[lo], sizeof nm); memcpy(p->kit_names[lo], nm, sizeof nm);
-    }
-    __atomic_store_n(&p->kit_count, kc, __ATOMIC_RELEASE);
 
     /* publish the finished list: the names are in place before the count that makes them visible */
     __atomic_store_n(&p->host_count, found, __ATOMIC_RELEASE);
     __atomic_store_n(&p->host_scanned, 1, __ATOMIC_RELEASE);
 }
 
-/* the engine queues note events only while something plays them: the hosted instrument or the drum kit */
+/* the engine queues note events only while the hosted instrument plays them */
 static void tap_update(Plugin *p) {
-    int on = __atomic_load_n(&p->hosted, __ATOMIC_ACQUIRE) != NULL || __atomic_load_n(&p->kit, __ATOMIC_ACQUIRE) != NULL;
+    int on = __atomic_load_n(&p->hosted, __ATOMIC_ACQUIRE) != NULL;
     __atomic_store_n(&p->eng->host_tap, on ? 1 : 0, __ATOMIC_RELEASE);
 }
 
@@ -660,37 +604,14 @@ static void host_apply(Plugin *p) {
     }
 }
 
-/* loads the chosen drum kit on the worker thread. The program is read and published at once, and then each
- * instrument's samples are loaded in turn: an instrument plays as soon as it's ready. The old kit is freed after the
- * audio thread has had time to leave it. */
-static void kit_apply(Plugin *p) {
-    int want = p->kit_want;
-    if (want < 0 || want > p->kit_count) want = 0;
-    Kit *old = __atomic_load_n(&p->kit, __ATOMIC_ACQUIRE);
-    Kit *next = want > 0 ? kit_new(p->kit_paths[want - 1], p->kit_roots[want - 1]) : NULL;
-    p->kit_slot = next ? want : 0;
-    __atomic_store_n(&p->kit, next, __ATOMIC_RELEASE);
-    tap_update(p);
-    if (old) {
-        struct timespec ts = {0, 60 * 1000000L};
-        nanosleep(&ts, 0);
-        kit_free(old);
-    }
-    if (next) for (int i = 0; i < next->prog->ninstruments; i++) kit_load_instrument(next, i);
-}
-
-/* after a scan: selects the instrument and kit the project was saved with, by file. A file that isn't in the list
- * (moved or deleted) leaves that slot on None. */
+/* after a scan: selects the instrument the project was saved with, by file. A file that isn't in the list (moved or
+ * deleted) leaves the slot on None. */
 static void restore_selection(Plugin *p) {
     p->restore_pending = 0;
-    int hw = 0, kw = 0;
+    int hw = 0;
     for (int i = 0; i < p->host_count && p->restore_host[0] && !hw; i++) if (!strcmp(p->host_paths[i], p->restore_host)) hw = i + 1;
-    for (int i = 0; i < p->kit_count && p->restore_kit[0] && !kw; i++) if (!strcmp(p->kit_paths[i], p->restore_kit)) kw = i + 1;
     p->host_want = hw;
     p->val[P_HOST_SLOT] = norm_of(P_HOST_SLOT, hw);
-    p->kit_want = kw;
-    p->val[P_KIT_SLOT] = norm_of(P_KIT_SLOT, kw);
-    p->kit_pending = 1;
 }
 
 static void host_service(Plugin *p) {
@@ -701,7 +622,6 @@ static void host_service(Plugin *p) {
         if (p->restore_pending) restore_selection(p);
     }
     if (p->host_pending) { p->host_pending = 0; host_apply(p); }
-    if (p->kit_pending) { p->kit_pending = 0; kit_apply(p); }
 }
 
 static void host_kick(Plugin *p) {
@@ -715,24 +635,13 @@ static int host_clamp_top(const Plugin *p, int top) {
     return top < 0 ? 0 : top > last ? last : top;
 }
 
-static void kit_kick(Plugin *p) {
-    p->kit_pending = 1;
-    if (!p->refresh_running) host_service(p);
-}
-
 static void host_close(Plugin *p) {
     VHost *h = __atomic_exchange_n(&p->hosted, NULL, __ATOMIC_ACQ_REL);
     tap_update(p);
     if (h) vh_close(h);
 }
 
-static void kit_close(Plugin *p) {
-    Kit *k = __atomic_exchange_n(&p->kit, NULL, __ATOMIC_ACQ_REL);
-    tap_update(p);
-    kit_free(k);
-}
-
-/* keeps the queued notes in time order (the queue is short); the kit and the hosted instrument both read it */
+/* keeps the queued notes in time order (the queue is short); the hosted instrument reads it */
 static void sort_host_events(Engine *e) {
     int nq = e->nhq > EN_HOST_EV ? EN_HOST_EV : e->nhq;
     for (int i = 0; i < nq; i++) {
@@ -741,29 +650,6 @@ static void sort_host_events(Engine *e) {
         while (j > 0 && e->hq[j - 1].frame > x.frame) { e->hq[j] = e->hq[j - 1]; j--; }
         e->hq[j] = x;
     }
-}
-
-/* Plays the queued notes through the drum kit, and mixes its output in. Runs before host_render, which clears the queue. */
-static void kit_render_block(Plugin *p, int n) {
-    Engine *e = p->eng;
-    Kit *k = __atomic_load_n(&p->kit, __ATOMIC_ACQUIRE);
-    int nq = e->nhq > EN_HOST_EV ? EN_HOST_EV : e->nhq;
-    kit_player_follow(&p->kp, k);   /* a new kit silences the old voices before any of this block's notes start */
-    p->kp.gain = p->val[P_KIT_MUTE] >= 0.5f ? 0.f : p->val[P_KIT_VOL];
-    int pos = 0;
-    for (int i = 0; i < nq; i++) {
-        int f = e->hq[i].frame;
-        if (f < 0) f = 0;
-        if (f > n) f = n;
-        if (f > pos) { kit_render(&p->kp, k, p->scratchL + pos, p->scratchR + pos, f - pos); pos = f; }
-        HostEv x = e->hq[i];
-        if (x.kind == 2) kit_player_reset(&p->kp);            /* all notes off */
-        else if (x.note >= KIT_NOTE0 && x.note < KIT_NOTE0 + XPM_MAX_INSTRUMENTS) {
-            if (x.kind && x.vel > 0) kit_note_on(&p->kp, k, x.note - KIT_NOTE0, x.vel, e->sr);
-            else kit_note_off(&p->kp, x.note - KIT_NOTE0);
-        }
-    }
-    if (pos < n) kit_render(&p->kp, k, p->scratchL + pos, p->scratchR + pos, n - pos);
 }
 
 /* Plays the notes the built-in engine queued this block through the hosted instrument, and mixes its output in. */
@@ -1400,16 +1286,6 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
             p->val[P_HOST_SCROLL] = norm_of(P_HOST_SCROLL, p->host_top);
             return;
         }
-        if (i == P_KIT_PREV || i == P_KIT_NEXT) {   /* steps Kit through None and the kits in the kit folder */
-            int cycle = p->kit_count + 1, want = p->kit_want + (i == P_KIT_NEXT ? 1 : -1);
-            if (want < 0) want = cycle - 1;
-            if (want >= cycle) want = 0;
-            p->kit_want = want;
-            p->val[P_KIT_SLOT] = norm_of(P_KIT_SLOT, want);   /* the picker shows the new choice */
-            refresh_host(p);
-            kit_kick(p);
-            return;
-        }
         if (i == P_HOST_PREV || i == P_HOST_NEXT) {   /* steps Host plugin through None and the scanned instruments */
             int cycle = p->host_count + 1, want = p->host_want + (i == P_HOST_NEXT ? 1 : -1);
             if (want < 0) want = cycle - 1;
@@ -1529,7 +1405,6 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_PAD_BASE: e->pad_base = idx_of(p, i); break;
     case P_MIDI_OUT: apply_out_mode(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
     case P_HOST_SLOT: p->host_want = idx_of(p, i); host_kick(p); break;
-    case P_KIT_SLOT: p->kit_want = idx_of(p, i); kit_kick(p); break;
     case P_HOST_SCROLL: p->host_top = host_clamp_top(p, idx_of(p, i)); break;
     case P_HOST_PICK: {   /* a row on the Host page: the instrument at that row of the page */
         int want = p->host_top + idx_of(p, i) + 1;
@@ -1795,25 +1670,17 @@ static void param_display(Plugin *p, int i, char *out, int max) {
         else if (x <= p->host_count) copy_str(b, p->host_names[x - 1], sizeof(b));
         else copy_str(b, p->host_scanned ? "-" : "Scan first", sizeof(b));
         break;
-    case P_KIT_SLOT:
-        if (x == 0) copy_str(b, "None", sizeof(b));
-        else if (x <= p->kit_count) copy_str(b, p->kit_names[x - 1], sizeof(b));
-        else copy_str(b, "Scan first", sizeof(b));
-        break;
-    case P_KIT_PREV: copy_str(b, "<", sizeof(b)); break;
-    case P_KIT_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_HOST_SCAN: copy_str(b, "Scan", sizeof(b)); break;
     case P_HOST_PREV: copy_str(b, "<", sizeof(b)); break;
     case P_HOST_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_SOUND_X: copy_str(b, x == 0 ? "-" : SY_SOUND_NAMES[SY_SILENT + x], sizeof(b)); break;
-    case P_KIT_MUTE: copy_str(b, x ? "Muted" : "On", sizeof(b)); break;
     case P_HOST_SCROLL: {
         int top = p->host_top, shown = p->host_count - top < HOST_ROWS ? p->host_count - top : HOST_ROWS;
         if (p->host_count == 0) copy_str(b, "-", sizeof(b));
         else snprintf(b, sizeof(b), "%d-%d of %d", top + 1, top + shown, p->host_count);
         break;
     }
-    case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: case P_KIT_VOL: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
+    case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
     case P_PAD_BASE:
         if (e->map_set) { copy_str(b, "Learned layout", sizeof(b)); break; }
         { char nn[8]; x = e->pad_base; vc_note_name(x, 0, nn, sizeof(nn)); snprintf(b, sizeof(b), "%s (%d)", nn, x); }
@@ -1913,7 +1780,7 @@ static void param_display(Plugin *p, int i, char *out, int max) {
 /* ---------- chunk (saved inside the MPC project) ---------- */
 
 #define IMP_REC 23
-static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2) + 1 + VC_USER_PRESETS * (1 + UPRE_MAX * 4) + 32 + 2 * (4 + KIT_PATH_LEN); }
+static int chunk_size(void) { return 12 + NUM_PARAMS * 4 + 4 + VC_PADS * 6 + 4 + 4 + VC_PADS * IMP_REC + 4 + 128 + VC_PADS * (1 + VC_MAX_IV) + VC_RIFFS * EN_STEPS + VC_USER_PROGS * (1 + VC_PROG_MAX * 2) + 1 + VC_USER_PRESETS * (1 + UPRE_MAX * 4) + 32; }
 
 static void w32(unsigned char *b, int *k, uint32_t v) { b[(*k)++] = v & 255; b[(*k)++] = (v >> 8) & 255; b[(*k)++] = (v >> 16) & 255; b[(*k)++] = v >> 24; }
 static uint32_t r32(const unsigned char *b, int *k) { uint32_t v = b[*k] | (b[*k + 1] << 8) | (b[*k + 2] << 16) | ((uint32_t)b[*k + 3] << 24); *k += 4; return v; }
@@ -1962,16 +1829,12 @@ static int get_chunk(Plugin *p, void **data) {
         for (int j = 0; j < UPRE_MAX; j++) { union { float f; uint32_t u; } u; u.f = p->upre[s][j]; w32(b, &k, u.u); }
     }
     for (int j = 0; j < 32; j++) b[k++] = p->fav[j]; /* version 7: starred presets */
-    /* version 13: the hosted instrument and the drum kit, by file, each as a length and its path ("" for none) */
+    /* version 13 and later: the hosted instrument, by file, as a length and its path ("" for none) */
     const char *hpath = p->host_slot > 0 ? p->host_paths[p->host_slot - 1] : "";
-    const char *kpath = p->kit_slot > 0 ? p->kit_paths[p->kit_slot - 1] : "";
-    for (int s = 0; s < 2; s++) {
-        const char *path = s == 0 ? hpath : kpath;
-        size_t n = strlen(path);
-        w32(b, &k, (uint32_t)n);
-        memcpy(b + k, path, n);
-        k += (int)n;
-    }
+    size_t hn = strlen(hpath);
+    w32(b, &k, (uint32_t)hn);
+    memcpy(b + k, hpath, hn);
+    k += (int)hn;
     *data = b;
     return k;
 }
@@ -1981,7 +1844,7 @@ static void read_chunk_path(const unsigned char *b, int size, int *k, char *dst)
     dst[0] = 0;
     if (size < *k + 4) return;
     uint32_t n = r32(b, k);
-    if (n >= KIT_PATH_LEN || size < *k + (int)n) return;
+    if (n >= VH_PATH_LEN || size < *k + (int)n) return;
     memcpy(dst, b + *k, n);
     dst[n] = 0;
     *k += (int)n;
@@ -2083,11 +1946,11 @@ static int set_chunk(Plugin *p, const void *data, int size) {
         }
     }
     if (ver >= 7 && size >= k + 32) { for (int j = 0; j < 32; j++) p->fav[j] = b[k++]; p->fav[0] &= 0xFE; } /* bit 0 is not a preset */
-    if (ver >= 13) {   /* the instrument and kit by file: a scan finds them and selects them (see restore_selection) */
+    if (ver >= 13) {   /* the instrument by file: a scan finds it and selects it (see restore_selection) */
         read_chunk_path(b, size, &k, p->restore_host);
-        read_chunk_path(b, size, &k, p->restore_kit);
-        if (p->restore_host[0] || p->restore_kit[0]) {
-            /* a one-off scan while the project loads, so the instrument and kit are back before the screen shows them */
+        if (ver == 13) { char kit_path_unused[VH_PATH_LEN]; read_chunk_path(b, size, &k, kit_path_unused); }   /* a version 13 drum kit: dropped */
+        if (p->restore_host[0]) {
+            /* a one-off scan while the project loads, so the instrument is back before the screen shows it */
             p->restore_pending = 1;
             p->host_scan_req = 1;
             host_service(p);
@@ -2206,7 +2069,6 @@ static void render(Plugin *p, float **out, int n, int accumulate) {
     }
     en_process(e, p->scratchL, p->scratchR, n);
     sort_host_events(e);
-    kit_render_block(p, n);
     host_render(p, n);
     fx_reverb(&p->rv, p->scratchL, p->scratchR, n, p->val[P_REVERB]);
     apply_shift(p);
@@ -2262,7 +2124,6 @@ static void flush_port_now(Plugin *p) {
 static void destroy(Plugin *p) {
     stop_refresh_thread(p);
     host_close(p);
-    kit_close(p);
     flush_port_now(p);
     vc_port_close(&p->port);
     free(p->scratchL); free(p->scratchR); free(p->chunk); free(p->outEvents); free(p->eng); free(p);

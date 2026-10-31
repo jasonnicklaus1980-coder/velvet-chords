@@ -753,7 +753,6 @@ class Skin:
         self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 384, 96, w=76, h=44)
         self.action_button(c, bg, "host_up", "Page up", "Host page up", 472, 96, w=116, h=44)
         self.action_button(c, bg, "host_down", "Page down", "Host page down", 600, 96, w=116, h=44)
-        self.stepper(c, bg, "Kit", "Kit prev", "Kit next", 728, 96, 300, "Drum kit", h=44)
         self.value_field(c, bg, "Host volume", 1040, 96, 212, h=44, caption="Host volume")
         bg.panel((12, 152, 1268, 620))
         bg.bar((12, 152, 1268, 620), "MPC plugin list and Expansions", right="Subfolder in brackets")
@@ -766,9 +765,7 @@ class Skin:
             comps_y = 192 + k * 46
             c.append(self.place(key, "Host row %d" % (k + 1), 28, comps_y, 1224, 42,
                                 [("Data", self.p("Host row")), ("Name", self.p("Host row %d" % (k + 1)))]))
-        # the bottom strip: the kit's level and mute, and the scroll position (turn a Q-Link on it to move the list)
-        self.value_field(c, bg, "Kit volume", 28, 580, 200, h=30, caption="Kit volume")
-        self.switch(c, bg, "Kit mute", 260, 580, "Kit mute")
+        # the bottom strip: the scroll position (turn a Q-Link on it to move the list)
         self.value_field(c, bg, "Host scroll", 520, 580, 300, h=30, caption="Scroll (Q-Link)")
         self.page("Host", 6, c, "vc_bg_host.png", bg)
 

@@ -109,29 +109,6 @@ int main(int argc, char **argv) {
     rmdir("build/native/mpc_exp_test/pads");
     rmdir(root);
 
-    /* an expansion: its title comes from expansion.xml in its top folder, found from a kit deep inside it */
-    const char *troot = "build/native/mpc_title_test";
-    mkdir(troot, 0775);
-    mkdir("build/native/mpc_title_test/Expansion A", 0775);
-    mkdir("build/native/mpc_title_test/Expansion A/Programs", 0775);
-    mkdir("build/native/mpc_title_test/Loose", 0775);
-    write_text("build/native/mpc_title_test/Expansion A/expansion.xml",
-               "<?xml version=\"1.0\"?><expansion><title>Dirty Drummer Demo</title><type>drum</type></expansion>");
-    write_text("build/native/mpc_title_test/Expansion A/Programs/kit.xpm", "");
-    write_text("build/native/mpc_title_test/Loose/kit.xpm", "");
-    char title[96];
-    CHECK(mpc_expansion_title("build/native/mpc_title_test/Expansion A/Programs/kit.xpm", troot, title, sizeof title) == 0
-          && !strcmp(title, "Dirty Drummer Demo"), "a kit inside an expansion takes the expansion's title");
-    CHECK(mpc_expansion_title("build/native/mpc_title_test/Loose/kit.xpm", troot, title, sizeof title) == -1,
-          "a kit outside any expansion has no title");
-    remove("build/native/mpc_title_test/Expansion A/Programs/kit.xpm");
-    remove("build/native/mpc_title_test/Expansion A/expansion.xml");
-    remove("build/native/mpc_title_test/Loose/kit.xpm");
-    rmdir("build/native/mpc_title_test/Expansion A/Programs");
-    rmdir("build/native/mpc_title_test/Expansion A");
-    rmdir("build/native/mpc_title_test/Loose");
-    rmdir(troot);
-
     setenv("VC_SETTINGS_FILE", path, 1);
     char found[300];
     CHECK(mpc_settings_find(found, sizeof found) == 0 && !strcmp(found, path), "VC_SETTINGS_FILE overrides the search");
