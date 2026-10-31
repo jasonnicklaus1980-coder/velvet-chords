@@ -73,6 +73,7 @@ typedef struct { int frame; unsigned char d[3]; } MidiMsg;
 
 typedef struct {
     int owner, held, sustained;
+    int group;                                  /* SY_GROUP_*: the MIDI channel this chord came in on */
     int n;
     unsigned char notes[VC_MAX_NOTES];
     unsigned char sounding[VC_MAX_NOTES];
@@ -171,6 +172,7 @@ typedef struct Engine {
 
     MidiMsg in[EN_MIDI_IN];
     int nin;
+    int cur_group;                              /* the group of the MIDI message being handled */
     MidiMsg out[EN_MIDI_OUT];
     int nout;
 

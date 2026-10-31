@@ -302,7 +302,7 @@ static void host_tap(Engine *e, int kind, int note, float vel, int frame) {
 static void note_on_slot(Engine *e, OwnerRec *r, int slot, int frame) {
     if (slot < 0 || slot >= r->n || r->sounding[slot]) return;
     int note = r->notes[slot];
-    sy_note_on(&e->synth, note, r->vel, r->owner);
+    sy_note_on(&e->synth, note, r->vel, r->owner, r->group);
     host_tap(e, 1, note, r->vel, frame);
     r->sounding[slot] = 1;
     if (e->out_ref[note]++ == 0 && e->midi_out) emit(e, frame, (unsigned char)(0x90 | (e->out_channel & 15)), (unsigned char)note, (unsigned char)(r->vel * 127.f + 0.5f));
@@ -318,7 +318,7 @@ static void note_off_slot(Engine *e, OwnerRec *r, int slot, int frame) {
 }
 
 static void note_on_raw(Engine *e, OwnerRec *r, int note, int frame) {
-    sy_note_on(&e->synth, note, r->vel, r->owner);
+    sy_note_on(&e->synth, note, r->vel, r->owner, r->group);
     host_tap(e, 1, note, r->vel, frame);
     if (e->out_ref[note]++ == 0 && e->midi_out) emit(e, frame, (unsigned char)(0x90 | (e->out_channel & 15)), (unsigned char)note, (unsigned char)(r->vel * 127.f + 0.5f));
 }
@@ -362,7 +362,7 @@ static void release_owner(Engine *e, OwnerRec *r, int frame) {
 static OwnerRec *alloc_owner(Engine *e, int frame) {
     OwnerRec *oldest = 0;
     for (int i = 0; i < EN_OWNERS; i++) {
-        if (!e->owners[i].owner) return &e->owners[i];
+        if (!e->owners[i].owner) { e->owners[i].group = e->cur_group; return &e->owners[i]; }
         if (!oldest || e->owners[i].owner < oldest->owner) oldest = &e->owners[i];
     }
     release_owner(e, oldest, frame);
@@ -784,7 +784,12 @@ static void pad_on(Engine *e, int note, int vel, int frame) {
 
 static void handle_midi(Engine *e, const MidiMsg *m, int frame) {
     int st = m->d[0] & 0xF0;
-    if (st == 0x90 && m->d[2] > 0) { e->det_pcs |= 1u << ((m->d[1] & 127) % 12); pad_on(e, m->d[1] & 127, m->d[2], frame); }
+    if (st == 0x90 && m->d[2] > 0) {
+        e->det_pcs |= 1u << ((m->d[1] & 127) % 12);
+        e->cur_group = (m->d[0] & 0x0F) == 9 ? SY_GROUP_DRUM : SY_GROUP_MELODY;   /* channel 10 is the drum track */
+        pad_on(e, m->d[1] & 127, m->d[2], frame);
+        e->cur_group = SY_GROUP_MELODY;
+    }
     else if (st == 0x80 || st == 0x90) pad_off(e, m->d[1] & 127, frame);
     else if (st == 0xB0) {
         int cc = m->d[1], val = m->d[2];

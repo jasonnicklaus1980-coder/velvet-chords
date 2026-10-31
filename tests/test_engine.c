@@ -641,7 +641,7 @@ static void test_instruments(void) {
     for (int snd = 0; snd < SY_SOUND_COUNT; snd++) {
         sy_init(&sy, 48000.f);
         sy.sound = snd;
-        sy_note_on(&sy, 57, 0.8f, 1);                       /* A2 in MIDI 57 = 220 Hz */
+        sy_note_on(&sy, 57, 0.8f, 1, SY_GROUP_MELODY);      /* A2 in MIDI 57 = 220 Hz */
         memset(L, 0, sizeof(L)); memset(R, 0, sizeof(R));
         for (int b = 0; b < 48000; b += 256) sy_render(&sy, L + b, R + b, 48000 - b < 256 ? 48000 - b : 256);
         double e = 0; int finite = 1;

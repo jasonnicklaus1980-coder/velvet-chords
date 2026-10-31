@@ -42,7 +42,12 @@ void sy_init(Synth *s, float sr) {
 
 /* A free voice, or else a released one (the oldest). When every voice is still held, there is no voice: the new note is
  * dropped, rather than cutting a note that is sounding (a drum hit must not cut the melody). NULL means none. */
-static SVoice *alloc_voice(Synth *s) {
+static SVoice *alloc_voice(Synth *s, int group) {
+    if (group == SY_GROUP_DRUM) {   /* the drums have their share: a drum note beyond it is dropped */
+        int held = 0;
+        for (int i = 0; i < SY_VOICES; i++) if (s->v[i].active && !s->v[i].released && s->v[i].group == SY_GROUP_DRUM) held++;
+        if (held >= SY_DRUM_MAX) return NULL;
+    }
     SVoice *best = 0;
     for (int i = 0; i < SY_VOICES; i++) if (!s->v[i].active) return &s->v[i];
     for (int i = 0; i < SY_VOICES; i++) {
@@ -54,7 +59,7 @@ static SVoice *alloc_voice(Synth *s) {
 
 static float rnd(Synth *s) { s->rng = s->rng * 1664525u + 1013904223u; return (float)(s->rng >> 8) / 8388608.f - 1.f; }
 
-void sy_note_on(Synth *s, int note, float vel, int owner) {
+void sy_note_on(Synth *s, int note, float vel, int owner, int group) {
     if (s->sound == SY_SILENT || note < 0 || note > 127) return;
     float sr = s->sr;
     /* retrigger choke: an older, already-releasing copy of this note fades in ~6 ms, so fast repeats don't pile up */
@@ -63,12 +68,12 @@ void sy_note_on(Synth *s, int note, float vel, int owner) {
         SVoice *o = &s->v[i];
         if (o->active && o->note == note && o->released && o->relMul > choke) o->relMul = choke;
     }
-    SVoice *v = alloc_voice(s);
+    SVoice *v = alloc_voice(s, group);
     if (!v) return;
     float *ks = v->ks;
     memset(v, 0, sizeof(*v));
     v->ks = ks;
-    v->active = 1; v->note = note; v->owner = owner; v->sound = s->sound; v->vel = vel; v->age = ++s->age;
+    v->active = 1; v->note = note; v->owner = owner; v->group = group; v->sound = s->sound; v->vel = vel; v->age = ++s->age;
     float hz = vc_midi_hz(note);
     v->inc = hz / sr;
     float pan = (note - 60) / 60.f;

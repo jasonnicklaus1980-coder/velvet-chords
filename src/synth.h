@@ -2,6 +2,10 @@
 #define VC_SYNTH_H
 
 #define SY_VOICES 48
+/* voice groups: melody (every other MIDI channel) and drums (channel 10). Drums may hold at most SY_DRUM_MAX voices, so
+ * the melody always has the rest, and a drum hit never takes a melody voice. */
+enum { SY_GROUP_MELODY, SY_GROUP_DRUM };
+#define SY_DRUM_MAX 16
 #define SY_KS_LEN 2048 /* plucked-string delay line per voice */
 /* ORDER IS PART OF SAVED PROJECTS: E. piano, Pad, Organ and Silent keep the positions the old 4-sound list mapped to */
 /* positions chosen so projects saved with the 4- and 10-sound lists still pick the same instrument */
@@ -14,7 +18,7 @@ extern const char *SY_SOUND_NAMES[SY_SOUND_COUNT];
 extern const char *SY_SOUND_SHORT[SY_SOUND_COUNT];
 
 typedef struct {
-    int active, note, owner, released, sound, stage;
+    int active, note, owner, released, sound, stage, group;
     unsigned age;
     float vel, amp, attK, decMul, relMul, inc, pan;
     float ph[4];
@@ -36,7 +40,7 @@ typedef struct {
 } Synth;
 
 void sy_init(Synth *s, float sr);
-void sy_note_on(Synth *s, int note, float vel, int owner);
+void sy_note_on(Synth *s, int note, float vel, int owner, int group);
 void sy_release(Synth *s, int note, int owner); /* note < 0: every voice of owner */
 void sy_kill_all(Synth *s);
 void sy_render(Synth *s, float *L, float *R, int n); /* adds into L/R */
