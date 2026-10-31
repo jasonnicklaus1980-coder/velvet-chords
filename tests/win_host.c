@@ -167,6 +167,27 @@ int main(int argc, char **argv) {
         pump(200);
     }
 
+    if (child) {
+        /* the preset arrows on the Play page: the right arrow steps to the next preset, the left one back */
+        int pPreset = find_param(fx, "Preset");
+        char p0[96], p1[96], p2[96], p3[96], back[96];
+        display(fx, pPreset, p0, sizeof p0);
+        PostMessageA(child, WM_LBUTTONDOWN, 0, MAKELPARAM(422, 28));   /* next arrow */
+        pump(200);
+        display(fx, pPreset, p1, sizeof p1);
+        PostMessageA(child, WM_LBUTTONDOWN, 0, MAKELPARAM(422, 28));
+        pump(200);
+        display(fx, pPreset, p2, sizeof p2);
+        PostMessageA(child, WM_LBUTTONDOWN, 0, MAKELPARAM(422, 28));
+        pump(200);
+        display(fx, pPreset, p3, sizeof p3);
+        printf("  (presets: %s > %s > %s > %s)\n", p0, p1, p2, p3);
+        CHECK(strcmp(p1, p0) != 0 && strcmp(p2, p1) != 0 && strcmp(p3, p2) != 0, "the next arrow steps through the presets");
+        PostMessageA(child, WM_LBUTTONDOWN, 0, MAKELPARAM(30, 28));    /* previous arrow */
+        pump(200);
+        display(fx, pPreset, back, sizeof back);
+        CHECK(!strcmp(back, p2), "the previous arrow steps back one preset");
+    }
     if (child && argc > 2) {   /* a screenshot of the editor on the Play page, for a look at it */
         pump(200);
         CHECK(save_window_bmp(child, argv[2]), "the editor is saved as a picture");
