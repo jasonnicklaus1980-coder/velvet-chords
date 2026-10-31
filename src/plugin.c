@@ -1953,6 +1953,17 @@ static void ui_load_page(Plugin *p) {
     p->ui_loaded_page = p->ui_page;
 }
 
+/* the bank pad a layout control stands for: "Pad 1" .. "Pad 16" give 0 .. 15, anything else gives -1 */
+static int ui_pad_index(const char *name) {
+    if (strncmp(name, "Pad ", 4) != 0 || !name[4]) return -1;
+    int n = 0;
+    for (const char *q = name + 4; *q; q++) {
+        if (*q < '0' || *q > '9' || n > 16) return -1;
+        n = n * 10 + (*q - '0');
+    }
+    return n >= 1 && n <= 16 ? n - 1 : -1;
+}
+
 static void ui_draw_image(void *graphics, void *img, const RECT *r) {
     GdipDrawImageRectI(graphics, img, r->left, r->top, r->right - r->left, r->bottom - r->top);
 }
@@ -1988,6 +1999,22 @@ static void ui_paint(HWND h, Plugin *p) {
                                            !PINFO[c->param].trigger && idx_of(p, c->param) != 0);
         void *pic = pictures ? (on ? st[1 + 2 * i] : st[2 + 2 * i]) : NULL;
         if (!pic && pictures) pic = on ? st[2 + 2 * i] : st[1 + 2 * i];   /* a control with one picture shows it both ways */
+        int pad = c->kind == WIN_CTL_SHOW ? ui_pad_index(c->name) : -1;
+        if (pad >= 0) {
+            /* a bank pad: its chord name and function, read from the pad's own parameters, over its picture */
+            if (pic) ui_draw_image(gfx, pic, &r);
+            else if (!pictures) { HBRUSH b = CreateSolidBrush(UI_CTL); FillRect(dc, &r, b); DeleteObject(b); }
+            char chord[64] = "", func[64] = "";
+            param_display(p, P_PADNAME0 + pad, chord, sizeof chord);
+            param_display(p, P_PADFUNC0 + pad, func, sizeof func);
+            RECT top = r, bottom = r;
+            top.bottom = r.top + (r.bottom - r.top) / 2 + 8;
+            bottom.top = top.bottom - 8;
+            top.left += 4; top.right -= 4; bottom.left += 4; bottom.right -= 4;
+            DrawTextA(dc, chord, -1, &top, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+            DrawTextA(dc, func, -1, &bottom, DT_CENTER | DT_VCENTER | DT_SINGLELINE | DT_NOPREFIX | DT_END_ELLIPSIS);
+            continue;
+        }
         if (pic) { ui_draw_image(gfx, pic, &r); continue; }
         if (!pictures) {   /* no skin: a box for every control */
             HBRUSH b = CreateSolidBrush(on ? UI_SEL : UI_CTL);
