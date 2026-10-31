@@ -24,6 +24,14 @@ Tested
   and the preset arrows step. The check runs in CI (make win-test).
 - Not yet opened in a real Windows DAW.
 
+Virtual MIDI port (Velvet Chords Out)
+- Windows has no virtual MIDI port built in. To send the chords to another
+  track, install loopMIDI (free, from tobias-erichsen.de), which provides the
+  driver the plugin uses. Then set MIDI out to "Virtual port" on the Pattern
+  page. The MIDI port readout shows whether the port opened.
+- Without loopMIDI the plugin still plays its own sound; the readout says the
+  driver is not installed.
+- The port has been tested with a stand-in driver only, not with loopMIDI.
+
 Notes
-- The virtual MIDI port (Velvet Chords Out) is not available on Windows.
 - The window reads the skin's pictures with GDI+ (part of Windows).

@@ -192,6 +192,35 @@ int main(int argc, char **argv) {
         pump(200);
         CHECK(save_window_bmp(child, argv[2]), "the editor is saved as a picture");
     }
+    printf("virtual port\n");
+    {
+        /* MIDI out set to the virtual port: with the driver the port opens and the notes go to it; without it the port
+         * says the driver is missing, and the plugin still plays */
+        const char *mode = getenv("VC_VMIDI");
+        int pOut = find_param(fx, "MIDI out"), pStatus = find_param(fx, "MIDI port");
+        fx->setParameter(fx, pOut, 2.0f / 3.0f);   /* 2 = To the virtual port */
+        pump(100);
+        display(fx, pStatus, d, sizeof d);
+        printf("  (port status: %s)\n", d);
+        if (mode && !strcmp(mode, "present")) {
+            CHECK(!strncmp(d, "Port open", 9), "with the driver the port opens");
+            send_note(fx, 1, 64, 90);
+            render(fx, 10);
+            send_note(fx, 0, 64, 0);
+            render(fx, 4);
+            FILE *f = fopen(getenv("VC_FAKE_VMIDI_LOG"), "r");
+            char line[256], all[4096] = "";
+            while (f && fgets(line, sizeof line, f)) strncat(all, line, sizeof all - strlen(all) - 1);
+            if (f) fclose(f);
+            /* the plugin sends its own chord on MIDI channel 16 (9F), so check for note-ons and note-offs on that channel */
+            CHECK(strstr(all, "9F ") != NULL, "note-ons reach the port on channel 16");
+            CHECK(strstr(all, "8F ") != NULL, "note-offs reach the port on channel 16");
+        } else {
+            CHECK(strstr(d, "not installed") != NULL, "without the driver the port says it is not installed");
+        }
+        fx->setParameter(fx, pOut, 0.f);            /* back to Off */
+        pump(50);
+    }
     printf("audio\n");
     send_note(fx, 1, 60, 100);
     float peak = render(fx, 40);

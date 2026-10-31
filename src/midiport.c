@@ -37,11 +37,58 @@ typedef const char *(*err_fn)(int);
 int vc_port_is_open(const MidiPort *m) { return m && m->seq != 0; }
 
 #ifdef _WIN32
-/* the virtual port is ALSA, which Windows doesn't have: the plugin still plays its own sound */
+/* Windows has no virtual MIDI port built in. It comes from the teVirtualMIDI driver (the loopMIDI program installs it),
+ * loaded at runtime like ALSA on Linux: without the driver the port reports that, and the plugin still plays. */
+#include <windows.h>
+typedef void *(__stdcall *vm_create_fn)(const wchar_t *name, void *callback, void *instance, DWORD max_sysex, DWORD flags);
+typedef BOOL (__stdcall *vm_send_fn)(void *port, unsigned char *data, DWORD length);
+typedef void (__stdcall *vm_close_fn)(void *port);
+#define VM_FLAGS_INSTANTIATE_BOTH 0x0Cu   /* TE_VM_FLAGS_INSTANTIATE_BOTH: the port shows as an input and an output */
+
+static vm_create_fn g_vm_create;
+static vm_send_fn g_vm_send;
+static vm_close_fn g_vm_close;
+
+static int vm_load(char *status, size_t n) {
+    if (g_vm_create) return 1;
+    HMODULE lib = LoadLibraryA("teVirtualMIDI64.dll");
+    if (!lib) { snprintf(status, n, "Virtual MIDI driver not installed (install loopMIDI)"); return 0; }
+    vm_create_fn create = (vm_create_fn)GetProcAddress(lib, "virtualMIDICreatePortEx2");
+    vm_send_fn send = (vm_send_fn)GetProcAddress(lib, "virtualMIDISendData");
+    vm_close_fn close = (vm_close_fn)GetProcAddress(lib, "virtualMIDIClosePort");
+    if (!create || !send || !close) { snprintf(status, n, "Virtual MIDI driver is too old"); return 0; }
+    g_vm_send = send;
+    g_vm_close = close;
+    g_vm_create = create;
+    return 1;
+}
+
 int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
-    (void)m; (void)client_name; (void)port_name;
-    snprintf(m->status, sizeof(m->status), "Virtual MIDI port is not available on Windows");
-    return 0;
+    (void)client_name;
+    if (m->seq) return 1;
+    if (!vm_load(m->status, sizeof(m->status))) return 0;
+    wchar_t wname[96];
+    int k = 0;
+    for (; port_name[k] && k < 95; k++) wname[k] = (wchar_t)(unsigned char)port_name[k];
+    wname[k] = 0;
+    void *port = g_vm_create(wname, NULL, NULL, 0, VM_FLAGS_INSTANTIATE_BOTH);
+    if (!port) { snprintf(m->status, sizeof(m->status), "Couldn't create the port (error %lu)", (unsigned long)GetLastError()); return 0; }
+    m->seq = port;
+    snprintf(m->status, sizeof(m->status), "Port open: %s", port_name);
+    return 1;
+}
+
+void vc_port_send(MidiPort *m, const unsigned char *msg) {
+    if (!m->seq || !g_vm_send) return;
+    unsigned char d[3] = {msg[0], msg[1], msg[2]};
+    DWORD len = ((msg[0] & 0xF0) == 0xC0 || (msg[0] & 0xF0) == 0xD0) ? 2 : 3;   /* program change and channel pressure are 2 bytes */
+    g_vm_send(m->seq, d, len);   /* the driver takes a whole message at once; a failed send is just dropped */
+}
+
+void vc_port_close(MidiPort *m) {
+    if (m->seq && g_vm_close) g_vm_close(m->seq);
+    m->seq = 0;
+    snprintf(m->status, sizeof(m->status), "Port closed");
 }
 #else
 int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
@@ -72,7 +119,6 @@ int vc_port_open(MidiPort *m, const char *client_name, const char *port_name) {
     snprintf(m->status, sizeof(m->status), "Port open: %s (%d:%d)", port_name, m->client, m->port);
     return 1;
 }
-#endif
 
 void vc_port_send(MidiPort *m, const unsigned char *msg) {
     if (!m->seq || !m->out_fn) return;
@@ -95,3 +141,4 @@ void vc_port_close(MidiPort *m) {
     m->seq = 0;
     snprintf(m->status, sizeof(m->status), "Port closed");
 }
+#endif

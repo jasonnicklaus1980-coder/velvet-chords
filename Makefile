@@ -88,7 +88,11 @@ build/win:
 win-test: win
 	$(ZIG) cc -target x86_64-windows-gnu -std=gnu99 -O1 -Wall -o build/win/win_host.exe tests/win_host.c -luser32 -lgdi32
 	rm -rf build/win/skin && mkdir -p build/win/skin && cp "package/skin/Velvet Chords - VST - Velvet Chords"/*.png build/win/skin/
+	$(ZIG) cc -target x86_64-windows-gnu -shared -o build/win/fake_teVirtualMIDI64.dll tests/fake_tevirtualmidi.c -luser32
 	cd build/win && xvfb-run -a wine win_host.exe velvetchords.dll
+	rm -rf build/win_fake && mkdir -p build/win_fake && cp build/win/velvetchords.dll build/win/win_host.exe build/win_fake/
+	cp -r build/win/skin build/win_fake/ && cp build/win/fake_teVirtualMIDI64.dll build/win_fake/teVirtualMIDI64.dll
+	cd build/win_fake && VC_VMIDI=present VC_FAKE_VMIDI_LOG="$$PWD/vmidi.log" xvfb-run -a wine win_host.exe velvetchords.dll
 .PHONY: win-test
 
 # regenerate the screen skin (needs python3-pil and the Poppins font); the result is committed in package/skin
