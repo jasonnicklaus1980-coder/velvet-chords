@@ -350,6 +350,7 @@ typedef struct {
     KitPlayer kp;                                  /* the kit's voices: only the audio thread touches these */
     volatile int kit_want, kit_pending, kit_count, kit_slot;
     char kit_paths[KIT_LIST_MAX][KIT_PATH_LEN];
+    char kit_roots[KIT_LIST_MAX][KIT_PATH_LEN];    /* the folder each kit was found in: its WAV files are searched under it */
     char kit_names[KIT_LIST_MAX][128];
     volatile int restore_pending;                  /* a project was loaded: select its instrument and kit once the scan is done */
     char restore_host[KIT_PATH_LEN], restore_kit[KIT_PATH_LEN];
@@ -604,6 +605,7 @@ static void host_scan(Plugin *p) {
             for (int k = 0; k < kc && !seen; k++) seen = !strcmp(p->kit_paths[k], p->host_scan_paths[i]);
             if (seen) continue;
             memcpy(p->kit_paths[kc], p->host_scan_paths[i], sizeof p->kit_paths[kc]);
+            snprintf(p->kit_roots[kc], sizeof p->kit_roots[kc], "%s", kfolders[f]);
             const char *base = strrchr(p->host_scan_paths[i], '/');
             base = base ? base + 1 : p->host_scan_paths[i];
             snprintf(p->kit_names[kc], sizeof p->kit_names[kc], "%s", base);
@@ -648,7 +650,7 @@ static void kit_apply(Plugin *p) {
     int want = p->kit_want;
     if (want < 0 || want > p->kit_count) want = 0;
     Kit *old = __atomic_load_n(&p->kit, __ATOMIC_ACQUIRE);
-    Kit *next = want > 0 ? kit_new(p->kit_paths[want - 1]) : NULL;
+    Kit *next = want > 0 ? kit_new(p->kit_paths[want - 1], p->kit_roots[want - 1]) : NULL;
     p->kit_slot = next ? want : 0;
     __atomic_store_n(&p->kit, next, __ATOMIC_RELEASE);
     tap_update(p);

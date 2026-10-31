@@ -127,11 +127,11 @@ int main(int argc, char **argv) {
     snprintf(path, sizeof path, "%s/kit.xpm", dir);
     FILE *xf = fopen(path, "wb");
     if (xf) { fputs(XPM, xf); fclose(xf); }
-    Kit *k = kit_new(path);
+    Kit *k = kit_new(path, NULL);
     CHECK(k != NULL, "the program reads");
     CHECK(k && strcmp(k->name, "Test Kit") == 0, "the program name is read from Name");
     CHECK(k && k->prog->ninstruments == 3, "three instruments");
-    CHECK(kit_new("/nonexistent/kit.xpm") == NULL, "a missing program gives NULL");
+    CHECK(kit_new("/nonexistent/kit.xpm", NULL) == NULL, "a missing program gives NULL");
 
     KitPlayer kp;
     memset(&kp, 0, sizeof kp);
@@ -183,12 +183,33 @@ int main(int argc, char **argv) {
     kit_player_reset(&kp);
     kit_note_on(&kp, k, 0, 100, 44100.0);
     kit_render(&kp, k, L, R, 8);
-    Kit *k2 = kit_new(path);
+    Kit *k2 = kit_new(path, NULL);
     kit_render(&kp, k2, L, R, 8);
     busy = 0;
     for (int i = 0; i < KIT_VOICES; i++) if (kp.v[i].active) busy++;
     CHECK(busy == 0, "a different kit silences the voices from the old one");
     kit_free(k2);
+
+    /* a kit in a subfolder whose sample is kept at the root of the same folder tree: found through the root, and not
+     * found without it */
+    char sub[512], xpm2[600];
+    snprintf(sub, sizeof sub, "%s/prog", dir);
+    mkdir(sub, 0775);
+    snprintf(xpm2, sizeof xpm2, "%s/kit2.xpm", sub);
+    FILE *x2 = fopen(xpm2, "wb");
+    if (x2) {
+        fputs("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<MPCVObject><Program type=\"Drum\"><Name>Sub kit</Name><Instruments>"
+              "<Instrument number=\"1\"><OneShot>True</OneShot><Layers><Layer number=\"1\"><VelStart>0</VelStart><VelEnd>127</VelEnd>"
+              "<SampleName>hat</SampleName><Volume>0.784333</Volume><Pan>0.5</Pan></Layer></Layers></Instrument>"
+              "</Instruments></Program></MPCVObject>\n", x2);
+        fclose(x2);
+    }
+    Kit *far = kit_new(xpm2, NULL);
+    CHECK(far && kit_load_instrument(far, 0) == 0 && far->inst[0].nlayers == 0, "without its root, a kit doesn't find a sample outside its folder");
+    kit_free(far);
+    Kit *near = kit_new(xpm2, dir);
+    CHECK(near && kit_load_instrument(near, 0) == 0 && near->inst[0].nlayers == 1, "with its root, the sample at the root is found");
+    kit_free(near);
 
     kit_free(k);
     printf("%d checks, %d failures\n", checks, failures);

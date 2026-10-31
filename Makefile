@@ -86,7 +86,7 @@ vhost-test: native build/native/vhost_test build/native/vhdir/fake_synth.so
 
 # drum kits: the XPM program and its WAV samples, played from the kit's voices
 build/native/test_kit: tests/test_kit.c src/kit.c src/kit.h src/xpm_read.c src/xpm_read.h src/xml_min.c src/xml_min.h src/vcmath.c src/vcmath.h | build/native
-	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_kit.c src/kit.c src/xpm_read.c src/xml_min.c src/vcmath.c -lm
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_kit.c src/kit.c src/mpc_list.c src/xpm_read.c src/xml_min.c src/vcmath.c -lm
 
 kit-test: build/native/test_kit
 	./build/native/test_kit build/native/kit_test

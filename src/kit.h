@@ -36,15 +36,19 @@ typedef struct {
 } KitInst;
 
 typedef struct {
-    char dir[KIT_PATH_LEN];                 /* the folder the program and its WAV files are in */
+    char dir[KIT_PATH_LEN];                 /* the folder the program is in: its WAV files are looked for here first */
     char name[128];
     XpmProgram *prog;
+    char **wavs;                            /* every WAV file under the kit's root, for samples kept in another folder */
+    int nwavs;
     KitInst inst[XPM_MAX_INSTRUMENTS];      /* indexed by instrument number - 1 */
 } Kit;
 
-/* Reads the program at xpm_path. The samples are not loaded yet. Returns NULL if the file can't be read or isn't a
- * program the reader understands. */
-Kit *kit_new(const char *xpm_path);
+/* Reads the program at xpm_path. root is the folder the program was found in (an expansion or the kit folder); the WAV
+ * files under it are indexed, so samples kept in another folder of the expansion are found too. Pass NULL to look only
+ * beside the program. The samples are not loaded yet. Returns NULL if the file can't be read or isn't a program the
+ * reader understands. */
+Kit *kit_new(const char *xpm_path, const char *root);
 
 /* Loads the WAV samples of program instrument i (0-based, in file order) and marks its slot ready. Returns 0 on
  * success. A layer whose WAV is missing is left out; the instrument still becomes ready. */

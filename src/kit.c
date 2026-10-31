@@ -1,4 +1,5 @@
 #include "kit.h"
+#include "mpc_list.h"
 #include "vcmath.h"
 #include <dirent.h>
 #include <stdio.h>
@@ -129,7 +130,23 @@ static int find_wav(const char *dir, const char *sample, char *out, size_t len) 
     return found;
 }
 
-Kit *kit_new(const char *xpm_path) {
+/* the WAV files under root, so that a sample kept in another folder of the expansion can be found */
+#define KIT_WAV_MAX 8192
+#define KIT_WAV_DEPTH 6
+static void index_wavs(Kit *k, const char *root) {
+    char (*found)[VH_PATH_LEN] = malloc(KIT_WAV_MAX * sizeof *found);
+    if (!found) return;
+    int n = mpc_walk_files(root, found, KIT_WAV_MAX, KIT_WAV_DEPTH, ".wav");
+    if (n > 0) k->wavs = malloc((size_t)n * sizeof *k->wavs);
+    for (int i = 0; k->wavs && i < n; i++) {
+        size_t l = strlen(found[i]) + 1;
+        char *copy = malloc(l);
+        if (copy) { memcpy(copy, found[i], l); k->wavs[k->nwavs++] = copy; }
+    }
+    free(found);
+}
+
+Kit *kit_new(const char *xpm_path, const char *root) {
     if (!xpm_path) return NULL;
     size_t len = 0;
     unsigned char *text = read_file(xpm_path, &len);
@@ -142,7 +159,23 @@ Kit *kit_new(const char *xpm_path) {
     k->prog = prog;
     snprintf(k->name, sizeof k->name, "%s", prog->name);
     folder_of(xpm_path, k->dir, sizeof k->dir);
+    if (root && root[0]) index_wavs(k, root);
     return k;
+}
+
+/* finds sample.WAV among the indexed files (the kit's root), by file name, in any case */
+static int find_indexed(const Kit *k, const char *sample, char *out, size_t len) {
+    char want[300];
+    snprintf(want, sizeof want, "%s.wav", sample);
+    for (int i = 0; i < k->nwavs; i++) {
+        const char *base = strrchr(k->wavs[i], '/');
+        base = base ? base + 1 : k->wavs[i];
+        if (strcasecmp(base, want) == 0) {
+            snprintf(out, len, "%s", k->wavs[i]);
+            return 0;
+        }
+    }
+    return -1;
 }
 
 int kit_load_instrument(Kit *k, int i) {
@@ -157,7 +190,8 @@ int kit_load_instrument(Kit *k, int i) {
         if (!xl->active || !xl->sample[0]) continue;
         char path[2 * KIT_PATH_LEN];   /* a folder path plus a file name */
         KitLayer *kl = &ki->layers[n];
-        if (find_wav(k->dir, xl->sample, path, sizeof path) != 0 || kit_wav_load(path, &kl->s) != 0) continue;
+        int found = find_wav(k->dir, xl->sample, path, sizeof path) == 0 || find_indexed(k, xl->sample, path, sizeof path) == 0;
+        if (!found || kit_wav_load(path, &kl->s) != 0) continue;
         kl->vel_start = xl->vel_start;
         kl->vel_end = xl->vel_end;
         kl->one_shot = xi->one_shot;
@@ -174,6 +208,8 @@ void kit_free(Kit *k) {
     if (!k) return;
     for (int s = 0; s < XPM_MAX_INSTRUMENTS; s++)
         for (int l = 0; l < k->inst[s].nlayers; l++) kit_sample_free(&k->inst[s].layers[l].s);
+    for (int i = 0; i < k->nwavs; i++) free(k->wavs[i]);
+    free(k->wavs);
     free(k->prog);
     free(k);
 }
