@@ -55,7 +55,6 @@
   <li><a href="#smart">Smart Scale pads</a></li>
   <li><a href="#presets">Presets</a></li>
   <li><a href="#progressions">Progressions and progression play</a></li>
-  <li><a href="#midi">Sending chords to another instrument</a></li>
   <li><a href="#recording">Recording with Velvet Chords</a></li>
   <li><a href="#import">Importing MIDI and analysing audio</a></li>
   <li><a href="#trouble">Troubleshooting</a></li>
@@ -122,7 +121,7 @@
   <li><strong>Strum</strong> (0 to 150 ms) spreads the chord notes out, and <strong>Strum dir</strong> sets up, down or alternate.</li>
   <li><strong>Arp</strong> and <strong>Arp rate</strong> run an arpeggio, synced to the MPC tempo. See also the <a href="#lanes">Lanes page</a> for four arpeggio lanes.</li>
   <li><strong>Inversion</strong>, <strong>Octave</strong>, <strong>Transpose</strong> (-12 to +12) and <strong>Voice lead</strong> (pads in a bank move smoothly from one to the next).</li>
-  <li><strong>MIDI out</strong> and <strong>MIDI channel</strong>. See <a href="#midi">Sending chords to another instrument</a>.</li>
+  <li><strong>MIDI out</strong> and <strong>MIDI channel</strong>.</li>
   <li><strong>Pad 1 note</strong> and <strong>Learn pad 1</strong>: which incoming note is pad A01. See <a href="#trouble">Troubleshooting</a>.</li>
   <li><strong>Save progression</strong> and <strong>Export MIDI</strong>.</li>
 </ul>
@@ -158,7 +157,7 @@
   <tr><td>MIDI import</td><td>Load chords from a MIDI file. See <a href="#import">Importing</a>.</td></tr>
   <tr><td>Your presets</td><td>Save and load four of your own presets, with Export and Import for sharing.</td></tr>
   <tr><td>Starred presets</td><td>Star your favourite factory presets and step through them.</td></tr>
-  <tr><td>MIDI log</td><td>Diagnostic. Writes every MIDI event to a file. See <a href="#midi">Sending chords to another instrument</a>.</td></tr>
+  <tr><td>MIDI log</td><td>Diagnostic. Writes every MIDI event to a file.</td></tr>
 </table>
 
 <h2 id="lanes">8. The Lanes page</h2>
@@ -210,20 +209,6 @@
   <li><strong>Your own progressions:</strong> the 16 chords on bank A can be saved as one of four user progressions with <em>Save progression</em> (Perform page). Recall one with the progression control, which lists User 1 to 4.</li>
 </ul>
 
-<h2 id="midi">13. Sending chords to another instrument</h2>
-<p>Velvet Chords can be a chord-and-pattern generator that plays another instrument. It sends its chords as MIDI and can stay silent itself.</p>
-<ol>
-  <li><strong>Track 1: Velvet Chords.</strong> On the Pattern page, set <em>Built-in sound</em> to <strong>Silent</strong> and <em>Send chords as MIDI</em> to <strong>Virtual port</strong>. The output is on channel 16 by default.</li>
-  <li><strong>Track 2: your instrument.</strong> On that track's MIDI input, choose the input <strong>Velvet Chords Out</strong>, channel 16, with monitoring on. Menu names differ between MPC OS versions.</li>
-  <li>Select Track 1 and play the pads. Each pad sends its chord, or its pattern, to Track 2.</li>
-</ol>
-<p>The <em>MIDI port</em> readout on the Pattern page shows whether the port opened. If the port does not appear as an input on Track 2, save the project and restart MPC with the plugin loaded so it rescans its MIDI ports.</p>
-<div class="note"><strong>Choose the routing carefully.</strong> <em>Virtual port</em> sends the chords only to a track whose input you set to Velvet Chords Out. <em>To MPC</em> and <em>Both</em> put the chords into the MPC's own MIDI routing, where any track set to <em>all inputs</em> can receive them and be cut off by a note-off. Leave <em>MIDI out</em> on <em>Off</em> unless you need the chords as MIDI.</div>
-<p><strong>MIDI channel</strong> (Pattern page) sets the output channel. The default is 16.</p>
-
-<h3>MIDI log (diagnostic)</h3>
-<p>On the Tools page, <strong>MIDI log</strong> writes every MIDI event Velvet Chords receives (<code>I</code>), sends (<code>O</code>) and gets from the host on start or stop (<code>M</code>) to <code>Velvet Chords/MIDI log.txt</code>. Each line has the time in seconds, the direction, and the three bytes in hex. Turn it on, reproduce the problem, turn it off, and send the file. The file keeps growing while the log is on.</p>
-
 <h2 id="recording">14. Recording with Velvet Chords</h2>
 <ul>
   <li><strong>Hold</strong> and <strong>Repeat</strong> change how long chords ring and how they retrigger. Hold is off by default.</li>
@@ -258,7 +243,6 @@
   <tr><td>The bank buttons seem to do nothing</td><td>Press the bank button again. Each of the four buttons switches to its bank. The lit button shows the bank in view.</td></tr>
   <tr><td>The preset box shows only Default</td><td>Reload the plugin or restart MPC, so the box reads the list when the plugin loads.</td></tr>
   <tr><td>The sound drops out when you record</td><td>See <a href="#recording">Recording with Velvet Chords</a>.</td></tr>
-  <tr><td>Velvet Chords Out is not an input on the other track</td><td>Save the project and restart MPC with the plugin loaded. Check the <em>MIDI port</em> readout on the Pattern page.</td></tr>
   <tr><td>MPC starts with default settings after installing</td><td>Restore the <code>MPC.settings</code> backup the installer made.</td></tr>
   <tr><td>The screen skin doesn't show</td><td>Check that <code>/sdcard/Synths</code> is one of MPC's content locations. The plugin still works through MPC's generic parameter view.</td></tr>
   <tr><td>A chord is wrong after importing or analysing</td><td>Use <strong>Copy to Custom</strong> on the Edit page, then edit the pad.</td></tr>

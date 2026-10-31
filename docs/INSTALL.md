@@ -69,20 +69,6 @@ The plugin comes with its own MPC screen skin, six pages on the function keys, i
 
 The Q-Links follow the page. If the skin doesn't appear (for example `/sdcard/Synths` isn't in MPC's content locations; the installer warns about this), the plugin still works through MPC's generic parameter view.
 
-## Using it like ChordPrism: chords and patterns into any instrument
-
-Velvet Chords can work as a pure chord-and-pattern generator that plays **another** instrument, the way ChordPrism sits in front of a synth in a DAW. It sends its chords out as MIDI and stays silent itself.
-
-1. **Track 1: Velvet Chords.** On the Pattern page set *Built-in sound* to **Silent** and *Send chords as MIDI* to **Virtual port**. Output is on channel 16 by default.
-2. **Track 2: your instrument.** Any instrument track: an MPC piano, an AIR synth, a Rhodes. In that track's MIDI input settings, choose the input port **Velvet Chords Out**, channel 16, with monitoring on so it plays while Track 1 is selected. (Menu names differ between MPC OS versions.)
-3. Select Track 1 and play the pads. Each pad sends its chord, or its rhythm pattern, to Track 2.
-
-The *MIDI port* readout on the Pattern page shows whether the port opened. If MPC doesn't list *Velvet Chords Out* as an input, save the project, then reload it or restart MPC with the plugin loaded so MPC rescans its MIDI ports.
-
-While the port is on, the plugin ignores notes arriving on its own output channel, so a track set to "all inputs" can't loop chords back into it.
-
-*To MPC* sends the same MIDI to MPC through the plugin interface instead. Whether MPC forwards that anywhere is untested; *Both* uses both routes.
-
 ## Smart Scale pads
 
 Set **Smart Scale pads** (Play page) to **Pads 9-16** and the top two rows of every bank (pads 9-16) stop playing chords and play single notes that fit the chord you last played on the bottom two rows (pads 1-8). Play a chord with your left hand and a melody, bassline or riff with your right, and nothing clashes. The keys on screen show each note and what it is (root, 3rd, 5th, b7...), and they relabel the moment you change chords.
