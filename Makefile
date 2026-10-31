@@ -75,7 +75,7 @@ win-layout:
 	python3 tools/make_win_layout.py
 
 win: src/songs_gen.c | build/win
-	$(ZIG) cc -target x86_64-windows-gnu $(WIN_CFLAGS) -shared -o build/win/velvetchords.dll $(SRC) src/plugin.c -lgdi32 -luser32
+	$(ZIG) cc -target x86_64-windows-gnu $(WIN_CFLAGS) -shared -o build/win/velvetchords.dll $(SRC) src/plugin.c -lgdi32 -luser32 -lgdiplus
 	llvm-readobj --coff-exports build/win/velvetchords.dll | grep -q VSTPluginMain
 	@echo "built build/win/velvetchords.dll"
 .PHONY: win win-layout

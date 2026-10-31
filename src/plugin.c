@@ -320,6 +320,8 @@ typedef struct {
     int refresh_running;
     void *ui_hwnd;                 /* the Windows editor window, or NULL */
     int ui_page;                   /* the editor page shown (0 Play .. 5 Lanes) */
+    void *ui_store;                /* the editor's pictures (Windows): the page background and each control's two states */
+    int ui_loaded_page;            /* the page whose pictures are loaded, or -1 */
     pthread_t refresh_thread;
     /* MIDI import */
     ImportChord imp[VC_PADS], imp_engine[VC_PADS];
@@ -1859,9 +1861,11 @@ static void destroy(Plugin *p) {
 }
 
 /* ---------- editor window (Windows only) ----------
- * A VST2 editor drawn with GDI from src/win_layout.h, which holds the MPC skin's six pages: every control is a box at
- * its place on the skin, labelled with its name and current value. Left click steps or sets a control, right click steps
- * back, and the six tabs along the bottom change page. The MPC build has no editor; these stubs keep it unchanged. */
+ * A VST2 editor for the six pages of the MPC skin, the same layout as the MPC screen (src/win_layout.h). The skin's
+ * pictures sit in a skin folder next to the DLL and are read with GDI+ (part of Windows): a page's background, then each
+ * control's on and off picture. A control with no picture is drawn as a box with its name and value. Left click steps
+ * or sets a control, right click steps it back, and the tabs along the bottom change page. The MPC build has no
+ * editor; the stubs at the end keep it unchanged. */
 #ifdef _WIN32
 #define WIN32_LEAN_AND_MEAN
 #define NOMINMAX
@@ -1872,8 +1876,20 @@ typedef struct { short top, left, bottom, right; } VcERect;   /* the VST2 editor
 #define WIN_TAB_H 32
 #define WIN_EDITOR_W WIN_PAGE_W
 #define WIN_EDITOR_H (WIN_PAGE_H + WIN_TAB_H)
+#define WIN_STORE_N (2 * WIN_CTL_COUNT + 1)   /* slot 0: the page background; then on and off for each control */
+
+/* GDI+ flat API (gdiplus.dll ships with Windows); declared here so no C++ headers are needed */
+typedef struct { unsigned int version; void *debug_callback; int no_thread; int no_codecs; } VcGdipInput;
+int WINAPI GdiplusStartup(ULONG_PTR *token, const VcGdipInput *input, void *output);
+int WINAPI GdipCreateBitmapFromFile(const wchar_t *file, void **bitmap);
+int WINAPI GdipCreateFromHDC(HDC dc, void **graphics);
+int WINAPI GdipDrawImageRectI(void *graphics, void *image, int x, int y, int w, int h);
+int WINAPI GdipDeleteGraphics(void *graphics);
+int WINAPI GdipDisposeImage(void *image);
 
 static HINSTANCE g_hinst;
+static wchar_t g_skin_dir[MAX_PATH];   /* <folder of the DLL>\skin\ */
+static int g_gdip_ok;
 BOOL WINAPI DllMain(HINSTANCE inst, DWORD reason, LPVOID reserved) {
     (void)reserved;
     if (reason == DLL_PROCESS_ATTACH) g_hinst = inst;
@@ -1904,14 +1920,60 @@ static void ctl_click(Plugin *p, const WinCtl *c, int dir) {
     if (PINFO[i].steps >= 2) step_param(p, i, dir, PINFO[i].steps);
 }
 
+/* the picture file's full path: the skin folder beside the DLL, then the name (ASCII) */
+static wchar_t *ui_skin_path(wchar_t *out, size_t n, const char *file) {
+    size_t k = wcslen(g_skin_dir);
+    if (k >= n) return NULL;
+    memcpy(out, g_skin_dir, k * sizeof(wchar_t));
+    for (size_t i = 0; file[i] && k + 1 < n; i++) out[k++] = (wchar_t)(unsigned char)file[i];
+    out[k] = 0;
+    return out;
+}
+
+static void *ui_load_png(const char *file) {
+    wchar_t path[MAX_PATH + 64];
+    void *img = NULL;
+    if (!file || !g_gdip_ok || !ui_skin_path(path, sizeof path / sizeof path[0], file)) return NULL;
+    if (GdipCreateBitmapFromFile(path, &img) != 0) return NULL;   /* Status Ok is 0; a missing file fails */
+    return img;
+}
+
+/* loads the pictures of the page on screen and frees the previous page's. A missing picture just isn't drawn. */
+static void ui_load_page(Plugin *p) {
+    void **st = (void **)p->ui_store;
+    if (!st || p->ui_loaded_page == p->ui_page) return;
+    for (int i = 0; i < WIN_STORE_N; i++) if (st[i]) { GdipDisposeImage(st[i]); st[i] = NULL; }
+    st[0] = ui_load_png(WIN_PAGE_BG[p->ui_page]);
+    for (int i = 0; i < WIN_CTL_COUNT; i++) {
+        const WinCtl *c = &WIN_CTL[i];
+        if (c->page != p->ui_page) continue;
+        st[1 + 2 * i] = ui_load_png(c->on_img);
+        st[2 + 2 * i] = ui_load_png(c->off_img);
+    }
+    p->ui_loaded_page = p->ui_page;
+}
+
+static void ui_draw_image(void *graphics, void *img, const RECT *r) {
+    GdipDrawImageRectI(graphics, img, r->left, r->top, r->right - r->left, r->bottom - r->top);
+}
+
 static void ui_paint(HWND h, Plugin *p) {
     PAINTSTRUCT ps;
     HDC dc = BeginPaint(h, &ps);
     RECT all;
     GetClientRect(h, &all);
-    HBRUSH bg = CreateSolidBrush(UI_BG);
-    FillRect(dc, &all, bg);
-    DeleteObject(bg);
+    void **st = (void **)p->ui_store;
+    ui_load_page(p);
+    void *gfx = NULL;
+    if (g_gdip_ok) GdipCreateFromHDC(dc, &gfx);
+    int pictures = gfx && st && st[0];
+    if (!pictures) {
+        HBRUSH bg = CreateSolidBrush(UI_BG);
+        FillRect(dc, &all, bg);
+        DeleteObject(bg);
+    } else {
+        ui_draw_image(gfx, st[0], &all);
+    }
     HFONT font = CreateFontA(-14, 0, 0, 0, FW_NORMAL, 0, 0, 0, DEFAULT_CHARSET, OUT_DEFAULT_PRECIS, CLIP_DEFAULT_PRECIS,
                              CLEARTYPE_QUALITY, DEFAULT_PITCH, "Segoe UI");
     HFONT old = (HFONT)SelectObject(dc, font);
@@ -1920,11 +1982,18 @@ static void ui_paint(HWND h, Plugin *p) {
     for (int i = 0; i < WIN_CTL_COUNT; i++) {
         const WinCtl *c = &WIN_CTL[i];
         if (c->page != p->ui_page) continue;
-        int on = c->kind == WIN_CTL_SEG && idx_of(p, c->param) == c->seg;
-        HBRUSH b = CreateSolidBrush(on ? UI_SEL : UI_CTL);
         RECT r = {c->x, c->y, c->x + c->w, c->y + c->h};
-        FillRect(dc, &r, b);
-        DeleteObject(b);
+        int on = c->kind == WIN_CTL_SEG ? idx_of(p, c->param) == c->seg
+                                        : (c->param >= 0 && c->param < NUM_PARAMS && PINFO[c->param].steps == 2 &&
+                                           !PINFO[c->param].trigger && idx_of(p, c->param) != 0);
+        void *pic = pictures ? (on ? st[1 + 2 * i] : st[2 + 2 * i]) : NULL;
+        if (!pic && pictures) pic = on ? st[2 + 2 * i] : st[1 + 2 * i];   /* a control with one picture shows it both ways */
+        if (pic) { ui_draw_image(gfx, pic, &r); continue; }
+        if (!pictures) {   /* no skin: a box for every control */
+            HBRUSH b = CreateSolidBrush(on ? UI_SEL : UI_CTL);
+            FillRect(dc, &r, b);
+            DeleteObject(b);
+        }
         char text[160];
         if (c->kind == WIN_CTL_SEG) {
             snprintf(text, sizeof text, "%s", c->name);
@@ -1938,6 +2007,7 @@ static void ui_paint(HWND h, Plugin *p) {
         tr.right -= 4;
         DrawTextA(dc, text, -1, &tr, DT_CENTER | DT_VCENTER | DT_WORDBREAK | DT_NOPREFIX);
     }
+    if (gfx) GdipDeleteGraphics(gfx);
     for (int t = 0; t < WIN_PAGE_COUNT; t++) {
         RECT r = {t * WIN_EDITOR_W / WIN_PAGE_COUNT, WIN_PAGE_H, (t + 1) * WIN_EDITOR_W / WIN_PAGE_COUNT, WIN_EDITOR_H};
         HBRUSH b = CreateSolidBrush(t == p->ui_page ? UI_SEL : UI_TAB);
@@ -1991,6 +2061,19 @@ static LRESULT CALLBACK ui_proc(HWND h, UINT msg, WPARAM wp, LPARAM lp) {
 static void ui_register(void) {
     static int done;
     if (done) return;
+    if (!g_gdip_ok) {
+        ULONG_PTR token;
+        VcGdipInput in = {1, NULL, 0, 0};
+        g_gdip_ok = GdiplusStartup(&token, &in, NULL) == 0;   /* once per process; the editor still works without it */
+    }
+    wchar_t mod[MAX_PATH];
+    DWORD n = GetModuleFileNameW(g_hinst, mod, MAX_PATH);
+    if (n > 0 && n < MAX_PATH) {
+        wchar_t *slash = wcsrchr(mod, L'\\');
+        if (slash) slash[1] = 0; else mod[0] = 0;
+    } else mod[0] = 0;
+    wcsncpy(g_skin_dir, mod, MAX_PATH - 8);
+    wcscat(g_skin_dir, L"skin\\");
     WNDCLASSA wc;
     memset(&wc, 0, sizeof wc);
     wc.lpfnWndProc = ui_proc;
@@ -2009,6 +2092,8 @@ static intptr_t ui_get_rect(void *ptr) {
 
 static intptr_t ui_open(Plugin *p, void *parent) {
     ui_register();
+    if (!p->ui_store) p->ui_store = calloc(WIN_STORE_N, sizeof(void *));
+    p->ui_loaded_page = -1;
     HWND h = CreateWindowExA(0, "VelvetChordsEditor", "Velvet Chords", WS_CHILD | WS_VISIBLE, 0, 0, WIN_EDITOR_W,
                              WIN_EDITOR_H, (HWND)parent, NULL, g_hinst, p);
     if (!h) return 0;
@@ -2017,10 +2102,18 @@ static intptr_t ui_open(Plugin *p, void *parent) {
     return 1;
 }
 
+static void ui_free_pictures(Plugin *p) {
+    void **st = (void **)p->ui_store;
+    if (!st) return;
+    for (int i = 0; i < WIN_STORE_N; i++) if (st[i]) { GdipDisposeImage(st[i]); st[i] = NULL; }
+    p->ui_loaded_page = -1;
+}
+
 static void ui_close(Plugin *p) {
-    if (!p->ui_hwnd) return;
-    DestroyWindow((HWND)p->ui_hwnd);
-    p->ui_hwnd = NULL;
+    if (p->ui_hwnd) { DestroyWindow((HWND)p->ui_hwnd); p->ui_hwnd = NULL; }
+    ui_free_pictures(p);
+    free(p->ui_store);
+    p->ui_store = NULL;
 }
 #else
 static intptr_t ui_get_rect(void *ptr) { (void)ptr; return 0; }   /* no editor on the MPC build */
