@@ -40,12 +40,14 @@ void sy_init(Synth *s, float sr) {
     for (int i = 0; i < SY_VOICES; i++) s->v[i].ks = s->ks[i];
 }
 
+/* A free voice, or else a released one (the oldest). When every voice is still held, there is no voice: the new note is
+ * dropped, rather than cutting a note that is sounding (a drum hit must not cut the melody). NULL means none. */
 static SVoice *alloc_voice(Synth *s) {
     SVoice *best = 0;
     for (int i = 0; i < SY_VOICES; i++) if (!s->v[i].active) return &s->v[i];
     for (int i = 0; i < SY_VOICES; i++) {
         SVoice *v = &s->v[i];
-        if (!best || (v->released && !best->released) || (v->released == best->released && v->age < best->age)) best = v;
+        if (v->released && (!best || v->age < best->age)) best = v;
     }
     return best;
 }
@@ -62,6 +64,7 @@ void sy_note_on(Synth *s, int note, float vel, int owner) {
         if (o->active && o->note == note && o->released && o->relMul > choke) o->relMul = choke;
     }
     SVoice *v = alloc_voice(s);
+    if (!v) return;
     float *ks = v->ks;
     memset(v, 0, sizeof(*v));
     v->ks = ks;

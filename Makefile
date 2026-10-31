@@ -40,7 +40,7 @@ build/native build/arm:
 
 native: src/songs_gen.c build/native/velvetchords.so build/native/test_engine build/native/test_host build/native/alloc_probe.so build/native/vc_export
 
-test: native vhost-test sample-meta-test keygroup-test mpc-list-test isolation-test kit-test
+test: native vhost-test sample-meta-test keygroup-test mpc-list-test isolation-test synth-pool-test kit-test
 	./build/native/test_engine
 	rm -rf build/native/exports && mkdir -p build/native/exports
 	LD_PRELOAD=$(CURDIR)/build/native/alloc_probe.so VC_EXPORT_DIR=$(CURDIR)/build/native/exports ./build/native/test_host ./build/native/velvetchords.so build/native/demo
@@ -91,6 +91,14 @@ build/native/test_kit: tests/test_kit.c src/kit.c src/kit.h src/xpm_read.c src/x
 kit-test: build/native/test_kit
 	./build/native/test_kit build/native/kit_test
 .PHONY: kit-test
+
+# the synth voice pool: held notes are never cut to make room for a new one
+build/native/test_synth_pool: tests/test_synth_pool.c src/synth.c src/synth.h src/vcmath.c src/vcmath.h | build/native
+	$(NATIVE_CC) -std=gnu99 -O2 $(WARN) -Isrc -o $@ tests/test_synth_pool.c src/synth.c src/vcmath.c -lm
+
+synth-pool-test: build/native/test_synth_pool
+	./build/native/test_synth_pool
+.PHONY: synth-pool-test
 
 # two instances at once (a melody track and a drum track): the melody must not change when the drums play beside it
 build/native/test_isolation: tests/test_isolation.c src/vst2_abi.h | build/native
