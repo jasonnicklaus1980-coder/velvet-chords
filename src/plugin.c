@@ -620,6 +620,17 @@ static void host_scan(Plugin *p) {
             kc++;
         }
     }
+    /* sorted by name: the names start with the expansion's title, so each expansion's kits stay together */
+    for (int a = 0; a < kc; a++) {
+        int lo = a;
+        for (int b = a + 1; b < kc; b++) if (strcasecmp(p->kit_names[b], p->kit_names[lo]) < 0) lo = b;
+        if (lo == a) continue;
+        char tmp[KIT_PATH_LEN];
+        memcpy(tmp, p->kit_paths[a], sizeof tmp); memcpy(p->kit_paths[a], p->kit_paths[lo], sizeof tmp); memcpy(p->kit_paths[lo], tmp, sizeof tmp);
+        memcpy(tmp, p->kit_roots[a], sizeof tmp); memcpy(p->kit_roots[a], p->kit_roots[lo], sizeof tmp); memcpy(p->kit_roots[lo], tmp, sizeof tmp);
+        char nm[128];
+        memcpy(nm, p->kit_names[a], sizeof nm); memcpy(p->kit_names[a], p->kit_names[lo], sizeof nm); memcpy(p->kit_names[lo], nm, sizeof nm);
+    }
     __atomic_store_n(&p->kit_count, kc, __ATOMIC_RELEASE);
 
     /* publish the finished list: the names are in place before the count that makes them visible */
