@@ -748,25 +748,28 @@ class Skin:
         c = []
         self.header_info(c, bg)
         bg.panel((12, 64, 1268, 144))
-        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 28, 96, 340, "Instrument")
-        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 384, 96, w=76, h=CH)
-        self.action_button(c, bg, "host_up", "Page up", "Host page up", 472, 96, w=116, h=CH)
-        self.action_button(c, bg, "host_down", "Page down", "Host page down", 600, 96, w=116, h=CH)
-        self.stepper(c, bg, "Kit", "Kit prev", "Kit next", 728, 96, 300, "Drum kit")
-        self.value_field(c, bg, "Host volume", 1040, 96, 212, caption="Host volume")
+        # touch targets are 44 px tall here (36 on the rest of the skin), and the rows are 42 px
+        self.stepper(c, bg, "Host plugin", "Host prev", "Host next", 28, 96, 340, "Instrument", h=44)
+        self.action_button(c, bg, "host_scan", "Scan", "Scan plugins", 384, 96, w=76, h=44)
+        self.action_button(c, bg, "host_up", "Page up", "Host page up", 472, 96, w=116, h=44)
+        self.action_button(c, bg, "host_down", "Page down", "Host page down", 600, 96, w=116, h=44)
+        self.stepper(c, bg, "Kit", "Kit prev", "Kit next", 728, 96, 300, "Drum kit", h=44)
+        self.value_field(c, bg, "Host volume", 1040, 96, 212, h=44, caption="Host volume")
         bg.panel((12, 152, 1268, 620))
         bg.bar((12, 152, 1268, 620), "MPC plugin list and Expansions", right="Subfolder in brackets")
         for k in range(8):
-            on, off = self.img.host_row(True, 1224, 38), self.img.host_row(False, 1224, 38)
+            on, off = self.img.host_row(True, 1224, 42), self.img.host_row(False, 1224, 42)
             key = self.define("vcHostRow", definition([A_QLINK], [
-                button_sub(on, off, k, 8, 1224, 38),
-                label_sub("Name", "Name", 14, 0, 1196, 38, 15, TEXT),
+                button_sub(on, off, k, 8, 1224, 42),
+                label_sub("Name", "Name", 14, 0, 1196, 42, 17, TEXT),
             ]))
             comps_y = 192 + k * 46
-            c.append(self.place(key, "Host row %d" % (k + 1), 28, comps_y, 1224, 38,
+            c.append(self.place(key, "Host row %d" % (k + 1), 28, comps_y, 1224, 42,
                                 [("Data", self.p("Host row")), ("Name", self.p("Host row %d" % (k + 1)))]))
+        # the bottom strip: the kit's level and mute, and the scroll position (turn a Q-Link on it to move the list)
         self.value_field(c, bg, "Kit volume", 28, 580, 200, h=30, caption="Kit volume")
         self.switch(c, bg, "Kit mute", 260, 580, "Kit mute")
+        self.value_field(c, bg, "Host scroll", 520, 580, 300, h=30, caption="Scroll (Q-Link)")
         self.page("Host", 6, c, "vc_bg_host.png", bg)
 
     def tui(self):

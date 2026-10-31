@@ -1799,6 +1799,14 @@ int main(int argc, char **argv) {
         pfx->setParameter(pfx, pUp, 1.f); pfx->setParameter(pfx, pUp, 0.f);
         display(pfx, pRow1, d);
         CHECK(!strcmp(d, "Inst 01"), "page up goes back to the first page (%s)", d);
+        int pScroll = find_param(pfx, "Host scroll");
+        pfx->setParameter(pfx, pScroll, 0.f);                                      /* the scroll field turns the list to the top */
+        display(pfx, pRow1, d);
+        CHECK(!strcmp(d, "Inst 01"), "the scroll field moves the list (row 1 is %s)", d);
+        pfx->setParameter(pfx, pScroll, 1.f);                                      /* past the end: the last full page */
+        display(pfx, pRow1, d);
+        CHECK(!strcmp(d, "Inst 03"), "scrolling past the end stops at the last full page (%s)", d);
+        pfx->setParameter(pfx, pScroll, 0.f);
         pfx->setParameter(pfx, pPick, 1.f);                                        /* pick row 8 (the last of 8 steps) */
         display(pfx, pSlot, d);
         CHECK(!strcmp(d, "Inst 08"), "picking a row selects that instrument (%s)", d);

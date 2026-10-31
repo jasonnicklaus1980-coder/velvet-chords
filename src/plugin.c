@@ -88,6 +88,8 @@ enum {
     P_HOST_ROW0, P_HOST_ROW_END = P_HOST_ROW0 + HOST_ROWS - 1,
     /* the drum kit picker (appended, so saved projects keep their places) */
     P_KIT_PREV, P_KIT_NEXT, P_KIT_SLOT, P_KIT_VOL, P_KIT_MUTE,
+    /* the Host page's scroll position (a Q-Link can turn it): the first instrument shown */
+    P_HOST_SCROLL,
     NUM_PARAMS
 };
 /* the four arpeggiator lanes: the parameter that sets each of order, rate, octaves and transpose */
@@ -281,6 +283,7 @@ static void init_param_info(void) {
     P(P_KIT_SLOT, "Kit", KIT_LIST_MAX + 1, 0.f, 0)
     P(P_KIT_VOL, "Kit volume", 0, 0.8f, 0)
     P(P_KIT_MUTE, "Kit mute", 2, 0.f, 0)
+    P(P_HOST_SCROLL, "Host scroll", HOST_MAX + 1, 0.f, 0)
     P(P_BANK_A, "Bank A", 2, 1.f, 0)
     P(P_BANK_B, "Bank B", 2, 0.f, 0)
     P(P_BANK_C, "Bank C", 2, 0.f, 0)
@@ -572,6 +575,7 @@ static void host_scan(Plugin *p) {
     char settings[300];
     int found = 0;
     p->host_top = 0;
+    p->val[P_HOST_SCROLL] = 0.f;
     /* 1. the MPC's own plugin list, in the MPC's order */
     if (!dir && mpc_settings_find(settings, sizeof settings) == 0) {
         MpcPlugin list[HOST_MAX];
@@ -684,6 +688,12 @@ static void host_service(Plugin *p) {
 static void host_kick(Plugin *p) {
     p->host_pending = 1;
     if (!p->refresh_running) host_service(p);
+}
+
+/* the first instrument the Host page can show: the window never runs past the end of the list */
+static int host_clamp_top(const Plugin *p, int top) {
+    int last = p->host_count - HOST_ROWS > 0 ? p->host_count - HOST_ROWS : 0;
+    return top < 0 ? 0 : top > last ? last : top;
 }
 
 static void kit_kick(Plugin *p) {
@@ -1367,8 +1377,8 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
         if (i == P_HOST_SCAN) { p->host_scan_req = 1; host_kick(p); return; }
         if (i == P_HOST_UP || i == P_HOST_DOWN) {    /* the Host page shows HOST_ROWS instruments at a time */
             int top = p->host_top + (i == P_HOST_DOWN ? HOST_ROWS : -HOST_ROWS);
-            int last = p->host_count - HOST_ROWS > 0 ? p->host_count - HOST_ROWS : 0;
-            p->host_top = top < 0 ? 0 : top > last ? last : top;
+            p->host_top = host_clamp_top(p, top);
+            p->val[P_HOST_SCROLL] = norm_of(P_HOST_SCROLL, p->host_top);
             return;
         }
         if (i == P_KIT_PREV || i == P_KIT_NEXT) {   /* steps Kit through None and the kits in the kit folder */
@@ -1501,6 +1511,7 @@ static void set_param(Plugin *p, int i, float v, int from_host) {
     case P_MIDI_OUT: apply_out_mode(p, idx_of(p, i)); if (from_host) refresh_host(p); break;
     case P_HOST_SLOT: p->host_want = idx_of(p, i); host_kick(p); break;
     case P_KIT_SLOT: p->kit_want = idx_of(p, i); kit_kick(p); break;
+    case P_HOST_SCROLL: p->host_top = host_clamp_top(p, idx_of(p, i)); break;
     case P_HOST_PICK: {   /* a row on the Host page: the instrument at that row of the page */
         int want = p->host_top + idx_of(p, i) + 1;
         if (want <= p->host_count) {
@@ -1777,6 +1788,12 @@ static void param_display(Plugin *p, int i, char *out, int max) {
     case P_HOST_NEXT: copy_str(b, ">", sizeof(b)); break;
     case P_SOUND_X: copy_str(b, x == 0 ? "-" : SY_SOUND_NAMES[SY_SILENT + x], sizeof(b)); break;
     case P_KIT_MUTE: copy_str(b, x ? "Muted" : "On", sizeof(b)); break;
+    case P_HOST_SCROLL: {
+        int top = p->host_top, shown = p->host_count - top < HOST_ROWS ? p->host_count - top : HOST_ROWS;
+        if (p->host_count == 0) copy_str(b, "-", sizeof(b));
+        else snprintf(b, sizeof(b), "%d-%d of %d", top + 1, top + shown, p->host_count);
+        break;
+    }
     case P_TONE: case P_RELEASE: case P_VOLUME: case P_REVERB: case P_HUMAN: case P_KIT_VOL: snprintf(b, sizeof(b), "%d%%", (int)(p->val[i] * 100.f + 0.5f)); break;
     case P_PAD_BASE:
         if (e->map_set) { copy_str(b, "Learned layout", sizeof(b)); break; }
