@@ -36,6 +36,35 @@ int mpc_walk_files(const char *dir, char paths[][VH_PATH_LEN], int max, int dept
     return count;
 }
 
+int mpc_expansion_title(const char *file, const char *root, char *out, size_t len) {
+    if (!file || !root || !out || len == 0) return -1;
+    char dir[2 * VH_PATH_LEN];
+    snprintf(dir, sizeof dir, "%s", file);
+    size_t rl = strlen(root);
+    for (;;) {
+        char *slash = strrchr(dir, '/');
+        if (!slash || slash == dir) return -1;
+        *slash = 0;                                   /* dir is now the folder of the current level */
+        if (strlen(dir) < rl || strncmp(dir, root, rl) != 0) return -1;   /* above the root */
+        char xml_path[2 * VH_PATH_LEN];
+        snprintf(xml_path, sizeof xml_path, "%s/expansion.xml", dir);
+        FILE *f = fopen(xml_path, "rb");
+        if (f) {
+            static char text[16384];
+            size_t n = fread(text, 1, sizeof text - 1, f);
+            fclose(f);
+            text[n] = 0;
+            XNode *doc = xml_parse(text, n);
+            const char *title = doc ? xml_child_text(doc, "title") : NULL;
+            int ok = title && *title;
+            if (ok) snprintf(out, len, "%s", title);
+            if (doc) xml_free(doc);
+            return ok ? 0 : -1;
+        }
+        if (strlen(dir) == rl) return -1;            /* the root itself has no expansion.xml */
+    }
+}
+
 int mpc_walk_plugins(const char *dir, char paths[][VH_PATH_LEN], int max, int depth) {
     return mpc_walk_files(dir, paths, max, depth, ".so");
 }

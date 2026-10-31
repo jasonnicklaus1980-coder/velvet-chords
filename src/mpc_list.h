@@ -31,6 +31,10 @@ int mpc_plugin_list(const char *settings_path, MpcPlugin *out, int max);
  * Returns the count, or -1 if dir can't be read. Nothing is loaded. */
 int mpc_walk_plugins(const char *dir, char paths[][VH_PATH_LEN], int max, int depth);
 
+/* The title of the expansion a file belongs to: the nearest folder from the file's own folder up to root (root included)
+ * that holds an expansion.xml, read for its <title>. Returns 0 and writes the title, or -1 if there's none. */
+int mpc_expansion_title(const char *file, const char *root, char *out, size_t len);
+
 /* The same walk for any file extension (case-insensitive, such as ".xpm"). */
 int mpc_walk_files(const char *dir, char paths[][VH_PATH_LEN], int max, int depth, const char *ext);
 

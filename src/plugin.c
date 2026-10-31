@@ -611,6 +611,12 @@ static void host_scan(Plugin *p) {
             snprintf(p->kit_names[kc], sizeof p->kit_names[kc], "%s", base);
             char *dot = strrchr(p->kit_names[kc], '.');
             if (dot) *dot = 0;   /* the name without .xpm */
+            char title[96];      /* inside an expansion: "Expansion title: kit", so the picker groups kits by expansion */
+            if (mpc_expansion_title(p->kit_paths[kc], kfolders[f], title, sizeof title) == 0) {
+                char named[128];
+                snprintf(named, sizeof named, "%s: %s", title, p->kit_names[kc]);
+                snprintf(p->kit_names[kc], sizeof p->kit_names[kc], "%s", named);
+            }
             kc++;
         }
     }
